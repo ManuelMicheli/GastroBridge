@@ -28,7 +28,7 @@ const TESTIMONIALS = [
 export function Testimonials() {
   const [current, setCurrent] = useState(0);
   const [playing, setPlaying] = useState(true);
-  const quoteRef = useRef<HTMLBlockquoteElement>(null);
+  const quoteRef = useRef<HTMLQuoteElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const goTo = useCallback(
@@ -89,7 +89,7 @@ export function Testimonials() {
     return () => section?.removeEventListener("keydown", onKey);
   }, [next, prev]);
 
-  const t = TESTIMONIALS[current];
+  const t = TESTIMONIALS[current] ?? TESTIMONIALS[0]!;
 
   return (
     <section
