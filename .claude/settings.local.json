@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(find /d/Manum/GastroBridge -type f \\\\\\(-name *.ts -o -name *.tsx -o -name *.js -o -name *.jsx \\\\\\))",
+      "WebFetch(domain:supabase.com)",
+      "Read(//d/Manum/**)",
+      "Bash(rm -rf gastrobridge-temp)"
+    ]
+  }
+}
