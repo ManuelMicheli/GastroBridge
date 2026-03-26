@@ -1,66 +1,126 @@
 "use client";
 
-import { Search, ShoppingCart, TrendingDown } from "lucide-react";
-import { motion } from "motion/react";
+import { useRef, useEffect } from "react";
+import { Hexagon, Circle, Triangle } from "lucide-react";
+import { gsap } from "@/lib/gsap-config";
 
 const STEPS = [
   {
-    icon: Search,
+    icon: Hexagon,
     step: "01",
-    title: "Cerca e Confronta",
-    description:
-      "Cerca qualsiasi prodotto e confronta prezzi da tutti i fornitori della tua zona in tempo reale.",
+    title: "Registrati",
+    description: "Registrati e configura il profilo della tua attivita in pochi minuti.",
   },
   {
-    icon: ShoppingCart,
+    icon: Circle,
     step: "02",
-    title: "Carrello Smart",
-    description:
-      "Aggiungi prodotti da fornitori diversi. Il carrello raggruppa automaticamente gli ordini per fornitore.",
+    title: "Cerca e Confronta",
+    description: "Cerca, confronta prezzi e scopri i migliori fornitori della tua zona.",
   },
   {
-    icon: TrendingDown,
+    icon: Triangle,
     step: "03",
-    title: "Risparmia Ogni Giorno",
-    description:
-      "Ricevi alert quando i prezzi scendono e scopri alternative piu convenienti per i tuoi prodotti.",
+    title: "Ordina e Gestisci",
+    description: "Ordina e gestisci tutto in un posto. Semplice, veloce, trasparente.",
   },
 ];
 
 export function HowItWorks() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
+  const lineRef = useRef<SVGPathElement>(null);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const ctx = gsap.context(() => {
+      // Cards stagger
+      gsap.fromTo(
+        cardsRef.current.filter(Boolean),
+        { opacity: 0, y: 40 },
+        {
+          opacity: 1,
+          y: 0,
+          stagger: 0.15,
+          duration: 0.8,
+          ease: "power3.out",
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: "top 70%",
+            once: true,
+          },
+        }
+      );
+
+      // SVG line draw
+      if (lineRef.current) {
+        const length = lineRef.current.getTotalLength();
+        gsap.set(lineRef.current, { strokeDasharray: length, strokeDashoffset: length });
+        gsap.to(lineRef.current, {
+          strokeDashoffset: 0,
+          duration: 1.5,
+          ease: "power2.inOut",
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: "top 60%",
+            once: true,
+          },
+        });
+      }
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <section className="py-20 px-4 bg-white">
+    <section ref={sectionRef} id="come-funziona" className="py-24 px-4 bg-forest-dark">
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-display text-charcoal mb-4">
+          <h2 className="text-3xl sm:text-4xl font-display text-cream mb-4">
             Come funziona
           </h2>
-          <p className="text-sage text-lg max-w-xl mx-auto">
-            Confronta. Ordina. Risparmia. In tre semplici passi.
+          <p className="text-cream/50 text-lg max-w-xl mx-auto font-body">
+            Tre passi per trasformare i tuoi acquisti Ho.Re.Ca.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        {/* SVG connector line (desktop only) */}
+        <div className="hidden lg:block relative">
+          <svg
+            className="absolute top-1/2 left-0 w-full h-1 -translate-y-1/2 z-0"
+            viewBox="0 0 1000 2"
+            preserveAspectRatio="none"
+          >
+            <path
+              ref={lineRef}
+              d="M 100 1 L 900 1"
+              stroke="rgba(250,248,245,0.15)"
+              strokeWidth="2"
+              fill="none"
+            />
+          </svg>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
           {STEPS.map((item, i) => (
-            <motion.div
+            <div
               key={item.step}
-              className="relative bg-cream rounded-2xl p-8 text-center"
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: i * 0.15 }}
+              ref={(el) => { cardsRef.current[i] = el; }}
+              className="gsap-reveal relative rounded-2xl border border-cream/10 bg-forest-dark/50 p-8 backdrop-blur-sm"
             >
-              <div className="inline-flex items-center justify-center w-14 h-14 bg-forest-light rounded-xl mb-5">
-                <item.icon className="h-7 w-7 text-forest" />
+              {/* Watermark number */}
+              <span className="absolute top-4 right-6 text-7xl font-display text-cream/[0.06] select-none">
+                {item.step}
+              </span>
+
+              <div className="relative z-10">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-accent-orange/10 mb-5">
+                  <item.icon className="h-6 w-6 text-accent-orange" />
+                </div>
+                <h3 className="text-xl font-display text-cream mb-3">{item.title}</h3>
+                <p className="text-cream/70 font-body leading-relaxed">{item.description}</p>
               </div>
-              <div className="text-xs font-mono text-sage mb-2 uppercase tracking-widest">
-                Passo {item.step}
-              </div>
-              <h3 className="text-xl font-bold text-charcoal mb-3">
-                {item.title}
-              </h3>
-              <p className="text-sage leading-relaxed">{item.description}</p>
-            </motion.div>
+            </div>
           ))}
         </div>
       </div>
