@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@theme {
+  /* Colors - GastroBridge Brand */
+  --color-forest: #1B6B4A;
+  --color-forest-dark: #145238;
+  --color-forest-light: #E8F5EE;
+  --color-cream: #FAF8F5;
+  --color-charcoal: #1A1A1A;
+  --color-terracotta: #C4520A;
+  --color-terracotta-light: #FFF3E0;
+  --color-sage: #94A89A;
+  --color-sage-muted: #D4DDD7;
+
+  /* Fonts */
+  --font-display: "DM Serif Display", Georgia, serif;
+  --font-body: "Satoshi", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  /* Shadows */
+  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.05);
+  --shadow-elevated: 0 4px 24px rgba(0, 0, 0, 0.08);
+}
+
+body {
+  background: var(--color-cream);
+  color: var(--color-charcoal);
+  font-family: var(--font-body);
+}
