@@ -1,91 +1,139 @@
 "use client";
 
+import { useRef, useEffect } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ArrowRight } from "lucide-react";
-import { motion } from "motion/react";
+import { gsap, SplitText } from "@/lib/gsap-config";
 
 export function Hero() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const headlineRef = useRef<HTMLHeadingElement>(null);
+  const badgeRef = useRef<HTMLDivElement>(null);
+  const subtitleRef = useRef<HTMLParagraphElement>(null);
+  const ctaRef = useRef<HTMLDivElement>(null);
+  const statsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) return;
+
+    const ctx = gsap.context(() => {
+      const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+
+      // Badge fade in
+      tl.fromTo(
+        badgeRef.current,
+        { opacity: 0, y: -10 },
+        { opacity: 1, y: 0, duration: 0.6 },
+        0.2
+      );
+
+      // Headline split text
+      if (headlineRef.current) {
+        const split = new SplitText(headlineRef.current, { type: "words" });
+        tl.fromTo(
+          split.words,
+          { opacity: 0, y: 40 },
+          { opacity: 1, y: 0, stagger: 0.05, duration: 1 },
+          0.4
+        );
+      }
+
+      // Subtitle
+      tl.fromTo(
+        subtitleRef.current,
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.6 },
+        "-=0.4"
+      );
+
+      // CTAs
+      tl.fromTo(
+        ctaRef.current,
+        { opacity: 0, y: 20 },
+        { opacity: 1, y: 0, duration: 0.6 },
+        "-=0.3"
+      );
+
+      // Stats
+      tl.fromTo(
+        statsRef.current,
+        { opacity: 0 },
+        { opacity: 1, duration: 0.6 },
+        "-=0.2"
+      );
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <section className="relative overflow-hidden py-20 sm:py-32 px-4">
-      {/* Background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-b from-forest-light/30 via-cream to-cream" />
+    <section
+      ref={sectionRef}
+      id="hero"
+      className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden"
+    >
+      {/* Mesh gradient background */}
+      <div className="absolute inset-0 mesh-gradient" />
 
-      <div className="relative max-w-4xl mx-auto text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <Badge variant="success" className="mb-6 text-sm px-4 py-1.5">
-            <span className="h-2 w-2 bg-forest rounded-full animate-pulse mr-2 inline-block" />
-            Marketplace B2B Ho.Re.Ca.
-          </Badge>
-        </motion.div>
+      <div className="relative z-10 max-w-4xl mx-auto text-center">
+        {/* Badge */}
+        <div ref={badgeRef} className="opacity-0 mb-8">
+          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-cream/20 text-cream/70 text-sm font-body">
+            <span className="h-2 w-2 rounded-full bg-accent-green animate-pulse" />
+            La piattaforma Ho.Re.Ca. #1 in Italia
+          </span>
+        </div>
 
-        <motion.h1
-          className="text-4xl sm:text-5xl lg:text-7xl font-display text-charcoal leading-[1.1] tracking-tight mb-6"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.1 }}
+        {/* Headline */}
+        <h1
+          ref={headlineRef}
+          className="opacity-0 font-display text-cream text-4xl sm:text-5xl lg:text-[5.5rem] leading-[1.1] tracking-tight mb-6"
         >
-          Tutti i tuoi fornitori.
-          <br />
-          <span className="text-forest">Un solo posto.</span>
-        </motion.h1>
+          Tutti i tuoi fornitori. Un solo posto.
+        </h1>
 
-        <motion.p
-          className="text-lg sm:text-xl text-sage max-w-2xl mx-auto mb-10 leading-relaxed"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
+        {/* Subtitle */}
+        <p
+          ref={subtitleRef}
+          className="opacity-0 text-cream/70 text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed font-body"
         >
-          Confronta prezzi, scopri nuovi fornitori e gestisci gli ordini per il tuo
-          ristorante da un&apos;unica piattaforma. Risparmia fino al 20% sugli acquisti.
-        </motion.p>
+          Confronta prezzi, scopri fornitori e gestisci ordini per la tua attivita.
+        </p>
 
-        <motion.div
-          className="flex flex-col sm:flex-row gap-4 justify-center"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
-        >
+        {/* CTAs */}
+        <div ref={ctaRef} className="opacity-0 flex flex-col sm:flex-row gap-4 justify-center">
           <Link href="/signup">
-            <Button size="lg" className="w-full sm:w-auto">
+            <Button
+              size="lg"
+              className="w-full sm:w-auto bg-cream text-forest-dark hover:bg-cream/90 shadow-lg"
+            >
               Inizia Gratis <ArrowRight className="h-5 w-5" />
             </Button>
           </Link>
           <Link href="/pricing">
-            <Button variant="secondary" size="lg" className="w-full sm:w-auto">
+            <Button
+              variant="ghost"
+              size="lg"
+              className="w-full sm:w-auto text-cream border border-cream/30 hover:bg-cream/10"
+            >
               Scopri i Piani
             </Button>
           </Link>
-        </motion.div>
+        </div>
 
-        {/* Social proof */}
-        <motion.div
-          className="mt-12 flex flex-wrap items-center justify-center gap-6 text-sm text-sage"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.5 }}
+        {/* Stats */}
+        <div
+          ref={statsRef}
+          className="opacity-0 mt-16 flex flex-wrap items-center justify-center gap-6 text-sm text-cream/50"
         >
-          <div className="flex items-center gap-2">
-            <div className="flex -space-x-2">
-              {[...Array(4)].map((_, i) => (
-                <div
-                  key={i}
-                  className="h-8 w-8 rounded-full bg-sage-muted border-2 border-cream"
-                />
-              ))}
-            </div>
-            <span>500+ ristoratori</span>
-          </div>
-          <div className="h-4 w-px bg-sage-muted hidden sm:block" />
-          <span>150+ fornitori verificati</span>
-          <div className="h-4 w-px bg-sage-muted hidden sm:block" />
           <span>Nord Italia</span>
-        </motion.div>
+          <div className="h-4 w-px bg-cream/20 hidden sm:block" />
+          <span>Gratis per Iniziare</span>
+          <div className="h-4 w-px bg-cream/20 hidden sm:block" />
+          <span>Supporto 24/7</span>
+        </div>
       </div>
     </section>
   );
