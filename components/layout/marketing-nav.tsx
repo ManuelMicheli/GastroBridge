@@ -9,7 +9,7 @@ import { AnimatePresence, motion } from "motion/react";
 
 const NAV_LINKS = [
   { href: "/pricing", label: "Prezzi" },
-  { href: "/fornitori", label: "Per i Fornitori" },
+  { href: "/per-fornitori", label: "Per i Fornitori" },
 ];
 
 export function MarketingNav() {

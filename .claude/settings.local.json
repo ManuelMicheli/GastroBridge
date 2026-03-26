@@ -5,7 +5,17 @@
       "Bash(find /d/Manum/GastroBridge -type f \\\\\\(-name *.ts -o -name *.tsx -o -name *.js -o -name *.jsx \\\\\\))",
       "WebFetch(domain:supabase.com)",
       "Read(//d/Manum/**)",
-      "Bash(rm -rf gastrobridge-temp)"
+      "Bash(rm -rf gastrobridge-temp)",
+      "Bash(mkdir -p \"app/\\(supplier\\)/supplier/dashboard\" \"app/\\(supplier\\)/supplier/catalogo/nuovo\" \"app/\\(supplier\\)/supplier/catalogo/[id]\" \"app/\\(supplier\\)/supplier/catalogo/import\" \"app/\\(supplier\\)/supplier/ordini/[id]\" \"app/\\(supplier\\)/supplier/clienti\" \"app/\\(supplier\\)/supplier/analytics\" \"app/\\(supplier\\)/supplier/recensioni\" \"app/\\(supplier\\)/supplier/impostazioni/zone\" \"app/\\(supplier\\)/supplier/impostazioni/abbonamento\")",
+      "Bash(mv app/\\\\\\(supplier\\\\\\)/dashboard/page.tsx app/\\\\\\(supplier\\\\\\)/supplier/dashboard/page.tsx)",
+      "Bash(mv app/\\\\\\(supplier\\\\\\)/catalogo/page.tsx app/\\\\\\(supplier\\\\\\)/supplier/catalogo/page.tsx)",
+      "Bash(mv app/\\\\\\(supplier\\\\\\)/catalogo/nuovo/page.tsx app/\\\\\\(supplier\\\\\\)/supplier/catalogo/nuovo/page.tsx)",
+      "Bash(mv \"app/\\(supplier\\)/catalogo/[id]/page.tsx\" \"app/\\(supplier\\)/supplier/catalogo/[id]/page.tsx\")",
+      "Bash(find app/\\\\\\(supplier\\\\\\) -type d -empty -delete)",
+      "Bash(rm -rf \"app/\\(supplier\\)/dashboard\" \"app/\\(supplier\\)/catalogo\" \"app/\\(supplier\\)/ordini\" \"app/\\(supplier\\)/clienti\" \"app/\\(supplier\\)/analytics\" \"app/\\(supplier\\)/recensioni\" \"app/\\(supplier\\)/impostazioni\")",
+      "Bash(mkdir -p \"app/\\(marketing\\)/per-fornitori\")",
+      "Bash(mv \"app/\\(marketing\\)/fornitori/page.tsx\" \"app/\\(marketing\\)/per-fornitori/page.tsx\")",
+      "Bash(rm -rf \"app/\\(marketing\\)/fornitori\")"
     ]
   }
 }

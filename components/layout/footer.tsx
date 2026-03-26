@@ -7,7 +7,7 @@ const FOOTER_LINKS = {
     { href: "/login", label: "Accedi" },
   ],
   Fornitori: [
-    { href: "/fornitori", label: "Diventa Fornitore" },
+    { href: "/per-fornitori", label: "Diventa Fornitore" },
     { href: "/pricing", label: "Piani Fornitore" },
   ],
   Legale: [
