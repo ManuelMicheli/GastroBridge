@@ -12,18 +12,276 @@
   --color-sage: #94A89A;
   --color-sage-muted: #D4DDD7;
 
+  /* Dark Theme — Surfaces */
+  --color-surface-base: #09090F;
+  --color-surface-card: #12121A;
+  --color-surface-elevated: #1A1A24;
+  --color-surface-hover: #22222E;
+  --color-surface-sidebar: #0C0C14;
+  --color-surface-overlay: rgba(0, 0, 0, 0.60);
+
+  /* Dark Theme — Borders */
+  --color-border-subtle: rgba(255, 255, 255, 0.06);
+  --color-border-default: rgba(255, 255, 255, 0.10);
+  --color-border-accent: rgba(27, 107, 74, 0.30);
+  --color-border-glow: rgba(45, 212, 122, 0.20);
+
+  /* Dark Theme — Text */
+  --color-text-primary: #F5F5F7;
+  --color-text-secondary: #8A8A9A;
+  --color-text-tertiary: #555566;
+  --color-text-accent: #2DD47A;
+  --color-text-warning: #E8773A;
+  --color-text-danger: #EF4444;
+  --color-text-link: #5BCEA6;
+
+  /* Accent — Brighter for dark bg */
+  --color-accent-green: #2DD47A;
+  --color-accent-green-muted: rgba(45, 212, 122, 0.12);
+  --color-accent-orange: #E8773A;
+  --color-accent-orange-muted: rgba(232, 119, 58, 0.12);
+  --color-accent-red: #EF4444;
+  --color-accent-red-muted: rgba(239, 68, 68, 0.10);
+  --color-accent-blue: #60A5FA;
+  --color-accent-blue-muted: rgba(96, 165, 250, 0.10);
+
   /* Fonts */
   --font-display: "DM Serif Display", Georgia, serif;
   --font-body: "Satoshi", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
 
-  /* Shadows */
+  /* Shadows — Light */
   --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.05);
   --shadow-elevated: 0 4px 24px rgba(0, 0, 0, 0.08);
+
+  /* Shadows — Dark */
+  --shadow-card-dark: 0 2px 16px rgba(0, 0, 0, 0.40);
+  --shadow-elevated-dark: 0 8px 32px rgba(0, 0, 0, 0.50);
+
+  /* Glow Effects */
+  --glow-forest: 0 0 20px rgba(45, 212, 122, 0.12);
+  --glow-forest-strong: 0 0 40px rgba(45, 212, 122, 0.20);
+  --glow-terracotta: 0 0 20px rgba(232, 119, 58, 0.12);
+  --glow-accent: 0 0 24px rgba(45, 212, 122, 0.15);
+
+  /* Animation */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
 }
 
 body {
   background: var(--color-cream);
   color: var(--color-charcoal);
   font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* =========================================
+   Dark Dashboard — Override light tokens
+   All existing pages using bg-white, text-charcoal,
+   text-sage etc. automatically adapt inside .dashboard-dark
+   ========================================= */
+.dashboard-dark {
+  /* Remap brand colors to dark equivalents */
+  --color-cream: var(--color-surface-base);
+  --color-charcoal: var(--color-text-primary);
+  --color-sage: var(--color-text-secondary);
+  --color-sage-muted: rgba(255, 255, 255, 0.08);
+  --color-forest-light: var(--color-accent-green-muted);
+  --color-terracotta-light: var(--color-accent-orange-muted);
+
+  /* Override shadows */
+  --shadow-card: var(--shadow-card-dark);
+  --shadow-elevated: var(--shadow-elevated-dark);
+}
+
+/* bg-white → dark card surface */
+.dashboard-dark .bg-white {
+  background-color: var(--color-surface-card) !important;
+  border: 1px solid var(--color-border-subtle);
+}
+
+/* hover:bg-sage-muted/30 etc. → dark hover */
+.dashboard-dark .hover\:bg-sage-muted\/30:hover {
+  background-color: var(--color-surface-hover) !important;
+}
+
+/* border-sage-muted → dark border */
+.dashboard-dark [class*="border-sage-muted"] {
+  border-color: var(--color-border-subtle) !important;
+}
+
+/* bg-sage-muted/ variants → dark surface */
+.dashboard-dark [class*="bg-sage-muted"] {
+  background-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* bg-gray-50 → dark surface */
+.dashboard-dark .bg-gray-50,
+.dashboard-dark .bg-gray-50\/50 {
+  background-color: var(--color-surface-hover) !important;
+}
+
+/* hover:bg-red-50 → dark red muted */
+.dashboard-dark .hover\:bg-red-50:hover {
+  background-color: var(--color-accent-red-muted) !important;
+}
+
+/* text-forest → accent green for dark readability */
+.dashboard-dark .text-forest {
+  color: var(--color-accent-green) !important;
+}
+
+/* fill-terracotta → brighter orange */
+.dashboard-dark .fill-terracotta {
+  fill: var(--color-accent-orange) !important;
+}
+
+/* Badge overrides for dark bg */
+.dashboard-dark .bg-charcoal\/10 {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+/* Button secondary in dark */
+.dashboard-dark .border-forest {
+  border-color: var(--color-accent-green) !important;
+}
+
+.dashboard-dark .border-2.border-forest.text-forest {
+  color: var(--color-accent-green) !important;
+}
+
+.dashboard-dark .border-2.border-forest.text-forest:hover {
+  background-color: var(--color-accent-green) !important;
+  color: var(--color-surface-base) !important;
+}
+
+/* Ghost button in dark */
+.dashboard-dark .text-charcoal.hover\:bg-sage-muted\/50:hover {
+  background-color: var(--color-surface-hover) !important;
+}
+
+/* Input/Select in dark context */
+.dashboard-dark input,
+.dashboard-dark select,
+.dashboard-dark textarea {
+  background-color: var(--color-surface-card);
+  border-color: var(--color-border-default);
+  color: var(--color-text-primary);
+}
+
+.dashboard-dark input:focus,
+.dashboard-dark select:focus,
+.dashboard-dark textarea:focus {
+  border-color: var(--color-accent-green);
+}
+
+.dashboard-dark input::placeholder,
+.dashboard-dark textarea::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+/* Scrollbar — Dark dashboard */
+.dashboard-dark ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.dashboard-dark ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dashboard-dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+
+.dashboard-dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* =========================================
+   Marketing Landing Page — Animations & States
+   ========================================= */
+
+/* @property declarations for smooth mesh gradient interpolation */
+@property --mesh-x1 { syntax: "<percentage>"; inherits: false; initial-value: 20%; }
+@property --mesh-y1 { syntax: "<percentage>"; inherits: false; initial-value: 30%; }
+@property --mesh-x2 { syntax: "<percentage>"; inherits: false; initial-value: 80%; }
+@property --mesh-y2 { syntax: "<percentage>"; inherits: false; initial-value: 60%; }
+@property --mesh-x3 { syntax: "<percentage>"; inherits: false; initial-value: 50%; }
+@property --mesh-y3 { syntax: "<percentage>"; inherits: false; initial-value: 80%; }
+
+/* Initial state for scroll-triggered elements — prevents FOUC */
+.gsap-reveal {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+/* Mesh gradient animation */
+@keyframes mesh-shift {
+  0%, 100% {
+    --mesh-x1: 20%;
+    --mesh-y1: 30%;
+    --mesh-x2: 80%;
+    --mesh-y2: 60%;
+    --mesh-x3: 50%;
+    --mesh-y3: 80%;
+  }
+  33% {
+    --mesh-x1: 40%;
+    --mesh-y1: 50%;
+    --mesh-x2: 60%;
+    --mesh-y2: 30%;
+    --mesh-x3: 30%;
+    --mesh-y3: 60%;
+  }
+  66% {
+    --mesh-x1: 60%;
+    --mesh-y1: 20%;
+    --mesh-x2: 30%;
+    --mesh-y2: 70%;
+    --mesh-x3: 70%;
+    --mesh-y3: 40%;
+  }
+}
+
+.mesh-gradient {
+  background:
+    radial-gradient(ellipse at var(--mesh-x1, 20%) var(--mesh-y1, 30%), rgba(27, 107, 74, 0.4) 0%, transparent 60%),
+    radial-gradient(ellipse at var(--mesh-x2, 80%) var(--mesh-y2, 60%), rgba(20, 82, 56, 0.5) 0%, transparent 60%),
+    radial-gradient(ellipse at var(--mesh-x3, 50%) var(--mesh-y3, 80%), rgba(45, 212, 122, 0.15) 0%, transparent 60%),
+    var(--color-forest-dark);
+  animation: mesh-shift 20s ease-in-out infinite;
+}
+
+/* Marquee animation */
+@keyframes marquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.marquee-track {
+  animation: marquee 30s linear infinite;
+}
+
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+/* Reduced motion: show everything, disable animations */
+@media (prefers-reduced-motion: reduce) {
+  .gsap-reveal {
+    opacity: 1;
+    transform: none;
+  }
+  .mesh-gradient {
+    animation: none;
+  }
+  .marquee-track {
+    animation: none;
+  }
 }
