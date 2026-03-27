@@ -1,67 +1,150 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { ShoppingCart, TrendingDown, Store, ClipboardList } from "lucide-react";
+import { RestaurantDashboard } from "@/components/dashboard/restaurant/restaurant-dashboard";
 
-export const metadata: Metadata = { title: "Dashboard" };
+export const metadata: Metadata = { title: "Dashboard — GastroBridge" };
+
+type OrderRow = {
+  id: string;
+  total: number;
+  status: string;
+  created_at: string;
+};
 
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
+  const userId = user?.id ?? "";
+
+  // Fetch profile
   const { data: profile } = await supabase
     .from("profiles")
     .select("company_name")
-    .eq("id", user?.id ?? "")
+    .eq("id", userId)
     .single<{ company_name: string }>();
 
+  // Fetch restaurant IDs for this user
+  const { data: restaurants } = (await supabase
+    .from("restaurants")
+    .select("id")
+    .eq("profile_id", userId)) as { data: { id: string }[] | null };
+
+  const restaurantIds = restaurants?.map((r) => r.id) || [];
+
+  // If no restaurants, return empty dashboard
+  if (restaurantIds.length === 0) {
+    return (
+      <RestaurantDashboard
+        companyName={profile?.company_name || "Ristoratore"}
+        kpi={{ ordersThisMonth: 0, prevMonthOrders: 0, spending: 0, prevSpending: 0, savings: 0, activeSuppliers: 0 }}
+        spendingSparkline={[0, 0, 0, 0, 0, 0, 0]}
+        chartData={[]}
+        recentOrders={[]}
+      />
+    );
+  }
+
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const startOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+  const endOfPrevMonth = startOfMonth;
+
+  const [ordersRes, prevOrdersRes, recentOrdersRes] = await Promise.all([
+    supabase
+      .from("orders")
+      .select("id, total, status, created_at")
+      .in("restaurant_id", restaurantIds)
+      .gte("created_at", startOfMonth) as unknown as Promise<{ data: OrderRow[] | null }>,
+
+    supabase
+      .from("orders")
+      .select("id, total")
+      .in("restaurant_id", restaurantIds)
+      .gte("created_at", startOfPrevMonth)
+      .lt("created_at", endOfPrevMonth) as unknown as Promise<{ data: { id: string; total: number }[] | null }>,
+
+    supabase
+      .from("orders")
+      .select("id, status, total, created_at")
+      .in("restaurant_id", restaurantIds)
+      .order("created_at", { ascending: false })
+      .limit(8) as unknown as Promise<{ data: OrderRow[] | null }>,
+  ]);
+
+  const currentOrders = ordersRes.data || [];
+  const prevOrders = prevOrdersRes.data || [];
+  const currentOrderCount = currentOrders.length;
+  const prevOrderCount = prevOrders.length;
+  const currentSpending = currentOrders.reduce((s, o) => s + (o.total || 0), 0);
+  const prevSpending = prevOrders.reduce((s, o) => s + (o.total || 0), 0);
+
+  // Sparkline (last 14 days)
+  const sparklineMap: Record<string, number> = {};
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    sparklineMap[d.toISOString().slice(0, 10)] = 0;
+  }
+  currentOrders.forEach((o) => {
+    const day = o.created_at?.slice(0, 10);
+    if (day && sparklineMap[day] !== undefined) {
+      sparklineMap[day] += o.total || 0;
+    }
+  });
+  const spendingSparkline = Object.values(sparklineMap);
+
+  // Count unique suppliers from order_items
+  const { data: supplierItems } = (await supabase
+    .from("order_items")
+    .select("supplier_id")
+    .in(
+      "order_id",
+      currentOrders.map((o) => o.id)
+    )) as { data: { supplier_id: string }[] | null };
+
+  const uniqueSuppliers = new Set((supplierItems || []).map((i) => i.supplier_id)).size;
+
+  // Chart data (last 30 days)
+  const chartData: Array<{ label: string; value: number }> = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    const dayTotal = currentOrders
+      .filter((o) => o.created_at?.slice(0, 10) === key)
+      .reduce((s, o) => s + (o.total || 0), 0);
+    chartData.push({
+      label: d.toLocaleDateString("it-IT", { day: "2-digit", month: "short" }),
+      value: dayTotal,
+    });
+  }
+
+  // Recent orders
+  const recentOrders = (recentOrdersRes.data || []).map((o) => ({
+    id: o.id,
+    status: o.status,
+    total: o.total,
+    created_at: o.created_at,
+    supplier_name: "—",
+  }));
+
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-charcoal mb-1">
-        Ciao, {profile?.company_name || "Ristoratore"}
-      </h1>
-      <p className="text-sage mb-8">Ecco il riepilogo della tua attivita.</p>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {[
-          { label: "Ordini questo mese", value: "0", icon: ClipboardList, color: "text-forest" },
-          { label: "Spesa totale", value: "€0", icon: ShoppingCart, color: "text-terracotta" },
-          { label: "Risparmio stimato", value: "€0", icon: TrendingDown, color: "text-forest" },
-          { label: "Fornitori attivi", value: "0", icon: Store, color: "text-charcoal" },
-        ].map((stat) => (
-          <Card key={stat.label}>
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-sage-muted/20 rounded-xl">
-                <stat.icon className={`h-6 w-6 ${stat.color}`} />
-              </div>
-              <div>
-                <p className="text-2xl font-mono font-bold text-charcoal">{stat.value}</p>
-                <p className="text-sm text-sage">{stat.label}</p>
-              </div>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Ordini recenti</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sage text-sm">Nessun ordine ancora. Inizia a cercare prodotti!</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Alert Risparmio</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sage text-sm">Gli alert saranno disponibili dopo i primi ordini.</p>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+    <RestaurantDashboard
+      companyName={profile?.company_name || "Ristoratore"}
+      kpi={{
+        ordersThisMonth: currentOrderCount,
+        prevMonthOrders: prevOrderCount,
+        spending: currentSpending,
+        prevSpending,
+        savings: Math.round(currentSpending * 0.08),
+        activeSuppliers: uniqueSuppliers,
+      }}
+      spendingSparkline={spendingSparkline}
+      chartData={chartData}
+      recentOrders={recentOrders}
+    />
   );
 }

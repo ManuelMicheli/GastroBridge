@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
+    "dev": "set NODE_OPTIONS=--max-http-header-size=65536&& next dev --turbopack",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },

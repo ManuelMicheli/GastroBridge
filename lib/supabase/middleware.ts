@@ -25,92 +25,49 @@ export async function updateSession(request: NextRequest) {
     }
   );
 
+  // Refresh the auth token — this is the critical part
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Auth routes: redirect authenticated users to their dashboard
-  const isAuthRoute =
-    request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/signup");
+  // Protect app routes — redirect to login if not authenticated
+  const protectedPrefixes = [
+    "/dashboard",
+    "/cerca",
+    "/ordini",
+    "/carrello",
+    "/analytics",
+    "/impostazioni",
+    "/supplier",
+  ];
 
-  if (user && isAuthRoute) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
+  const isProtected = protectedPrefixes.some(
+    (prefix) =>
+      request.nextUrl.pathname === prefix ||
+      request.nextUrl.pathname.startsWith(prefix + "/")
+  );
 
-    const dashboardUrl =
-      profile?.role === "supplier" ? "/supplier/dashboard" : "/dashboard";
-    return NextResponse.redirect(new URL(dashboardUrl, request.url));
-  }
-
-  // Protected restaurant routes
-  if (!user && request.nextUrl.pathname.startsWith("/dashboard")) {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-  if (!user && request.nextUrl.pathname.startsWith("/cerca")) {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-  if (!user && request.nextUrl.pathname.startsWith("/fornitori")) {
-    // Marketing fornitori page is public, app fornitori is protected
-    // Only protect if it looks like an app route (has UUID segments, etc.)
-  }
-  if (!user && request.nextUrl.pathname.startsWith("/ordini")) {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-  if (!user && request.nextUrl.pathname.startsWith("/carrello")) {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-  if (!user && request.nextUrl.pathname.startsWith("/analytics")) {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-  if (!user && request.nextUrl.pathname.startsWith("/impostazioni")) {
+  if (!user && isProtected) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Protected supplier routes
-  if (!user && request.nextUrl.pathname.startsWith("/supplier")) {
-    return NextResponse.redirect(new URL("/login", request.url));
-  }
-
-  // Role-based protection
+  // Redirect authenticated users away from auth pages
   if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
+    const isAuthRoute =
+      request.nextUrl.pathname === "/login" ||
+      request.nextUrl.pathname === "/signup";
 
-    // Restaurant user trying to access supplier area
-    if (
-      profile?.role === "restaurant" &&
-      request.nextUrl.pathname.startsWith("/supplier")
-    ) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    }
+    if (isAuthRoute) {
+      // Check user role to redirect to correct dashboard
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
 
-    // Supplier user trying to access restaurant area
-    const restaurantRoutes = [
-      "/dashboard",
-      "/cerca",
-      "/ordini",
-      "/carrello",
-      "/analytics",
-      "/impostazioni",
-    ];
-    if (
-      profile?.role === "supplier" &&
-      restaurantRoutes.some(
-        (route) =>
-          request.nextUrl.pathname === route ||
-          request.nextUrl.pathname.startsWith(route + "/")
-      )
-    ) {
-      return NextResponse.redirect(
-        new URL("/supplier/dashboard", request.url)
-      );
+      const role = (profile as { role: string } | null)?.role;
+      const dest = role === "supplier" ? "/supplier/dashboard" : "/dashboard";
+      return NextResponse.redirect(new URL(dest, request.url));
     }
   }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn, signInWithGoogle, signInWithMagicLink } from "../actions";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { toast } from "@/components/ui/toast";
 import { Mail } from "lucide-react";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [showMagicLink, setShowMagicLink] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,8 +23,10 @@ export default function LoginPage() {
     if (result?.error) {
       setError(result.error);
       toast(result.error);
+      setIsLoading(false);
+    } else if (result?.redirectTo) {
+      router.push(result.redirectTo);
     }
-    setIsLoading(false);
   }
 
   async function handleMagicLink(formData: FormData) {
@@ -32,8 +36,8 @@ export default function LoginPage() {
     if (result?.error) {
       setError(result.error);
     }
-    if (result?.success) {
-      toast(result.success);
+    if (result?.message) {
+      toast(result.message);
     }
     setIsLoading(false);
   }

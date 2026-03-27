@@ -1,22 +1,52 @@
 import type { ReactNode } from "react";
-import { Sidebar } from "@/components/layout/sidebar";
-import { TopBar } from "@/components/layout/topbar";
-import { MobileNav } from "@/components/layout/mobile-nav";
 import { CartProvider } from "@/lib/hooks/useCart";
+import { createClient } from "@/lib/supabase/server";
+import { SidebarProvider } from "@/components/dashboard/sidebar/sidebar-provider";
+import { DashboardShell } from "@/components/dashboard/shell";
+import type { NavItem } from "@/components/dashboard/sidebar/sidebar-item";
+import type { MobileNavItem } from "@/components/dashboard/mobile/dark-mobile-nav";
 
-export default function AppLayout({ children }: { children: ReactNode }) {
+const NAV_ITEMS: NavItem[] = [
+  { href: "/dashboard", label: "Dashboard", iconName: "LayoutDashboard" },
+  { href: "/cerca", label: "Cerca Prodotti", iconName: "Search" },
+  { href: "/fornitori", label: "Fornitori", iconName: "Store" },
+  { href: "/ordini", label: "Ordini", iconName: "ClipboardList" },
+  { href: "/carrello", label: "Carrello", iconName: "ShoppingCart" },
+  { href: "/analytics", label: "Analytics", iconName: "BarChart3", section: "Gestione" },
+  { href: "/impostazioni", label: "Impostazioni", iconName: "Settings", section: "Gestione" },
+];
+
+const MOBILE_NAV: MobileNavItem[] = [
+  { href: "/dashboard", label: "Home", iconName: "LayoutDashboard" },
+  { href: "/cerca", label: "Cerca", iconName: "Search" },
+  { href: "/carrello", label: "Carrello", iconName: "ShoppingCart" },
+  { href: "/ordini", label: "Ordini", iconName: "ClipboardList" },
+  { href: "/impostazioni", label: "Altro", iconName: "Settings" },
+];
+
+export default async function AppLayout({ children }: { children: ReactNode }) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("company_name")
+    .eq("id", user?.id ?? "")
+    .single<{ company_name: string }>();
+
   return (
     <CartProvider>
-      <div className="flex min-h-screen bg-cream">
-        <Sidebar />
-        <div className="flex-1 flex flex-col min-w-0">
-          <TopBar />
-          <main className="flex-1 p-4 sm:p-6 pb-20 lg:pb-6">
-            {children}
-          </main>
-        </div>
-        <MobileNav />
-      </div>
+      <SidebarProvider>
+        <DashboardShell
+          navItems={NAV_ITEMS}
+          mobileNavItems={MOBILE_NAV}
+          role="restaurant"
+          companyName={profile?.company_name || "Ristorante"}
+          userEmail={user?.email || ""}
+        >
+          {children}
+        </DashboardShell>
+      </SidebarProvider>
     </CartProvider>
   );
 }

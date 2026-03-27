@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signUp } from "../actions";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { cn } from "@/lib/utils/formatters";
 import type { UserRole } from "@/types/database";
 
 export default function SignupPage() {
+  const router = useRouter();
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,8 +27,11 @@ export default function SignupPage() {
     if (result?.error) {
       setError(result.error);
       toast(result.error);
+      setIsLoading(false);
+    } else if (result?.redirectTo) {
+      toast("Account creato! Controlla la tua email per confermare.");
+      router.push(result.redirectTo);
     }
-    setIsLoading(false);
   }
 
   return (

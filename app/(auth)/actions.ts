@@ -23,6 +23,8 @@ export async function signIn(formData: FormData) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  let redirectTo = "/dashboard";
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
@@ -31,11 +33,11 @@ export async function signIn(formData: FormData) {
       .single<{ role: string }>();
 
     if (profile?.role === "supplier") {
-      redirect("/supplier/dashboard");
+      redirectTo = "/supplier/dashboard";
     }
   }
 
-  redirect("/dashboard");
+  return { success: true, redirectTo };
 }
 
 export async function signUp(formData: FormData) {
@@ -61,11 +63,8 @@ export async function signUp(formData: FormData) {
     return { error: error.message };
   }
 
-  // Redirect to email confirmation or dashboard
-  if (role === "supplier") {
-    redirect("/supplier/dashboard");
-  }
-  redirect("/dashboard");
+  const redirectTo = role === "supplier" ? "/supplier/dashboard" : "/dashboard";
+  return { success: true, redirectTo };
 }
 
 export async function signInWithGoogle() {
@@ -103,7 +102,7 @@ export async function signInWithMagicLink(formData: FormData) {
     return { error: error.message };
   }
 
-  return { success: "Controlla la tua email per il link di accesso." };
+  return { success: true, message: "Controlla la tua email per il link di accesso." };
 }
 
 export async function signOut() {
