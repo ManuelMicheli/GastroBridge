@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ArrowLeft, Pencil, Trash2, Plus, Upload } from "lucide-react";
 import { CatalogFormDialog } from "@/components/dashboard/restaurant/catalog-form-dialog";
 import { CatalogItemDialog } from "@/components/dashboard/restaurant/catalog-item-dialog";
+import { CatalogImportWizard } from "@/components/dashboard/restaurant/catalog-import-wizard";
 import { deleteCatalog, deleteCatalogItem } from "@/lib/catalogs/actions";
 import type { CatalogRow, CatalogItemRow } from "@/lib/catalogs/types";
 
@@ -21,6 +22,7 @@ export function CatalogDetailClient({
 }) {
   const router = useRouter();
   const [editCatalog, setEditCatalog] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [itemDialog, setItemDialog] = useState<{ open: boolean; item: ItemData | null }>({ open: false, item: null });
   const [query, setQuery] = useState("");
   const [pending, startTransition] = useTransition();
@@ -78,10 +80,8 @@ export function CatalogDetailClient({
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border-subtle text-text-primary hover:bg-surface-hover">
             <Pencil className="h-4 w-4" /> Modifica
           </button>
-          {/* Import button — wired in Task 11 */}
-          <button disabled
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border-subtle text-text-tertiary opacity-50 cursor-not-allowed"
-            title="Disponibile dopo Task 11">
+          <button onClick={() => setImportOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border-subtle text-text-primary hover:bg-surface-hover">
             <Upload className="h-4 w-4" /> Importa da file
           </button>
           <button onClick={() => setItemDialog({ open: true, item: null })}
@@ -155,6 +155,12 @@ export function CatalogDetailClient({
         catalogId={catalog.id}
         item={itemDialog.item}
         onSaved={() => router.refresh()}
+      />
+      <CatalogImportWizard
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        catalogId={catalog.id}
+        onImported={() => router.refresh()}
       />
     </div>
   );
