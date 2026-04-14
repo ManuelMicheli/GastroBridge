@@ -34,6 +34,7 @@ export async function updateSession(request: NextRequest) {
   const protectedPrefixes = [
     "/dashboard",
     "/cerca",
+    "/cataloghi",
     "/ordini",
     "/carrello",
     "/analytics",
