@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// `as any` casts on Supabase client calls are required until the generated
+// database types are regenerated to include restaurant_catalogs[_items].
 "use server";
 
 import { revalidatePath } from "next/cache";
