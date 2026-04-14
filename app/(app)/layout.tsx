@@ -7,21 +7,22 @@ import type { NavItem } from "@/components/dashboard/sidebar/sidebar-item";
 import type { MobileNavItem } from "@/components/dashboard/mobile/dark-mobile-nav";
 
 const NAV_ITEMS: NavItem[] = [
-  { href: "/dashboard", label: "Dashboard", iconName: "LayoutDashboard" },
-  { href: "/cerca", label: "Cerca Prodotti", iconName: "Search" },
-  { href: "/fornitori", label: "Fornitori", iconName: "Store" },
-  { href: "/ordini", label: "Ordini", iconName: "ClipboardList" },
-  { href: "/carrello", label: "Carrello", iconName: "ShoppingCart" },
-  { href: "/analytics", label: "Analytics", iconName: "BarChart3", section: "Gestione" },
-  { href: "/impostazioni", label: "Impostazioni", iconName: "Settings", section: "Gestione" },
+  { href: "/dashboard",    label: "Dashboard",       iconName: "LayoutDashboard" },
+  { href: "/cerca",        label: "Cerca Prodotti",  iconName: "Search" },
+  { href: "/fornitori",    label: "Fornitori",       iconName: "Store" },
+  { href: "/cataloghi",    label: "Cataloghi",       iconName: "BookMarked" },
+  { href: "/ordini",       label: "Ordini",          iconName: "ClipboardList" },
+  { href: "/carrello",     label: "Carrello",        iconName: "ShoppingCart" },
+  { href: "/analytics",    label: "Analytics",       iconName: "BarChart3",     section: "Gestione" },
+  { href: "/impostazioni", label: "Impostazioni",    iconName: "Settings",      section: "Gestione" },
 ];
 
 const MOBILE_NAV: MobileNavItem[] = [
-  { href: "/dashboard", label: "Home", iconName: "LayoutDashboard" },
-  { href: "/cerca", label: "Cerca", iconName: "Search" },
-  { href: "/carrello", label: "Carrello", iconName: "ShoppingCart" },
-  { href: "/ordini", label: "Ordini", iconName: "ClipboardList" },
-  { href: "/impostazioni", label: "Altro", iconName: "Settings" },
+  { href: "/dashboard",    label: "Home",    iconName: "LayoutDashboard" },
+  { href: "/cerca",        label: "Cerca",   iconName: "Search" },
+  { href: "/cataloghi",    label: "Catal.",  iconName: "BookMarked" },
+  { href: "/ordini",       label: "Ordini",  iconName: "ClipboardList" },
+  { href: "/impostazioni", label: "Altro",   iconName: "Settings" },
 ];
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
