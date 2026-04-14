@@ -136,7 +136,7 @@ export function CompareClient({ suppliers, items }: Props) {
       </div>
 
       {/* Pivot table */}
-      <div className="rounded-xl border border-border-subtle overflow-x-auto">
+      <div className="hidden md:block rounded-xl border border-border-subtle overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead className="bg-surface-card text-text-tertiary">
             <tr>
@@ -221,6 +221,42 @@ export function CompareClient({ suppliers, items }: Props) {
             )}
           </tfoot>
         </table>
+      </div>
+
+      {/* Mobile card list */}
+      <div className="md:hidden space-y-3">
+        {visibleRows.length === 0 ? (
+          <p className="text-center text-text-tertiary py-6">Nessun prodotto</p>
+        ) : visibleRows.map((r) => {
+          const offers = filteredSuppliers
+            .map((s) => ({ s, price: r.prices[s.id] }))
+            .filter((x): x is { s: SupplierCol; price: number } => x.price !== null && x.price !== undefined)
+            .sort((a, b) => a.price - b.price);
+          return (
+            <div key={r.key} className="rounded-xl bg-surface-card border border-border-subtle p-3">
+              <div className="flex justify-between items-baseline">
+                <h3 className="text-text-primary font-medium">{r.productName}</h3>
+                <span className="text-xs text-text-tertiary">{r.unit}</span>
+              </div>
+              <ul className="mt-2 space-y-1 text-sm">
+                {offers.map(({ s, price }) => {
+                  const isBestPrice = r.bestPriceSupplierId === s.id;
+                  const isBestComposite = r.bestCompositeSupplierId === s.id;
+                  return (
+                    <li key={s.id} className="flex justify-between">
+                      <span className={isBestPrice ? "text-accent-green" : "text-text-secondary"}>
+                        {s.supplier_name} {isBestComposite && <Star className="inline h-3 w-3 ml-0.5" />}
+                      </span>
+                      <span className={`tabular-nums ${isBestPrice ? "text-accent-green font-medium" : "text-text-primary"}`}>
+                        € {price.toFixed(2)}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
