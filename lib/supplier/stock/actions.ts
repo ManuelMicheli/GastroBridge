@@ -119,6 +119,24 @@ export async function listMovements(
   }
 }
 
+export async function getCostHistoryAction(
+  supplierId: string,
+  productId: string,
+  warehouseId: string,
+): Promise<Result<{ avg: number; count: number }>> {
+  try {
+    await requirePermission(supplierId, "stock.read");
+    const history = await getCostHistory(productId, warehouseId, 10);
+    if (history.length === 0) {
+      return { ok: true, data: { avg: 0, count: 0 } };
+    }
+    const avg = history.reduce((sum, n) => sum + n, 0) / history.length;
+    return { ok: true, data: { avg, count: history.length } };
+  } catch (err) {
+    return { ok: false, error: errMsg(err, "Errore caricamento storico costi") };
+  }
+}
+
 export async function listAtRisk(
   supplierId: string,
 ): Promise<Result<AtRiskLotRow[]>> {
