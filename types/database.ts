@@ -23,7 +23,14 @@ export type UnitType =
   | "cartone"
   | "bottiglia"
   | "latta"
-  | "confezione";
+  | "confezione"
+  // Phase 1 English additions (extend existing enum, non-breaking)
+  | "piece"
+  | "l"
+  | "box"
+  | "pallet"
+  | "bundle"
+  | "other";
 export type OrderStatus =
   | "draft"
   | "submitted"
@@ -71,6 +78,93 @@ export type PresetProfile =
   | "pizzeria"
   | "bar"
   | "mensa";
+
+// ------------------------------------------------------------------
+// Phase 1 — Supplier Fondamenta: new enums
+// ------------------------------------------------------------------
+export type SupplierRole = "admin" | "sales" | "warehouse" | "driver";
+
+export type SupplierPermission =
+  | "order.read"
+  | "order.accept_line"
+  | "order.prepare"
+  | "pricing.read"
+  | "pricing.edit"
+  | "catalog.read"
+  | "catalog.edit"
+  | "stock.read"
+  | "stock.receive"
+  | "stock.adjust"
+  | "ddt.generate"
+  | "ddt.manage_templates"
+  | "delivery.plan"
+  | "delivery.execute"
+  | "staff.manage"
+  | "settings.manage"
+  | "analytics.financial"
+  | "reviews.reply";
+
+export type StockMovementType =
+  | "receive"
+  | "order_reserve"
+  | "order_unreserve"
+  | "order_ship"
+  | "adjust_in"
+  | "adjust_out"
+  | "return"
+  | "transfer";
+
+export type OrderLineStatus =
+  | "pending"
+  | "accepted"
+  | "modified"
+  | "rejected";
+
+export type OrderSplitEventType =
+  | "received"
+  | "accepted"
+  | "partially_accepted"
+  | "rejected"
+  | "stock_conflict"
+  | "preparing"
+  | "packed"
+  | "shipped"
+  | "delivered"
+  | "canceled";
+
+export type DeliveryStatus =
+  | "planned"
+  | "loaded"
+  | "in_transit"
+  | "delivered"
+  | "failed";
+
+export type DdtCausale =
+  | "sale"
+  | "consignment"
+  | "return"
+  | "transfer"
+  | "sample"
+  | "cancel";
+
+export type PromotionType = "percentage" | "fixed_amount" | "bundle";
+
+export type NotificationChannel = "email" | "push" | "sms";
+
+export type NotificationEvent =
+  | "order_received"
+  | "order_accepted"
+  | "order_shipped"
+  | "order_delivered"
+  | "stock_low"
+  | "lot_expiring"
+  | "delivery_failed";
+
+export type PromotionAppliesTo =
+  | "all_catalog"
+  | "categories"
+  | "products"
+  | "customers_segment";
 
 export interface Database {
   public: {
@@ -218,6 +312,12 @@ export interface Database {
           delivery_schedule: Record<string, unknown> | null;
           payment_terms_days: number;
           cold_chain_available: boolean;
+          // Phase 1
+          fiscal_code: string | null;
+          rea_number: string | null;
+          sdi_code: string | null;
+          default_ddt_template_id: string | null;
+          feature_flags: Record<string, unknown>;
           created_at: string;
           updated_at: string;
         };
@@ -248,6 +348,11 @@ export interface Database {
           delivery_schedule?: Record<string, unknown> | null;
           payment_terms_days?: number;
           cold_chain_available?: boolean;
+          fiscal_code?: string | null;
+          rea_number?: string | null;
+          sdi_code?: string | null;
+          default_ddt_template_id?: string | null;
+          feature_flags?: Record<string, unknown>;
           created_at?: string;
           updated_at?: string;
         };
@@ -278,6 +383,11 @@ export interface Database {
           delivery_schedule?: Record<string, unknown> | null;
           payment_terms_days?: number;
           cold_chain_available?: boolean;
+          fiscal_code?: string | null;
+          rea_number?: string | null;
+          sdi_code?: string | null;
+          default_ddt_template_id?: string | null;
+          feature_flags?: Record<string, unknown>;
           created_at?: string;
           updated_at?: string;
         };
@@ -357,6 +467,10 @@ export interface Database {
           origin_country: string | null;
           origin_region: string | null;
           macro_category: CategoryMacro;
+          // Phase 1
+          default_warehouse_id: string | null;
+          hazard_class: string | null;
+          tax_rate: number;
           created_at: string;
           updated_at: string;
         };
@@ -388,6 +502,9 @@ export interface Database {
           origin_country?: string | null;
           origin_region?: string | null;
           macro_category?: CategoryMacro;
+          default_warehouse_id?: string | null;
+          hazard_class?: string | null;
+          tax_rate?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -419,6 +536,9 @@ export interface Database {
           origin_country?: string | null;
           origin_region?: string | null;
           macro_category?: CategoryMacro;
+          default_warehouse_id?: string | null;
+          hazard_class?: string | null;
+          tax_rate?: number;
           created_at?: string;
           updated_at?: string;
         };
@@ -462,6 +582,8 @@ export interface Database {
           unit_price: number;
           subtotal: number;
           notes: string | null;
+          // Phase 1
+          sales_unit_id: string | null;
         };
         Insert: {
           id?: string;
@@ -472,6 +594,7 @@ export interface Database {
           unit_price: number;
           subtotal: number;
           notes?: string | null;
+          sales_unit_id?: string | null;
         };
         Update: {
           id?: string;
@@ -482,6 +605,7 @@ export interface Database {
           unit_price?: number;
           subtotal?: number;
           notes?: string | null;
+          sales_unit_id?: string | null;
         };
       };
       order_splits: {
@@ -495,6 +619,11 @@ export interface Database {
           shipped_at: string | null;
           delivered_at: string | null;
           supplier_notes: string | null;
+          // Phase 1
+          warehouse_id: string | null;
+          assigned_sales_member_id: string | null;
+          expected_delivery_date: string | null;
+          delivery_zone_id: string | null;
         };
         Insert: {
           id?: string;
@@ -506,6 +635,10 @@ export interface Database {
           shipped_at?: string | null;
           delivered_at?: string | null;
           supplier_notes?: string | null;
+          warehouse_id?: string | null;
+          assigned_sales_member_id?: string | null;
+          expected_delivery_date?: string | null;
+          delivery_zone_id?: string | null;
         };
         Update: {
           id?: string;
@@ -517,6 +650,10 @@ export interface Database {
           shipped_at?: string | null;
           delivered_at?: string | null;
           supplier_notes?: string | null;
+          warehouse_id?: string | null;
+          assigned_sales_member_id?: string | null;
+          expected_delivery_date?: string | null;
+          delivery_zone_id?: string | null;
         };
       };
       reviews: {
@@ -631,6 +768,11 @@ export interface Database {
           delivery_fee: number;
           free_delivery_above: number | null;
           created_at: string;
+          // Phase 1
+          delivery_days: number[] | null;
+          cutoff_time: string | null;
+          delivery_slots: Record<string, unknown> | null;
+          warehouse_id: string | null;
         };
         Insert: {
           id?: string;
@@ -641,6 +783,10 @@ export interface Database {
           delivery_fee?: number;
           free_delivery_above?: number | null;
           created_at?: string;
+          delivery_days?: number[] | null;
+          cutoff_time?: string | null;
+          delivery_slots?: Record<string, unknown> | null;
+          warehouse_id?: string | null;
         };
         Update: {
           id?: string;
@@ -651,6 +797,10 @@ export interface Database {
           delivery_fee?: number;
           free_delivery_above?: number | null;
           created_at?: string;
+          delivery_days?: number[] | null;
+          cutoff_time?: string | null;
+          delivery_slots?: Record<string, unknown> | null;
+          warehouse_id?: string | null;
         };
       };
       saved_orders: {
@@ -773,6 +923,677 @@ export interface Database {
           updated_at?: string;
         };
       };
+      // ----------------------------------------------------------
+      // Phase 1 — Supplier Fondamenta: new tables
+      // ----------------------------------------------------------
+      warehouses: {
+        Row: {
+          id: string;
+          supplier_id: string;
+          name: string;
+          address: string | null;
+          city: string | null;
+          province: string | null;
+          zip_code: string | null;
+          latitude: number | null;
+          longitude: number | null;
+          is_primary: boolean;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          supplier_id: string;
+          name: string;
+          address?: string | null;
+          city?: string | null;
+          province?: string | null;
+          zip_code?: string | null;
+          latitude?: number | null;
+          longitude?: number | null;
+          is_primary?: boolean;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          supplier_id?: string;
+          name?: string;
+          address?: string | null;
+          city?: string | null;
+          province?: string | null;
+          zip_code?: string | null;
+          latitude?: number | null;
+          longitude?: number | null;
+          is_primary?: boolean;
+          is_active?: boolean;
+          created_at?: string;
+        };
+      };
+      supplier_members: {
+        Row: {
+          id: string;
+          supplier_id: string;
+          profile_id: string;
+          role: SupplierRole;
+          is_active: boolean;
+          invited_at: string;
+          accepted_at: string | null;
+          invited_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          supplier_id: string;
+          profile_id: string;
+          role: SupplierRole;
+          is_active?: boolean;
+          invited_at?: string;
+          accepted_at?: string | null;
+          invited_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          supplier_id?: string;
+          profile_id?: string;
+          role?: SupplierRole;
+          is_active?: boolean;
+          invited_at?: string;
+          accepted_at?: string | null;
+          invited_by?: string | null;
+          created_at?: string;
+        };
+      };
+      role_permissions: {
+        Row: {
+          role: SupplierRole;
+          permission: string;
+        };
+        Insert: {
+          role: SupplierRole;
+          permission: string;
+        };
+        Update: {
+          role?: SupplierRole;
+          permission?: string;
+        };
+      };
+      product_sales_units: {
+        Row: {
+          id: string;
+          product_id: string;
+          label: string;
+          unit_type: UnitType;
+          conversion_to_base: number;
+          is_base: boolean;
+          barcode: string | null;
+          moq: number;
+          sort_order: number;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          product_id: string;
+          label: string;
+          unit_type?: UnitType;
+          conversion_to_base: number;
+          is_base?: boolean;
+          barcode?: string | null;
+          moq?: number;
+          sort_order?: number;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          product_id?: string;
+          label?: string;
+          unit_type?: UnitType;
+          conversion_to_base?: number;
+          is_base?: boolean;
+          barcode?: string | null;
+          moq?: number;
+          sort_order?: number;
+          is_active?: boolean;
+          created_at?: string;
+        };
+      };
+      stock_lots: {
+        Row: {
+          id: string;
+          product_id: string;
+          warehouse_id: string;
+          lot_code: string;
+          expiry_date: string | null;
+          quantity_base: number;
+          quantity_reserved_base: number;
+          cost_per_base: number | null;
+          received_at: string;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          product_id: string;
+          warehouse_id: string;
+          lot_code: string;
+          expiry_date?: string | null;
+          quantity_base?: number;
+          quantity_reserved_base?: number;
+          cost_per_base?: number | null;
+          received_at?: string;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          product_id?: string;
+          warehouse_id?: string;
+          lot_code?: string;
+          expiry_date?: string | null;
+          quantity_base?: number;
+          quantity_reserved_base?: number;
+          cost_per_base?: number | null;
+          received_at?: string;
+          notes?: string | null;
+          created_at?: string;
+        };
+      };
+      stock_movements: {
+        Row: {
+          id: string;
+          product_id: string;
+          lot_id: string | null;
+          warehouse_id: string;
+          quantity_base: number;
+          movement_type: StockMovementType;
+          ref_order_split_id: string | null;
+          ref_delivery_item_id: string | null;
+          created_by_member_id: string | null;
+          created_at: string;
+          notes: string | null;
+        };
+        Insert: {
+          id?: string;
+          product_id: string;
+          lot_id?: string | null;
+          warehouse_id: string;
+          quantity_base: number;
+          movement_type: StockMovementType;
+          ref_order_split_id?: string | null;
+          ref_delivery_item_id?: string | null;
+          created_by_member_id?: string | null;
+          created_at?: string;
+          notes?: string | null;
+        };
+        Update: {
+          id?: string;
+          product_id?: string;
+          lot_id?: string | null;
+          warehouse_id?: string;
+          quantity_base?: number;
+          movement_type?: StockMovementType;
+          ref_order_split_id?: string | null;
+          ref_delivery_item_id?: string | null;
+          created_by_member_id?: string | null;
+          created_at?: string;
+          notes?: string | null;
+        };
+      };
+      price_lists: {
+        Row: {
+          id: string;
+          supplier_id: string;
+          name: string;
+          description: string | null;
+          is_default: boolean;
+          valid_from: string | null;
+          valid_to: string | null;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          supplier_id: string;
+          name: string;
+          description?: string | null;
+          is_default?: boolean;
+          valid_from?: string | null;
+          valid_to?: string | null;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          supplier_id?: string;
+          name?: string;
+          description?: string | null;
+          is_default?: boolean;
+          valid_from?: string | null;
+          valid_to?: string | null;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      price_list_items: {
+        Row: {
+          id: string;
+          price_list_id: string;
+          product_id: string;
+          sales_unit_id: string;
+          price: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          price_list_id: string;
+          product_id: string;
+          sales_unit_id: string;
+          price: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          price_list_id?: string;
+          product_id?: string;
+          sales_unit_id?: string;
+          price?: number;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      price_list_tier_discounts: {
+        Row: {
+          id: string;
+          price_list_item_id: string;
+          min_quantity: number;
+          discount_pct: number;
+          sort_order: number;
+        };
+        Insert: {
+          id?: string;
+          price_list_item_id: string;
+          min_quantity: number;
+          discount_pct: number;
+          sort_order?: number;
+        };
+        Update: {
+          id?: string;
+          price_list_item_id?: string;
+          min_quantity?: number;
+          discount_pct?: number;
+          sort_order?: number;
+        };
+      };
+      promotions: {
+        Row: {
+          id: string;
+          supplier_id: string;
+          name: string;
+          type: PromotionType;
+          value: number;
+          starts_at: string;
+          ends_at: string;
+          applies_to: PromotionAppliesTo;
+          filter_ids: string[] | null;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          supplier_id: string;
+          name: string;
+          type: PromotionType;
+          value: number;
+          starts_at: string;
+          ends_at: string;
+          applies_to: PromotionAppliesTo;
+          filter_ids?: string[] | null;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          supplier_id?: string;
+          name?: string;
+          type?: PromotionType;
+          value?: number;
+          starts_at?: string;
+          ends_at?: string;
+          applies_to?: PromotionAppliesTo;
+          filter_ids?: string[] | null;
+          is_active?: boolean;
+          created_at?: string;
+        };
+      };
+      customer_price_assignments: {
+        Row: {
+          id: string;
+          supplier_id: string;
+          restaurant_id: string;
+          price_list_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          supplier_id: string;
+          restaurant_id: string;
+          price_list_id: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          supplier_id?: string;
+          restaurant_id?: string;
+          price_list_id?: string;
+          created_at?: string;
+        };
+      };
+      order_split_items: {
+        Row: {
+          id: string;
+          order_split_id: string;
+          order_item_id: string;
+          product_id: string;
+          sales_unit_id: string | null;
+          quantity_requested: number;
+          quantity_accepted: number | null;
+          unit_price: number;
+          status: OrderLineStatus;
+          rejection_reason: string | null;
+          notes: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_split_id: string;
+          order_item_id: string;
+          product_id: string;
+          sales_unit_id?: string | null;
+          quantity_requested: number;
+          quantity_accepted?: number | null;
+          unit_price: number;
+          status?: OrderLineStatus;
+          rejection_reason?: string | null;
+          notes?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_split_id?: string;
+          order_item_id?: string;
+          product_id?: string;
+          sales_unit_id?: string | null;
+          quantity_requested?: number;
+          quantity_accepted?: number | null;
+          unit_price?: number;
+          status?: OrderLineStatus;
+          rejection_reason?: string | null;
+          notes?: string | null;
+          updated_at?: string;
+        };
+      };
+      order_split_events: {
+        Row: {
+          id: string;
+          order_split_id: string;
+          event_type: OrderSplitEventType;
+          member_id: string | null;
+          note: string | null;
+          metadata: Record<string, unknown> | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_split_id: string;
+          event_type: OrderSplitEventType;
+          member_id?: string | null;
+          note?: string | null;
+          metadata?: Record<string, unknown> | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_split_id?: string;
+          event_type?: OrderSplitEventType;
+          member_id?: string | null;
+          note?: string | null;
+          metadata?: Record<string, unknown> | null;
+          created_at?: string;
+        };
+      };
+      deliveries: {
+        Row: {
+          id: string;
+          order_split_id: string;
+          warehouse_id: string;
+          driver_member_id: string | null;
+          scheduled_date: string;
+          scheduled_slot: Record<string, unknown> | null;
+          status: DeliveryStatus;
+          delivered_at: string | null;
+          recipient_signature_url: string | null;
+          pod_photo_url: string | null;
+          failure_reason: string | null;
+          notes: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_split_id: string;
+          warehouse_id: string;
+          driver_member_id?: string | null;
+          scheduled_date: string;
+          scheduled_slot?: Record<string, unknown> | null;
+          status?: DeliveryStatus;
+          delivered_at?: string | null;
+          recipient_signature_url?: string | null;
+          pod_photo_url?: string | null;
+          failure_reason?: string | null;
+          notes?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_split_id?: string;
+          warehouse_id?: string;
+          driver_member_id?: string | null;
+          scheduled_date?: string;
+          scheduled_slot?: Record<string, unknown> | null;
+          status?: DeliveryStatus;
+          delivered_at?: string | null;
+          recipient_signature_url?: string | null;
+          pod_photo_url?: string | null;
+          failure_reason?: string | null;
+          notes?: string | null;
+          created_at?: string;
+        };
+      };
+      delivery_items: {
+        Row: {
+          id: string;
+          delivery_id: string;
+          order_split_item_id: string;
+          lot_id: string;
+          quantity_base: number;
+          quantity_sales_unit: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          delivery_id: string;
+          order_split_item_id: string;
+          lot_id: string;
+          quantity_base: number;
+          quantity_sales_unit: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          delivery_id?: string;
+          order_split_item_id?: string;
+          lot_id?: string;
+          quantity_base?: number;
+          quantity_sales_unit?: number;
+          created_at?: string;
+        };
+      };
+      ddt_templates: {
+        Row: {
+          id: string;
+          supplier_id: string;
+          name: string;
+          logo_url: string | null;
+          primary_color: string | null;
+          header_html: string | null;
+          footer_html: string | null;
+          conditions_text: string | null;
+          is_default: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          supplier_id: string;
+          name: string;
+          logo_url?: string | null;
+          primary_color?: string | null;
+          header_html?: string | null;
+          footer_html?: string | null;
+          conditions_text?: string | null;
+          is_default?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          supplier_id?: string;
+          name?: string;
+          logo_url?: string | null;
+          primary_color?: string | null;
+          header_html?: string | null;
+          footer_html?: string | null;
+          conditions_text?: string | null;
+          is_default?: boolean;
+          created_at?: string;
+        };
+      };
+      ddt_documents: {
+        Row: {
+          id: string;
+          supplier_id: string;
+          delivery_id: string;
+          number: number;
+          year: number;
+          causale: DdtCausale;
+          issued_at: string;
+          recipient_snapshot: Record<string, unknown>;
+          vettore: string | null;
+          peso_kg: number | null;
+          colli: number | null;
+          pdf_url: string;
+          canceled_at: string | null;
+          canceled_reason: string | null;
+          template_id: string | null;
+        };
+        Insert: {
+          id?: string;
+          supplier_id: string;
+          delivery_id: string;
+          number: number;
+          year: number;
+          causale: DdtCausale;
+          issued_at?: string;
+          recipient_snapshot: Record<string, unknown>;
+          vettore?: string | null;
+          peso_kg?: number | null;
+          colli?: number | null;
+          pdf_url: string;
+          canceled_at?: string | null;
+          canceled_reason?: string | null;
+          template_id?: string | null;
+        };
+        Update: {
+          id?: string;
+          supplier_id?: string;
+          delivery_id?: string;
+          number?: number;
+          year?: number;
+          causale?: DdtCausale;
+          issued_at?: string;
+          recipient_snapshot?: Record<string, unknown>;
+          vettore?: string | null;
+          peso_kg?: number | null;
+          colli?: number | null;
+          pdf_url?: string;
+          canceled_at?: string | null;
+          canceled_reason?: string | null;
+          template_id?: string | null;
+        };
+      };
+      notification_preferences: {
+        Row: {
+          id: string;
+          supplier_member_id: string;
+          channel: NotificationChannel;
+          event_type: NotificationEvent;
+          enabled: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          supplier_member_id: string;
+          channel: NotificationChannel;
+          event_type: NotificationEvent;
+          enabled?: boolean;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          supplier_member_id?: string;
+          channel?: NotificationChannel;
+          event_type?: NotificationEvent;
+          enabled?: boolean;
+          updated_at?: string;
+        };
+      };
+      push_subscriptions: {
+        Row: {
+          id: string;
+          profile_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          user_agent: string | null;
+          created_at: string;
+          last_used_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          user_agent?: string | null;
+          created_at?: string;
+          last_used_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          profile_id?: string;
+          endpoint?: string;
+          p256dh?: string;
+          auth?: string;
+          user_agent?: string | null;
+          created_at?: string;
+          last_used_at?: string | null;
+        };
+      };
     };
     Functions: {
       get_user_role: {
@@ -791,6 +1612,19 @@ export interface Database {
         Args: { p_order_id: string };
         Returns: number;
       };
+      // Phase 1 — supplier membership helpers
+      is_supplier_member: {
+        Args: { p_supplier_id: string };
+        Returns: boolean;
+      };
+      supplier_member_role: {
+        Args: { p_supplier_id: string };
+        Returns: SupplierRole | null;
+      };
+      has_supplier_permission: {
+        Args: { p_supplier_id: string; p_permission: string };
+        Returns: boolean;
+      };
     };
     Enums: {
       user_role: UserRole;
@@ -802,6 +1636,16 @@ export interface Database {
       category_macro: CategoryMacro;
       certification_type: CertificationType;
       preset_profile: PresetProfile;
+      // Phase 1
+      supplier_role: SupplierRole;
+      stock_movement_type: StockMovementType;
+      order_line_status: OrderLineStatus;
+      order_split_event_type: OrderSplitEventType;
+      delivery_status: DeliveryStatus;
+      ddt_causale: DdtCausale;
+      promotion_type: PromotionType;
+      notification_channel: NotificationChannel;
+      notification_event: NotificationEvent;
     };
   };
 }
