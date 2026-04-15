@@ -48,7 +48,13 @@ export async function updateSession(request: NextRequest) {
       request.nextUrl.pathname.startsWith(prefix + "/")
   );
 
-  if (!user && isProtected) {
+  // Rotte pubbliche autenticate via token magic-link (nessun login richiesto).
+  // Plan 1C Task 11: la pagina conferma cliente usa HMAC in querystring come
+  // credenziale, quindi deve essere raggiungibile anche senza sessione.
+  const isPublicTokenRoute =
+    /^\/ordini\/[^/]+\/conferma\/?$/.test(request.nextUrl.pathname);
+
+  if (!user && isProtected && !isPublicTokenRoute) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
