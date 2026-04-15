@@ -27,3 +27,4 @@ export {
   type ProductRowLike,
   type SupplierRowLike,
 } from "./adapters";
+export { defaultPrefs, bundleToScoringPrefs } from "./defaults";

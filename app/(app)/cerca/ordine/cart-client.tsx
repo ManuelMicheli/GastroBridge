@@ -8,8 +8,22 @@ import { normalizeName, normalizeUnit } from "@/lib/catalogs/normalize";
 import { useCart } from "@/lib/hooks/useCart";
 import { toast } from "sonner";
 import type { UnitType } from "@/types/database";
+import {
+  rankOffers,
+  defaultPrefs,
+  type Offer,
+  type Preferences,
+  type ScoredOffer,
+} from "@/lib/scoring";
+import { ScoreBadge } from "@/components/shared/scoring/score-badge";
+import { BreakdownTooltip } from "@/components/shared/scoring/breakdown-tooltip";
 
-export type SupplierLite = { id: string; supplier_name: string };
+export type SupplierLite = {
+  id: string;
+  supplier_name: string;
+  delivery_days: number | null;
+  min_order_amount: number | null;
+};
 export type CatalogItemLite = {
   id: string;
   catalog_id: string;
@@ -19,17 +33,50 @@ export type CatalogItemLite = {
   price: number;
 };
 
+/**
+ * Build a minimal `Offer` from a catalog item + supplier for the scoring
+ * engine. See the matching helper in search-client.tsx — fields absent
+ * from imported catalogs get neutral defaults (standard tier, no certs,
+ * macro=altro, not bio).
+ */
+function buildOffer(
+  item: { id: string; product_name: string; unit: string; price: number },
+  supplier: SupplierLite,
+): Offer {
+  return {
+    id: item.id,
+    supplierId: supplier.id,
+    productName: item.product_name,
+    unit: item.unit,
+    price: item.price,
+    qualityTier: "standard",
+    isBio: false,
+    leadTimeDays: supplier.delivery_days ?? 2,
+    certifications: [],
+    macroCategory: "altro",
+    supplierMinOrder: supplier.min_order_amount ?? undefined,
+  };
+}
+
 type OrderLine = { key: string; productName: string; unit: string; qty: number };
 
 const STORAGE_KEY = "gb.typical-order";
 
 type Pick = {
   itemId: string;
+  /** OrderLine.key — used to wire alt-pick overrides back to the line. */
+  lineKey: string;
   productName: string;
   unit: string;
   qty: number;
   price: number;
   lineTotal: number;
+  scored: ScoredOffer;
+  /** Top-3 alternative picks for the same line (sorted by score desc). */
+  alternatives: { itemId: string; supplierId: string; supplierName: string; price: number; scored: ScoredOffer }[];
+  /** When true, all offers for this line failed hard constraints — the
+   * pick is a fallback and the user should be warned. */
+  fallback: boolean;
 };
 
 type SupplierBucket = {
@@ -41,15 +88,21 @@ type SupplierBucket = {
 export function OptimalCartClient({
   suppliers,
   items,
+  preferences,
 }: {
   suppliers: SupplierLite[];
   items: CatalogItemLite[];
+  preferences: Preferences | null;
 }) {
+  const prefs = preferences ?? defaultPrefs;
   const router = useRouter();
   const { addItem } = useCart();
   const [order, setOrder] = useState<OrderLine[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
+  /** Per-line override: line.key -> chosen itemId. Lets users swap to an
+   * alternative offer without losing the ranking context. */
+  const [overrides, setOverrides] = useState<Record<string, string>>({});
 
   useEffect(() => {
     try {
@@ -64,83 +117,150 @@ export function OptimalCartClient({
     setHydrated(true);
   }, []);
 
-  // Index: (normName::unit) -> list of offers per supplier (cheapest first)
-  type Offer = { supplier: SupplierLite; price: number; itemId: string; unit: string };
-  const offersByKey = useMemo(() => {
+  // Index: (normName::unit) -> list of raw entries per supplier
+  type Entry = { supplier: SupplierLite; item: CatalogItemLite };
+  const entriesByKey = useMemo(() => {
     const supplierById = new Map<string, SupplierLite>();
     for (const s of suppliers) supplierById.set(s.id, s);
 
-    const map = new Map<string, Offer[]>();
+    const map = new Map<string, Entry[]>();
     for (const it of items) {
       const supplier = supplierById.get(it.catalog_id);
       if (!supplier) continue;
       const key = `${it.product_name_normalized}::${it.unit}`;
       const list = map.get(key) ?? [];
-      list.push({ supplier, price: it.price, itemId: it.id, unit: it.unit });
+      list.push({ supplier, item: it });
       map.set(key, list);
     }
-    for (const list of map.values()) list.sort((a, b) => a.price - b.price);
     return map;
   }, [items, suppliers]);
 
-  // Fallback: name-only lookup (first variant / cheapest overall)
-  const offersByName = useMemo(() => {
+  // Fallback: name-only lookup
+  const entriesByName = useMemo(() => {
     const supplierById = new Map<string, SupplierLite>();
     for (const s of suppliers) supplierById.set(s.id, s);
-    const map = new Map<string, Offer[]>();
+    const map = new Map<string, Entry[]>();
     for (const it of items) {
       const supplier = supplierById.get(it.catalog_id);
       if (!supplier) continue;
-      const nk = it.product_name_normalized;
-      const list = map.get(nk) ?? [];
-      list.push({ supplier, price: it.price, itemId: it.id, unit: it.unit });
-      map.set(nk, list);
+      const list = map.get(it.product_name_normalized) ?? [];
+      list.push({ supplier, item: it });
+      map.set(it.product_name_normalized, list);
     }
-    for (const list of map.values()) list.sort((a, b) => a.price - b.price);
     return map;
   }, [items, suppliers]);
 
-  // Build buckets per supplier from the user's typical order
-  const { buckets, missing, grandTotal } = useMemo(() => {
+  // Build buckets per supplier from the user's typical order, using the
+  // scoring engine to pick the highest-scored offer per line (honouring
+  // the restaurant's preferences). When all offers fail hard constraints
+  // we fall back to the cheapest, but flag the line.
+  const { buckets, missing, grandTotal, averagePricePerLine } = useMemo(() => {
     const buckets = new Map<string, SupplierBucket>();
     const missing: { productName: string; unit: string; qty: number }[] = [];
+    /** Average price (across candidate offers) per line.key — used to show
+     * savings badges even when we fall back. */
+    const averagePricePerLine = new Map<string, number>();
 
     for (const line of order) {
       const lookupKey = line.key.includes("::")
         ? line.key
         : `${normalizeName(line.productName)}::${normalizeUnit(line.unit)}`;
-      let offers = offersByKey.get(lookupKey);
-      if (!offers || offers.length === 0) {
-        // Fallback to name-only match
+      let matches = entriesByKey.get(lookupKey);
+      if (!matches || matches.length === 0) {
         const nameKey = lookupKey.split("::")[0] ?? normalizeName(line.productName);
-        offers = offersByName.get(nameKey);
+        matches = entriesByName.get(nameKey);
       }
-      if (!offers || offers.length === 0) {
+      if (!matches || matches.length === 0) {
         missing.push({ productName: line.productName, unit: line.unit, qty: line.qty });
         continue;
       }
-      const cheapest = offers[0]!;
-      const lineTotal = cheapest.price * line.qty;
-      let bucket = buckets.get(cheapest.supplier.id);
+
+      const offers: Offer[] = matches.map((e) => buildOffer(e.item, e.supplier));
+      const result = rankOffers(offers, prefs);
+
+      const entryByOfferId = new Map<string, Entry>();
+      for (const e of matches) entryByOfferId.set(e.item.id, e);
+
+      // Build scored list; if everything was excluded, synthesise a
+      // cheapest-fallback ScoredOffer so the UI can still render a line.
+      let orderedScored: ScoredOffer[] = result.included;
+      let fallback = false;
+      if (orderedScored.length === 0) {
+        fallback = true;
+        // Fallback: re-run scoring ignoring hard constraints by passing
+        // neutral prefs; keep original weights for the breakdown.
+        const neutral = rankOffers(offers, defaultPrefs);
+        orderedScored = neutral.included;
+      }
+
+      const priceAvg =
+        offers.length > 0
+          ? offers.reduce((s, o) => s + o.price, 0) / offers.length
+          : 0;
+      averagePricePerLine.set(line.key, priceAvg);
+
+      if (orderedScored.length === 0) continue; // nothing at all
+
+      const override = overrides[line.key];
+      const chosen =
+        (override && orderedScored.find((s) => s.offer.id === override)) ??
+        orderedScored[0];
+      if (!chosen) continue;
+
+      const chosenEntry = entryByOfferId.get(chosen.offer.id);
+      if (!chosenEntry) continue;
+
+      const alternatives = orderedScored
+        .filter((s) => s.offer.id !== chosen.offer.id)
+        .slice(0, 3)
+        .map((s) => {
+          const e = entryByOfferId.get(s.offer.id);
+          return {
+            itemId: s.offer.id,
+            supplierId: e?.supplier.id ?? s.offer.supplierId,
+            supplierName: e?.supplier.supplier_name ?? s.offer.supplierId,
+            price: s.offer.price,
+            scored: s,
+          };
+        });
+
+      const lineTotal = chosen.offer.price * line.qty;
+      let bucket = buckets.get(chosenEntry.supplier.id);
       if (!bucket) {
-        bucket = { supplier: cheapest.supplier, picks: [], subtotal: 0 };
-        buckets.set(cheapest.supplier.id, bucket);
+        bucket = { supplier: chosenEntry.supplier, picks: [], subtotal: 0 };
+        buckets.set(chosenEntry.supplier.id, bucket);
       }
       bucket.picks.push({
-        itemId:      cheapest.itemId,
+        itemId: chosenEntry.item.id,
+        lineKey: line.key,
         productName: line.productName,
-        unit:        cheapest.unit,
-        qty:         line.qty,
-        price:       cheapest.price,
+        unit: chosenEntry.item.unit,
+        qty: line.qty,
+        price: chosen.offer.price,
         lineTotal,
+        scored: chosen,
+        alternatives,
+        fallback,
       });
       bucket.subtotal += lineTotal;
     }
 
     const sorted = Array.from(buckets.values()).sort((a, b) => b.subtotal - a.subtotal);
     const grandTotal = sorted.reduce((s, b) => s + b.subtotal, 0);
-    return { buckets: sorted, missing, grandTotal };
-  }, [order, offersByKey, offersByName]);
+    return { buckets: sorted, missing, grandTotal, averagePricePerLine };
+  }, [order, entriesByKey, entriesByName, prefs, overrides]);
+
+  /** Total "baseline" = sum over lines of (avg offer price × qty). Compared
+   * to grandTotal this shows savings vs picking a random-average offer. */
+  const baselineTotal = useMemo(() => {
+    let total = 0;
+    for (const line of order) {
+      const avg = averagePricePerLine.get(line.key) ?? 0;
+      total += avg * line.qty;
+    }
+    return total;
+  }, [order, averagePricePerLine]);
+  const savingsVsAverage = Math.max(0, baselineTotal - grandTotal);
 
   const exportCsv = () => {
     const lines = ["Fornitore;Prodotto;Unità;Quantità;Prezzo;Totale riga"];
@@ -215,7 +335,7 @@ export function OptimalCartClient({
         <div>
           <h1 className="text-2xl font-semibold text-text-primary">Carrello ottimale</h1>
           <p className="text-sm text-text-secondary mt-1">
-            Per ogni prodotto è stato scelto il fornitore più economico. Ordini separati per fornitore.
+            Per ogni prodotto è stato scelto il fornitore con il punteggio più alto secondo le tue preferenze. Ordini separati per fornitore.
           </p>
         </div>
         <div className="flex gap-2 print:hidden">
@@ -239,6 +359,13 @@ export function OptimalCartClient({
         <SummaryStat label="Articoli totali" value={buckets.reduce((s, b) => s + b.picks.length, 0).toString()} />
         <SummaryStat label="Totale carrello" value={`€ ${grandTotal.toFixed(2)}`} highlight />
       </div>
+
+      {savingsVsAverage > 0 && (
+        <div className="rounded-xl border border-accent-green/30 bg-accent-green/5 px-4 py-2 text-sm text-accent-green">
+          Risparmio vs media: <span className="font-semibold">€ {savingsVsAverage.toFixed(2)}</span>
+          {" "}rispetto a un&apos;offerta media per ciascun prodotto.
+        </div>
+      )}
 
       {missing.length > 0 && (
         <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-4">
@@ -272,24 +399,68 @@ export function OptimalCartClient({
                 € {b.subtotal.toFixed(2)}
               </span>
             </header>
-            <table className="min-w-full text-sm mt-2">
+            <table className="w-full text-sm mt-2">
               <thead className="text-text-tertiary">
                 <tr>
                   <th className="text-left px-2 py-1 font-medium">Prodotto</th>
+                  <th className="text-left px-2 py-1 font-medium">Score</th>
                   <th className="text-right px-2 py-1 font-medium">Q.tà</th>
                   <th className="text-left px-2 py-1 font-medium">Unità</th>
                   <th className="text-right px-2 py-1 font-medium">Prezzo</th>
                   <th className="text-right px-2 py-1 font-medium">Totale</th>
+                  <th className="text-left px-2 py-1 font-medium print:hidden">Alternative</th>
                 </tr>
               </thead>
               <tbody>
                 {b.picks.map((p, i) => (
-                  <tr key={i} className="border-t border-border-subtle">
-                    <td className="px-2 py-1.5 text-text-primary">{p.productName}</td>
+                  <tr key={i} className="border-t border-border-subtle align-top">
+                    <td className="px-2 py-1.5 text-text-primary" title={p.productName}>
+                      {p.productName}
+                      {p.fallback && (
+                        <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-yellow-500/10 border border-yellow-500/30 px-2 py-0.5 text-[10px] text-yellow-500">
+                          <AlertTriangle className="h-3 w-3" /> vincoli non rispettati
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <details className="relative print:hidden">
+                        <summary className="list-none cursor-pointer">
+                          <ScoreBadge score={p.scored.score} size="sm" />
+                        </summary>
+                        <div className="absolute left-0 top-full mt-1 z-10">
+                          <BreakdownTooltip breakdown={p.scored.breakdown} />
+                        </div>
+                      </details>
+                      <span className="hidden print:inline">
+                        <ScoreBadge score={p.scored.score} size="sm" />
+                      </span>
+                    </td>
                     <td className="px-2 py-1.5 text-right tabular-nums text-text-primary">{p.qty}</td>
-                    <td className="px-2 py-1.5 text-text-secondary">{p.unit}</td>
+                    <td className="px-2 py-1.5 text-text-secondary" title={p.unit}>{p.unit}</td>
                     <td className="px-2 py-1.5 text-right tabular-nums text-text-secondary">€ {p.price.toFixed(2)}</td>
                     <td className="px-2 py-1.5 text-right tabular-nums text-text-primary font-medium">€ {p.lineTotal.toFixed(2)}</td>
+                    <td className="px-2 py-1.5 print:hidden">
+                      {p.alternatives.length > 0 ? (
+                        <select
+                          value=""
+                          onChange={(e) => {
+                            const altId = e.target.value;
+                            if (!altId) return;
+                            setOverrides((prev) => ({ ...prev, [p.lineKey]: altId }));
+                          }}
+                          className="rounded border border-border-subtle bg-surface-base px-2 py-1 text-xs text-text-primary"
+                        >
+                          <option value="">Cambia fornitore…</option>
+                          {p.alternatives.map((a) => (
+                            <option key={a.itemId} value={a.itemId}>
+                              {a.supplierName} — € {a.price.toFixed(2)} (score {Math.round(a.scored.score)})
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="text-xs text-text-tertiary">—</span>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

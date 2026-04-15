@@ -1,6 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { getPreferences } from "@/lib/restaurants/preferences";
+import { bundleToScoringPrefs } from "@/lib/scoring";
+import type { Preferences } from "@/lib/scoring";
 import { OptimalCartClient, type SupplierLite, type CatalogItemLite } from "./cart-client";
 
 export const metadata: Metadata = { title: "Carrello ottimale" };
@@ -8,14 +11,36 @@ export const metadata: Metadata = { title: "Carrello ottimale" };
 export default async function OptimalCartPage() {
   const supabase = await createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  let preferences: Preferences | null = null;
+  if (user) {
+    const { data: restaurants } = await supabase
+      .from("restaurants")
+      .select("id")
+      .eq("profile_id", user.id)
+      .order("is_primary", { ascending: false })
+      .order("created_at", { ascending: true })
+      .returns<{ id: string }[]>();
+    const primary = restaurants?.[0];
+    if (primary) {
+      const prefResult = await getPreferences(primary.id);
+      preferences = bundleToScoringPrefs(prefResult.ok ? prefResult.data : null);
+    }
+  }
+
   const { data: catalogs } = await supabase
     .from("restaurant_catalogs")
-    .select("id, supplier_name")
+    .select("id, supplier_name, delivery_days, min_order_amount")
     .order("supplier_name", { ascending: true });
 
   const suppliers: SupplierLite[] = (catalogs ?? []).map((c: any) => ({
     id: c.id,
     supplier_name: c.supplier_name,
+    delivery_days: c.delivery_days ?? null,
+    min_order_amount: c.min_order_amount !== null && c.min_order_amount !== undefined ? Number(c.min_order_amount) : null,
   }));
 
   let items: CatalogItemLite[] = [];
@@ -35,5 +60,11 @@ export default async function OptimalCartPage() {
     }));
   }
 
-  return <OptimalCartClient suppliers={suppliers} items={items} />;
+  return (
+    <OptimalCartClient
+      suppliers={suppliers}
+      items={items}
+      preferences={preferences}
+    />
+  );
 }

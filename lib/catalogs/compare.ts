@@ -25,7 +25,7 @@ export type Pivot = {
 export function buildPivot(
   suppliers: SupplierCol[],
   items: (CatalogItemRow & { catalog_id: string })[],
-  weights: { w_prezzo: number; w_consegna: number },
+  weights: { w_prezzo: number; w_consegna: number } = { w_prezzo: 1, w_consegna: 0 },
 ): Pivot {
   // Group items by (norm_name, unit)
   type Group = { productName: string; unit: string; bySupplier: Record<string, number> };

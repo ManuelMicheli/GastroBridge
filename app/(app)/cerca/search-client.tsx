@@ -5,8 +5,25 @@ import Link from "next/link";
 import { Search as SearchIcon, BookMarked, Plus, Trash2, ShoppingBasket, Upload, UploadCloud, Check, ArrowLeft, Download } from "lucide-react";
 import { parseCsv, parseXlsx, suggestMapping, type ParsedSheet } from "@/lib/catalogs/parse-file";
 import { normalizeName, normalizeUnit } from "@/lib/catalogs/normalize";
+import {
+  rankOffers,
+  defaultPrefs,
+  type Offer,
+  type Preferences,
+  type ScoredOffer,
+  type ExclusionReason,
+} from "@/lib/scoring";
+import { ScoreBadge } from "@/components/shared/scoring/score-badge";
+import { BreakdownTooltip } from "@/components/shared/scoring/breakdown-tooltip";
+import { ExclusionList, type ExcludedItem } from "@/components/shared/scoring/exclusion-list";
+import { ActiveFiltersBar } from "@/components/shared/scoring/active-filters-bar";
 
-export type SupplierLite = { id: string; supplier_name: string };
+export type SupplierLite = {
+  id: string;
+  supplier_name: string;
+  delivery_days: number | null;
+  min_order_amount: number | null;
+};
 export type CatalogItemLite = {
   id: string;
   catalog_id: string;
@@ -17,19 +34,52 @@ export type CatalogItemLite = {
   notes: string | null;
 };
 
+type RankedOffer = {
+  scored: ScoredOffer;
+  supplier: SupplierLite;
+  itemId: string;
+  price: number;
+};
+
 type Group = {
   key: string;
   productName: string;
   unit: string;
-  offers: { supplier: SupplierLite; price: number; itemId: string }[];
+  offers: RankedOffer[];
+  averagePrice: number;
 };
 
 type Props = {
   suppliers: SupplierLite[];
   items: CatalogItemLite[];
+  preferences: Preferences | null;
 };
 
-export function SearchPageClient({ suppliers, items }: Props) {
+/**
+ * Build a minimal `Offer` from a catalog item + supplier. Fields not
+ * captured in the catalog-import table (quality tier, bio, certifications,
+ * macro category) fall back to neutral defaults so the scoring engine runs
+ * end-to-end. Supplier-level lead-time / min-order come from
+ * `restaurant_catalogs`.
+ */
+function buildOffer(item: CatalogItemLite, supplier: SupplierLite): Offer {
+  return {
+    id: item.id,
+    supplierId: supplier.id,
+    productName: item.product_name,
+    unit: item.unit,
+    price: item.price,
+    qualityTier: "standard",
+    isBio: false,
+    leadTimeDays: supplier.delivery_days ?? 2,
+    certifications: [],
+    macroCategory: "altro",
+    supplierMinOrder: supplier.min_order_amount ?? undefined,
+  };
+}
+
+export function SearchPageClient({ suppliers, items, preferences }: Props) {
+  const prefs = preferences ?? defaultPrefs;
   const [query, setQuery] = useState("");
 
   const supplierById = useMemo(() => {
@@ -38,24 +88,81 @@ export function SearchPageClient({ suppliers, items }: Props) {
     return m;
   }, [suppliers]);
 
-  const groups = useMemo<Group[]>(() => {
-    const map = new Map<string, Group>();
+  // Build ranked groups: each (name, unit) grouping is fed through the
+  // scoring engine so within-group sort honours preferences (not just price).
+  // Exclusions from hard constraints are collected globally and surfaced at
+  // the bottom of the page.
+  const { groups, globalExcluded } = useMemo<{
+    groups: Group[];
+    globalExcluded: ExcludedItem[];
+  }>(() => {
+    // Bucket items by (normalized name + unit).
+    type RawBucket = {
+      key: string;
+      productName: string;
+      unit: string;
+      entries: { item: CatalogItemLite; supplier: SupplierLite }[];
+    };
+    const buckets = new Map<string, RawBucket>();
     for (const it of items) {
       const supplier = supplierById.get(it.catalog_id);
       if (!supplier) continue;
       const key = `${it.product_name_normalized}::${it.unit}`;
-      let g = map.get(key);
-      if (!g) {
-        g = { key, productName: it.product_name, unit: it.unit, offers: [] };
-        map.set(key, g);
+      let b = buckets.get(key);
+      if (!b) {
+        b = { key, productName: it.product_name, unit: it.unit, entries: [] };
+        buckets.set(key, b);
       }
-      g.offers.push({ supplier, price: it.price, itemId: it.id });
+      b.entries.push({ item: it, supplier });
     }
-    for (const g of map.values()) g.offers.sort((a, b) => a.price - b.price);
-    return Array.from(map.values()).sort((a, b) =>
-      a.productName.localeCompare(b.productName, "it"),
-    );
-  }, [items, supplierById]);
+
+    const excludedAll: ExcludedItem[] = [];
+    const groups: Group[] = [];
+
+    for (const b of buckets.values()) {
+      const offers: Offer[] = b.entries.map(({ item, supplier }) =>
+        buildOffer(item, supplier),
+      );
+      const result = rankOffers(offers, prefs);
+
+      const byId = new Map<string, { item: CatalogItemLite; supplier: SupplierLite }>();
+      for (const e of b.entries) byId.set(e.item.id, e);
+
+      const ranked: RankedOffer[] = [];
+      for (const s of result.included) {
+        const pair = byId.get(s.offer.id);
+        if (!pair) continue;
+        ranked.push({
+          scored: s,
+          supplier: pair.supplier,
+          itemId: pair.item.id,
+          price: s.offer.price,
+        });
+      }
+
+      for (const e of result.excluded) {
+        const pair = byId.get(e.offer.id);
+        excludedAll.push({
+          offer: e.offer,
+          reasons: e.reasons,
+          supplierName: pair?.supplier.supplier_name,
+        });
+      }
+
+      if (ranked.length === 0) continue;
+
+      groups.push({
+        key: b.key,
+        productName: b.productName,
+        unit: b.unit,
+        offers: ranked,
+        averagePrice: result.averagePrice,
+      });
+    }
+
+    groups.sort((a, b) => a.productName.localeCompare(b.productName, "it"));
+    return { groups, globalExcluded: excludedAll };
+  }, [items, supplierById, prefs]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -93,6 +200,8 @@ export function SearchPageClient({ suppliers, items }: Props) {
         </p>
       </header>
 
+      <ActiveFiltersBar prefs={prefs} />
+
       <TypicalOrderSection groups={groups} />
 
       <div className="border-t border-border-subtle pt-6 space-y-4">
@@ -125,34 +234,56 @@ export function SearchPageClient({ suppliers, items }: Props) {
       ) : (
         <ul className="space-y-3">
           {filtered.map((g) => {
-            const cheapest = g.offers[0];
-            const cheapestPrice = cheapest?.price;
+            const top = g.offers[0];
+            const savings =
+              top && g.averagePrice > 0 && top.price < g.averagePrice
+                ? g.averagePrice - top.price
+                : 0;
             return (
               <li key={g.key} className="rounded-xl bg-surface-card border border-border-subtle p-4">
                 <div className="flex items-baseline justify-between gap-3 flex-wrap">
                   <h3 className="text-base font-semibold text-text-primary">
                     {g.productName} <span className="text-xs text-text-tertiary font-normal">/ {g.unit}</span>
                   </h3>
-                  {cheapest && (
-                    <span className="text-sm text-text-secondary">
-                      Migliore: <span className="text-accent-green font-medium">€ {cheapestPrice!.toFixed(2)}</span>
-                      {" "}da {cheapest.supplier.supplier_name}
+                  {top && (
+                    <span className="text-sm text-text-secondary flex items-center gap-2">
+                      <ScoreBadge score={top.scored.score} size="sm" title="Punteggio migliore" />
+                      <span>
+                        <span className="text-accent-green font-medium">€ {top.price.toFixed(2)}</span>
+                        {" "}da {top.supplier.supplier_name}
+                      </span>
+                      {savings > 0 && (
+                        <span className="inline-flex rounded-full bg-accent-green/10 px-2 py-0.5 text-xs text-accent-green border border-accent-green/20">
+                          Risparmio € {savings.toFixed(2)} vs media
+                        </span>
+                      )}
                     </span>
                   )}
                 </div>
                 <ul className="mt-3 divide-y divide-border-subtle">
-                  {g.offers.map((o) => {
-                    const isBest = o.price === cheapestPrice;
+                  {g.offers.map((o, idx) => {
+                    const isBest = idx === 0;
                     return (
-                      <li key={o.itemId} className="flex items-center justify-between py-1.5 text-sm">
-                        <Link
-                          href={`/cataloghi/${o.supplier.id}`}
-                          className={`hover:underline ${isBest ? "text-accent-green" : "text-text-secondary"}`}
-                        >
-                          {o.supplier.supplier_name}
-                        </Link>
+                      <li key={o.itemId} className="flex items-center justify-between py-1.5 text-sm gap-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <ScoreBadge score={o.scored.score} size="sm" />
+                          <Link
+                            href={`/cataloghi/${o.supplier.id}`}
+                            className={`hover:underline truncate ${isBest ? "text-accent-green" : "text-text-secondary"}`}
+                          >
+                            {o.supplier.supplier_name}
+                          </Link>
+                          <details className="relative">
+                            <summary className="cursor-pointer list-none text-xs text-text-tertiary hover:text-text-primary">
+                              dettaglio
+                            </summary>
+                            <div className="absolute left-0 top-full mt-1 z-10">
+                              <BreakdownTooltip breakdown={o.scored.breakdown} />
+                            </div>
+                          </details>
+                        </div>
                         <span
-                          className={`tabular-nums ${isBest ? "text-accent-green font-medium" : "text-text-primary"}`}
+                          className={`tabular-nums shrink-0 ${isBest ? "text-accent-green font-medium" : "text-text-primary"}`}
                         >
                           € {o.price.toFixed(2)}
                         </span>
@@ -164,6 +295,10 @@ export function SearchPageClient({ suppliers, items }: Props) {
             );
           })}
         </ul>
+      )}
+
+      {globalExcluded.length > 0 && (
+        <ExclusionList excluded={globalExcluded} />
       )}
     </div>
   );
@@ -245,13 +380,13 @@ function TypicalOrderSection({ groups }: { groups: Group[] }) {
     if (!g || g.offers.length === 0) {
       return { line, available: false, bestPrice: null, bestSupplier: null, bestLineTotal: 0 };
     }
-    const cheapest = g.offers[0]!; // offers already sorted ASC
+    const top = g.offers[0]!; // offers already sorted by score desc
     return {
       line,
       available: true,
-      bestPrice: cheapest.price,
-      bestSupplier: cheapest.supplier,
-      bestLineTotal: cheapest.price * line.qty,
+      bestPrice: top.price,
+      bestSupplier: top.supplier,
+      bestLineTotal: top.price * line.qty,
     };
   });
 
@@ -316,16 +451,6 @@ function TypicalOrderSection({ groups }: { groups: Group[] }) {
           >
             <Upload className="h-4 w-4" /> Importa da file
           </button>
-          <Link
-            href="/cerca/ordine"
-            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium ${
-              lines.length === 0
-                ? "bg-surface-base text-text-tertiary opacity-50 pointer-events-none"
-                : "bg-accent-green text-surface-base"
-            }`}
-          >
-            <ShoppingBasket className="h-4 w-4" /> Carrello ottimale
-          </Link>
         </div>
       </header>
       <p className="text-sm text-text-secondary mb-4">
@@ -477,6 +602,15 @@ function TypicalOrderSection({ groups }: { groups: Group[] }) {
               </ul>
             </div>
           )}
+
+          <div className="mt-4 flex justify-end">
+            <Link
+              href="/cerca/ordine"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-lg text-sm font-medium bg-accent-green text-surface-base"
+            >
+              <ShoppingBasket className="h-4 w-4" /> Carrello ottimale
+            </Link>
+          </div>
         </>
       )}
     </section>
