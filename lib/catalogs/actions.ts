@@ -16,14 +16,33 @@ async function getRestaurantId(): Promise<string | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data } = await supabase
+  const { data: existing } = await supabase
     .from("restaurants")
     .select("id")
     .eq("profile_id", user.id)
     .limit(1)
-    .single<{ id: string }>();
+    .maybeSingle<{ id: string }>();
 
-  return data?.id ?? null;
+  if (existing?.id) return existing.id;
+
+  // Auto-provision a restaurant row for users who signed up as restaurant
+  // but never completed the onboarding step that creates one.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role, company_name")
+    .eq("id", user.id)
+    .single<{ role: string; company_name: string }>();
+
+  if (!profile || profile.role !== "restaurant") return null;
+
+  const fallbackName = profile.company_name?.trim() || user.email?.split("@")[0] || "Ristorante";
+  const { data: created } = await (supabase as any)
+    .from("restaurants")
+    .insert({ profile_id: user.id, name: fallbackName })
+    .select("id")
+    .single();
+
+  return created?.id ?? null;
 }
 
 export async function createCatalog(input: CatalogInput): Promise<Result<CatalogRow>> {
