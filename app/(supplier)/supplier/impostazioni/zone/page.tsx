@@ -1,19 +1,75 @@
+import type { Metadata } from "next";
+import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { MapPin, Plus } from "lucide-react";
+import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
+import { ZonesClient } from "./zones-client";
+import type { Database } from "@/types/database";
 
-export default function DeliveryZonesPage() {
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-charcoal">Zone di Consegna</h1>
-        <Button size="sm"><Plus className="h-4 w-4" /> Nuova Zona</Button>
+type ZoneRow = Database["public"]["Tables"]["delivery_zones"]["Row"];
+type WarehouseRow = Database["public"]["Tables"]["warehouses"]["Row"];
+
+export const metadata: Metadata = { title: "Zone di Consegna" };
+
+export default async function DeliveryZonesPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: supplier } = await supabase
+    .from("suppliers")
+    .select("id")
+    .eq("profile_id", user?.id ?? "")
+    .maybeSingle<{ id: string }>();
+
+  if (!supplier?.id) {
+    return (
+      <div>
+        <h1 className="text-2xl font-bold text-charcoal mb-6">
+          Zone di Consegna
+        </h1>
+        <Card className="text-center py-16">
+          <p className="text-sage">
+            Nessun profilo fornitore associato a questo utente.
+          </p>
+        </Card>
       </div>
-      <Card className="text-center py-16">
-        <MapPin className="h-12 w-12 text-sage-muted mx-auto mb-4" />
-        <p className="text-sage mb-2">Nessuna zona di consegna configurata.</p>
-        <p className="text-xs text-sage">Aggiungi le province o i CAP dove effettui le consegne.</p>
-      </Card>
-    </div>
+    );
+  }
+
+  const [{ data: zones }, { data: warehouses }] = await Promise.all([
+    supabase
+      .from("delivery_zones")
+      .select("*")
+      .eq("supplier_id", supplier.id)
+      .order("created_at", { ascending: true })
+      .returns<ZoneRow[]>(),
+    supabase
+      .from("warehouses")
+      .select(
+        "id, supplier_id, name, address, city, province, zip_code, latitude, longitude, is_primary, is_active, created_at",
+      )
+      .eq("supplier_id", supplier.id)
+      .eq("is_active", true)
+      .order("is_primary", { ascending: false })
+      .order("created_at", { ascending: true })
+      .returns<WarehouseRow[]>(),
+  ]);
+
+  const supplierFilter = `supplier_id=eq.${supplier.id}`;
+
+  return (
+    <>
+      <RealtimeRefresh
+        subscriptions={[
+          { table: "delivery_zones", filter: supplierFilter },
+        ]}
+      />
+      <ZonesClient
+        supplierId={supplier.id}
+        initialZones={zones ?? []}
+        warehouses={warehouses ?? []}
+      />
+    </>
   );
 }
