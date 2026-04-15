@@ -52,6 +52,14 @@ const BASE_NAV: GatedNavItem[] = [
     roles: ["admin"],
     requiresPhase1: true,
   },
+  {
+    href: "/supplier/consegne",
+    label: "Consegne",
+    iconName: "Truck",
+    section: "Gestione",
+    roles: ["admin", "warehouse", "driver"],
+    requiresPhase1: true,
+  },
   { href: "/supplier/impostazioni", label: "Impostazioni", iconName: "Settings", section: "Gestione" },
 ];
 
