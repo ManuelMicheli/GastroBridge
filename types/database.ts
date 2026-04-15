@@ -39,6 +39,31 @@ export type PlanType =
   | "base"
   | "growth"
   | "enterprise";
+export type QualityTier = "economy" | "standard" | "premium" | "luxury";
+export type CategoryMacro =
+  | "carne"
+  | "pesce"
+  | "verdura"
+  | "frutta"
+  | "latticini"
+  | "secco"
+  | "bevande"
+  | "surgelati"
+  | "panetteria"
+  | "altro";
+export type CertificationType =
+  | "DOP"
+  | "IGP"
+  | "STG"
+  | "BIO"
+  | "DOC"
+  | "DOCG"
+  | "IGT"
+  | "HALAL"
+  | "KOSHER"
+  | "MSC"
+  | "ASC"
+  | "FAIRTRADE";
 
 export interface Database {
   public: {
@@ -183,6 +208,9 @@ export interface Database {
           rating_count: number;
           is_verified: boolean;
           is_active: boolean;
+          delivery_schedule: Record<string, unknown> | null;
+          payment_terms_days: number;
+          cold_chain_available: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -210,6 +238,9 @@ export interface Database {
           rating_count?: number;
           is_verified?: boolean;
           is_active?: boolean;
+          delivery_schedule?: Record<string, unknown> | null;
+          payment_terms_days?: number;
+          cold_chain_available?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -237,6 +268,9 @@ export interface Database {
           rating_count?: number;
           is_verified?: boolean;
           is_active?: boolean;
+          delivery_schedule?: Record<string, unknown> | null;
+          payment_terms_days?: number;
+          cold_chain_available?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -306,6 +340,16 @@ export interface Database {
           origin: string | null;
           is_available: boolean;
           is_featured: boolean;
+          quality_tier: QualityTier;
+          is_bio: boolean;
+          lead_time_days: number;
+          packaging_size: number | null;
+          packaging_unit: string | null;
+          certifications_structured: CertificationType[];
+          cold_chain_required: boolean;
+          origin_country: string | null;
+          origin_region: string | null;
+          macro_category: CategoryMacro;
           created_at: string;
           updated_at: string;
         };
@@ -327,6 +371,16 @@ export interface Database {
           origin?: string | null;
           is_available?: boolean;
           is_featured?: boolean;
+          quality_tier?: QualityTier;
+          is_bio?: boolean;
+          lead_time_days?: number;
+          packaging_size?: number | null;
+          packaging_unit?: string | null;
+          certifications_structured?: CertificationType[];
+          cold_chain_required?: boolean;
+          origin_country?: string | null;
+          origin_region?: string | null;
+          macro_category?: CategoryMacro;
           created_at?: string;
           updated_at?: string;
         };
@@ -348,6 +402,16 @@ export interface Database {
           origin?: string | null;
           is_available?: boolean;
           is_featured?: boolean;
+          quality_tier?: QualityTier;
+          is_bio?: boolean;
+          lead_time_days?: number;
+          packaging_size?: number | null;
+          packaging_unit?: string | null;
+          certifications_structured?: CertificationType[];
+          cold_chain_required?: boolean;
+          origin_country?: string | null;
+          origin_region?: string | null;
+          macro_category?: CategoryMacro;
           created_at?: string;
           updated_at?: string;
         };
@@ -633,6 +697,9 @@ export interface Database {
       unit_type: UnitType;
       order_status: OrderStatus;
       plan_type: PlanType;
+      quality_tier: QualityTier;
+      category_macro: CategoryMacro;
+      certification_type: CertificationType;
     };
   };
 }
