@@ -476,5 +476,51 @@ export async function cancelDdt(
   }
 }
 
+/**
+ * Ritorna un signed URL temporaneo (5 minuti) per il PDF del DDT.
+ * Richiede permesso `ddt.generate` o `ddt.view` sul supplier (assumiamo la
+ * semantica canonica: chi può emettere può anche scaricare; fallback su
+ * requirePermission con `ddt.generate`).
+ */
+export async function getDdtSignedUrl(
+  ddtId: string,
+): Promise<ActionResult<{ pdfUrl: string }>> {
+  try {
+    if (!ddtId || typeof ddtId !== "string") {
+      return { ok: false, error: "ID DDT non valido" };
+    }
+
+    const admin = createAdminClient();
+    const loose = admin as unknown as { from: (t: string) => any };
+    const { data: row, error } = await loose
+      .from("ddt_documents")
+      .select("id, supplier_id, pdf_url")
+      .eq("id", ddtId)
+      .maybeSingle();
+    if (error) return { ok: false, error: error.message };
+    if (!row) return { ok: false, error: "DDT non trovato" };
+
+    await requirePermission(row.supplier_id, "ddt.generate");
+
+    const { data: signed, error: signErr } = await admin.storage
+      .from(DDT_BUCKET)
+      .createSignedUrl(row.pdf_url, 5 * 60);
+    if (signErr || !signed?.signedUrl) {
+      return {
+        ok: false,
+        error: signErr?.message ?? "Errore generazione URL firmato",
+      };
+    }
+
+    return { ok: true, pdfUrl: signed.signedUrl };
+  } catch (err) {
+    return {
+      ok: false,
+      error:
+        err instanceof Error ? err.message : "Errore generazione URL firmato",
+    };
+  }
+}
+
 // Re-export helpers utili ai chiamanti (storage bucket/name).
 export { DDT_BUCKET };
