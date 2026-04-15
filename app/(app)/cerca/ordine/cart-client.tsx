@@ -1,9 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Download, Printer, ShoppingCart, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Download, Printer, ShoppingCart, AlertTriangle, Plus } from "lucide-react";
 import { normalizeName, normalizeUnit } from "@/lib/catalogs/normalize";
+import { useCart } from "@/lib/hooks/useCart";
+import { toast } from "sonner";
+import type { UnitType } from "@/types/database";
 
 export type SupplierLite = { id: string; supplier_name: string };
 export type CatalogItemLite = {
@@ -20,6 +24,7 @@ type OrderLine = { key: string; productName: string; unit: string; qty: number }
 const STORAGE_KEY = "gb.typical-order";
 
 type Pick = {
+  itemId: string;
   productName: string;
   unit: string;
   qty: number;
@@ -40,8 +45,11 @@ export function OptimalCartClient({
   suppliers: SupplierLite[];
   items: CatalogItemLite[];
 }) {
+  const router = useRouter();
+  const { addItem } = useCart();
   const [order, setOrder] = useState<OrderLine[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [addingToCart, setAddingToCart] = useState(false);
 
   useEffect(() => {
     try {
@@ -57,18 +65,36 @@ export function OptimalCartClient({
   }, []);
 
   // Index: (normName::unit) -> list of offers per supplier (cheapest first)
+  type Offer = { supplier: SupplierLite; price: number; itemId: string; unit: string };
   const offersByKey = useMemo(() => {
     const supplierById = new Map<string, SupplierLite>();
     for (const s of suppliers) supplierById.set(s.id, s);
 
-    const map = new Map<string, { supplier: SupplierLite; price: number }[]>();
+    const map = new Map<string, Offer[]>();
     for (const it of items) {
       const supplier = supplierById.get(it.catalog_id);
       if (!supplier) continue;
       const key = `${it.product_name_normalized}::${it.unit}`;
       const list = map.get(key) ?? [];
-      list.push({ supplier, price: it.price });
+      list.push({ supplier, price: it.price, itemId: it.id, unit: it.unit });
       map.set(key, list);
+    }
+    for (const list of map.values()) list.sort((a, b) => a.price - b.price);
+    return map;
+  }, [items, suppliers]);
+
+  // Fallback: name-only lookup (first variant / cheapest overall)
+  const offersByName = useMemo(() => {
+    const supplierById = new Map<string, SupplierLite>();
+    for (const s of suppliers) supplierById.set(s.id, s);
+    const map = new Map<string, Offer[]>();
+    for (const it of items) {
+      const supplier = supplierById.get(it.catalog_id);
+      if (!supplier) continue;
+      const nk = it.product_name_normalized;
+      const list = map.get(nk) ?? [];
+      list.push({ supplier, price: it.price, itemId: it.id, unit: it.unit });
+      map.set(nk, list);
     }
     for (const list of map.values()) list.sort((a, b) => a.price - b.price);
     return map;
@@ -83,7 +109,12 @@ export function OptimalCartClient({
       const lookupKey = line.key.includes("::")
         ? line.key
         : `${normalizeName(line.productName)}::${normalizeUnit(line.unit)}`;
-      const offers = offersByKey.get(lookupKey);
+      let offers = offersByKey.get(lookupKey);
+      if (!offers || offers.length === 0) {
+        // Fallback to name-only match
+        const nameKey = lookupKey.split("::")[0] ?? normalizeName(line.productName);
+        offers = offersByName.get(nameKey);
+      }
       if (!offers || offers.length === 0) {
         missing.push({ productName: line.productName, unit: line.unit, qty: line.qty });
         continue;
@@ -96,10 +127,11 @@ export function OptimalCartClient({
         buckets.set(cheapest.supplier.id, bucket);
       }
       bucket.picks.push({
+        itemId:      cheapest.itemId,
         productName: line.productName,
-        unit: line.unit,
-        qty: line.qty,
-        price: cheapest.price,
+        unit:        cheapest.unit,
+        qty:         line.qty,
+        price:       cheapest.price,
         lineTotal,
       });
       bucket.subtotal += lineTotal;
@@ -108,7 +140,7 @@ export function OptimalCartClient({
     const sorted = Array.from(buckets.values()).sort((a, b) => b.subtotal - a.subtotal);
     const grandTotal = sorted.reduce((s, b) => s + b.subtotal, 0);
     return { buckets: sorted, missing, grandTotal };
-  }, [order, offersByKey]);
+  }, [order, offersByKey, offersByName]);
 
   const exportCsv = () => {
     const lines = ["Fornitore;Prodotto;Unità;Quantità;Prezzo;Totale riga"];
@@ -266,12 +298,51 @@ export function OptimalCartClient({
         ))}
       </div>
 
-      <footer className="rounded-xl bg-surface-card border border-accent-green/30 p-4 flex items-center justify-between">
-        <span className="text-text-primary font-medium">Totale carrello ottimale</span>
-        <span className="text-2xl font-bold text-accent-green tabular-nums">€ {grandTotal.toFixed(2)}</span>
+      <footer className="rounded-xl bg-surface-card border border-accent-green/30 p-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-text-primary font-medium">Totale carrello ottimale</span>
+          <span className="text-2xl font-bold text-accent-green tabular-nums">€ {grandTotal.toFixed(2)}</span>
+        </div>
+        <button
+          onClick={addAllToCart}
+          disabled={addingToCart || buckets.length === 0}
+          className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-accent-green text-surface-base font-semibold disabled:opacity-50 print:hidden"
+        >
+          <Plus className="h-5 w-5" />
+          {addingToCart ? "Aggiungo..." : "Aggiungi al carrello e procedi all'ordine"}
+        </button>
       </footer>
     </div>
   );
+
+  function addAllToCart() {
+    if (buckets.length === 0) return;
+    setAddingToCart(true);
+    try {
+      let count = 0;
+      for (const b of buckets) {
+        for (const p of b.picks) {
+          addItem({
+            productId:    `catalog_${p.itemId}`,
+            supplierId:   b.supplier.id,
+            supplierName: b.supplier.supplier_name,
+            name:         `${p.productName} (${p.unit})`,
+            brand:        null,
+            unit:         "pz" as UnitType,
+            unitPrice:    p.price,
+            quantity:     p.qty,
+            imageUrl:     null,
+            minQuantity:  1,
+          });
+          count += 1;
+        }
+      }
+      toast.success(`${count} prodotti aggiunti al carrello`);
+      router.push("/carrello");
+    } finally {
+      setAddingToCart(false);
+    }
+  }
 }
 
 function SummaryStat({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
