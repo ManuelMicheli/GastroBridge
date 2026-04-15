@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
-import { MapPin, CreditCard, Settings, ChevronRight } from "lucide-react";
+import { MapPin, CreditCard, Settings, ChevronRight, Warehouse } from "lucide-react";
 
 export const metadata: Metadata = { title: "Impostazioni Fornitore" };
 
 export default function SupplierSettingsPage() {
   const sections = [
+    { href: "/supplier/impostazioni/sedi", label: "Sedi / Magazzini", description: "Gestisci i magazzini e la sede principale", icon: Warehouse },
     { href: "/supplier/impostazioni/zone", label: "Zone di Consegna", description: "Gestisci province e CAP di consegna", icon: MapPin },
     { href: "/supplier/impostazioni/abbonamento", label: "Abbonamento", description: "Piano e fatturazione", icon: CreditCard },
   ];
