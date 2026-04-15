@@ -27,6 +27,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
 import { cn } from "@/lib/utils/formatters";
 import { getExpiryInfo, getExpiryLabel } from "@/lib/supplier/stock/expiry-severity";
 import { pickItem, markPacked } from "@/lib/orders/supplier-actions";
@@ -73,6 +74,14 @@ export function PickingClient({ initial }: Props) {
 
   return (
     <div className="space-y-6 print:space-y-4">
+      <RealtimeRefresh
+        subscriptions={[
+          { table: "order_split_items", filter: `order_split_id=eq.${initial.splitId}` },
+          { table: "order_split_events", filter: `order_split_id=eq.${initial.splitId}` },
+          { table: "order_splits", filter: `id=eq.${initial.splitId}` },
+          { table: "deliveries", filter: `order_split_id=eq.${initial.splitId}` },
+        ]}
+      />
       {/* Toolbar — hidden in print */}
       <div className="flex items-center justify-between print:hidden">
         <Link

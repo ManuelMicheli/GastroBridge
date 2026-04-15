@@ -396,6 +396,7 @@ export function OrderDetailClient({
           { table: "order_split_items", filter: `order_split_id=eq.${splitId}` },
           { table: "order_split_events", filter: `order_split_id=eq.${splitId}` },
           { table: "order_splits", filter: `id=eq.${splitId}` },
+          { table: "deliveries", filter: `order_split_id=eq.${splitId}` },
         ]}
       />
 

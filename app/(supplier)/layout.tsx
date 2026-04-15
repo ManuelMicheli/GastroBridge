@@ -6,6 +6,7 @@ import type { NavItem } from "@/components/dashboard/sidebar/sidebar-item";
 import type { MobileNavItem } from "@/components/dashboard/mobile/dark-mobile-nav";
 import { isPhase1Enabled } from "@/lib/supplier/feature-flags";
 import { getStockAlertCounts } from "@/lib/supplier/stock/queries";
+import { getPendingOrdersCount } from "@/lib/supplier/orders/queries";
 import type { SupplierRole } from "@/types/database";
 
 type GatedNavItem = NavItem & {
@@ -66,6 +67,7 @@ function buildNavItems(
   currentRole: SupplierRole | null,
   phase1Enabled: boolean,
   stockBadge = 0,
+  ordersBadge = 0,
 ): NavItem[] {
   return BASE_NAV.filter((item) => {
     if (item.requiresPhase1 && !phase1Enabled) return false;
@@ -76,6 +78,9 @@ function buildNavItems(
   }).map(({ roles: _roles, requiresPhase1: _rp1, ...nav }) => {
     if (nav.href === "/supplier/magazzino" && stockBadge > 0) {
       return { ...nav, badge: stockBadge };
+    }
+    if (nav.href === "/supplier/ordini" && ordersBadge > 0) {
+      return { ...nav, badge: ordersBadge };
     }
     return nav;
   });
@@ -98,6 +103,7 @@ export default async function SupplierLayout({ children }: { children: ReactNode
   let currentRole: SupplierRole | null = null;
   let phase1Enabled = false;
   let stockBadge = 0;
+  let ordersBadge = 0;
 
   if (user) {
     const { data: member } = await supabase
@@ -129,10 +135,16 @@ export default async function SupplierLayout({ children }: { children: ReactNode
           stockBadge = 0;
         }
       }
+
+      try {
+        ordersBadge = await getPendingOrdersCount(member.supplier_id);
+      } catch {
+        ordersBadge = 0;
+      }
     }
   }
 
-  const navItems = buildNavItems(currentRole, phase1Enabled, stockBadge);
+  const navItems = buildNavItems(currentRole, phase1Enabled, stockBadge, ordersBadge);
 
   return (
     <SidebarProvider>

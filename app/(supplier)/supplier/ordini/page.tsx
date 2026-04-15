@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
-import { getWorkflowState } from "@/lib/orders/supplier-actions";
+import { getWorkflowState } from "@/lib/orders/workflow-state";
 import {
   SupplierOrdersClient,
   type SupplierOrderRow,
@@ -153,6 +153,7 @@ export default async function SupplierOrdersPage({
           subscriptions={[
             { table: "order_splits", filter: `supplier_id=eq.${supplierId}` },
             { table: "order_split_items" },
+            { table: "order_split_events" },
           ]}
         />
       )}
