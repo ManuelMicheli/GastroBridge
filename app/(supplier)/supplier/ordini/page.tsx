@@ -1,59 +1,178 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { formatCurrency, formatDate } from "@/lib/utils/formatters";
-import { ORDER_STATUS_LABELS } from "@/lib/utils/constants";
-import Link from "next/link";
+import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
+import { getWorkflowState } from "@/lib/orders/supplier-actions";
+import {
+  SupplierOrdersClient,
+  type SupplierOrderRow,
+} from "./orders-client";
 
 export const metadata: Metadata = { title: "Ordini Fornitore" };
 
-export default async function SupplierOrdersPage() {
+const PAGE_SIZE = 50;
+
+type SearchParams = Record<string, string | string[] | undefined>;
+
+function firstParam(v: string | string[] | undefined): string {
+  if (Array.isArray(v)) return v[0] ?? "";
+  return v ?? "";
+}
+
+type SplitJoined = {
+  id: string;
+  order_id: string;
+  subtotal: number;
+  status: string;
+  supplier_notes: string | null;
+  expected_delivery_date: string | null;
+  delivery_zone_id: string | null;
+  orders: {
+    id: string;
+    created_at: string;
+    restaurants: { name: string } | null;
+  } | null;
+};
+
+export default async function SupplierOrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
+  const sp = await searchParams;
+  const filterState = firstParam(sp.state);
+  const filterRestaurant = firstParam(sp.restaurant).trim();
+  const filterFrom = firstParam(sp.from);
+  const filterTo = firstParam(sp.to);
+
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const { data: supplier } = await supabase
-    .from("suppliers").select("id").eq("profile_id", user?.id ?? "").single<{ id: string }>();
+    .from("suppliers")
+    .select("id")
+    .eq("profile_id", user?.id ?? "")
+    .single<{ id: string }>();
 
-  const { data: splits } = await supabase
+  const supplierId = supplier?.id;
+
+  // Map workflow-state filter to raw enum status (cfr. WORKFLOW_STATE_MAP in supplier-actions).
+  const stateToRawStatus: Record<string, string> = {
+    submitted: "submitted",
+    pending_customer_confirmation: "submitted",
+    stock_conflict: "submitted",
+    confirmed: "confirmed",
+    preparing: "preparing",
+    packed: "preparing",
+    shipping: "shipping",
+    delivered: "delivered",
+    rejected: "cancelled",
+    cancelled: "cancelled",
+  };
+
+  let query = supabase
     .from("order_splits")
-    .select("id, order_id, subtotal, status, confirmed_at, orders(created_at, restaurants(name))")
-    .eq("supplier_id", supplier?.id ?? "none")
-    .order("order_id", { ascending: false })
-    .returns<Array<{ id: string; order_id: string; subtotal: number; status: string; confirmed_at: string | null; orders: { created_at: string; restaurants: { name: string } } | null }>>();
+    .select(
+      `id, order_id, subtotal, status, supplier_notes, expected_delivery_date, delivery_zone_id,
+       orders:order_id ( id, created_at, restaurants:restaurant_id ( name ) )`,
+    )
+    .eq("supplier_id", supplierId ?? "none")
+    .order("id", { ascending: false })
+    .limit(PAGE_SIZE);
+
+  if (filterState && stateToRawStatus[filterState]) {
+    query = query.eq("status", stateToRawStatus[filterState]);
+  }
+
+  const { data: rawSplits } = await query.returns<SplitJoined[]>();
+
+  // Carica nomi zona in un colpo solo.
+  const zoneIds = Array.from(
+    new Set(
+      (rawSplits ?? [])
+        .map((s) => s.delivery_zone_id)
+        .filter((z): z is string => !!z),
+    ),
+  );
+  const zoneMap = new Map<string, string>();
+  if (zoneIds.length > 0) {
+    const { data: zones } = await supabase
+      .from("delivery_zones")
+      .select("id, zone_name")
+      .in("id", zoneIds)
+      .returns<Array<{ id: string; zone_name: string | null }>>();
+    for (const z of zones ?? []) {
+      if (z.zone_name) zoneMap.set(z.id, z.zone_name);
+    }
+  }
+
+  const rows: SupplierOrderRow[] = (rawSplits ?? [])
+    .map((s) => {
+      const wf = getWorkflowState(s.status, s.supplier_notes) as string;
+      return {
+        splitId: s.id,
+        orderId: s.order_id,
+        orderNumber: null,
+        restaurantName: s.orders?.restaurants?.name ?? "Ristorante",
+        zoneName: s.delivery_zone_id ? zoneMap.get(s.delivery_zone_id) ?? null : null,
+        createdAt: s.orders?.created_at ?? "",
+        expectedDeliveryDate: s.expected_delivery_date,
+        subtotal: Number(s.subtotal || 0),
+        workflowState: wf,
+        rawStatus: s.status,
+      };
+    })
+    // Filtro post-fetch per stati workflow encoded in notes (es. packed → raw preparing).
+    .filter((r) => {
+      if (filterState && r.workflowState !== filterState) return false;
+      if (
+        filterRestaurant &&
+        !r.restaurantName.toLowerCase().includes(filterRestaurant.toLowerCase())
+      ) {
+        return false;
+      }
+      if (filterFrom) {
+        if (!r.createdAt || r.createdAt < filterFrom) return false;
+      }
+      if (filterTo) {
+        // include end-of-day su filterTo
+        const endOfDay = `${filterTo}T23:59:59`;
+        if (!r.createdAt || r.createdAt > endOfDay) return false;
+      }
+      return true;
+    })
+    // Ordina per data ricezione desc.
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold text-charcoal mb-6">Ordini Ricevuti</h1>
-      {(splits ?? []).length > 0 ? (
-        <div className="space-y-3">
-          {(splits ?? []).map((split) => {
-            const order = split.orders as unknown as { created_at: string; restaurants: { name: string } } | null;
-            return (
-              <Link key={split.id} href={`/supplier/ordini/${split.id}`}>
-                <Card className="hover:shadow-elevated transition-shadow">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold text-charcoal">{order?.restaurants?.name ?? "Ristorante"}</p>
-                      <p className="text-sm text-sage">{order ? formatDate(order.created_at) : ""}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-mono font-bold text-lg">{formatCurrency(split.subtotal)}</p>
-                      <Badge variant={split.status === "delivered" ? "success" : "info"}>
-                        {ORDER_STATUS_LABELS[split.status] ?? split.status}
-                      </Badge>
-                    </div>
-                  </div>
-                </Card>
-              </Link>
-            );
-          })}
-        </div>
-      ) : (
-        <Card className="text-center py-16">
-          <p className="text-sage">Nessun ordine ricevuto ancora.</p>
-        </Card>
+    <div className="space-y-6">
+      {supplierId && (
+        <RealtimeRefresh
+          subscriptions={[
+            { table: "order_splits", filter: `supplier_id=eq.${supplierId}` },
+            { table: "order_split_items" },
+          ]}
+        />
       )}
+
+      <div>
+        <h1 className="text-2xl font-bold text-text-primary">Ordini Ricevuti</h1>
+        <p className="text-sm text-text-secondary">
+          Gestisci gli ordini dei tuoi clienti con filtri stato, ristorante e periodo.
+        </p>
+      </div>
+
+      <SupplierOrdersClient
+        orders={rows}
+        filters={{
+          state: filterState,
+          restaurant: filterRestaurant,
+          from: filterFrom,
+          to: filterTo,
+        }}
+        total={rows.length}
+      />
     </div>
   );
 }
