@@ -1,6 +1,7 @@
 "use client";
 
-import type { Metadata } from "next";
+import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { useCart } from "@/lib/hooks/useCart";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,15 +9,41 @@ import { toast } from "@/components/ui/toast";
 import { formatCurrency, formatUnitShort } from "@/lib/utils/formatters";
 import { Trash2, Plus, Minus, ShoppingCart, AlertTriangle } from "lucide-react";
 import type { UnitType } from "@/types/database";
+import { createCatalogOrder } from "@/lib/orders/actions";
 
 export default function CartPage() {
+  const router = useRouter();
   const { items, removeItem, updateQuantity, clearCart, getCartBySupplier, totalAmount } = useCart();
+  const [pending, startTransition] = useTransition();
 
   const supplierGroups = getCartBySupplier();
 
-  async function handleCheckout() {
-    toast("Ordine inviato con successo!");
-    clearCart();
+  function handleCheckout() {
+    if (items.length === 0) return;
+
+    const summaryLines: string[] = [];
+    for (const g of supplierGroups) {
+      summaryLines.push(`--- ${g.supplierName} (${formatCurrency(g.subtotal)}) ---`);
+      for (const it of g.items) {
+        summaryLines.push(`  ${it.quantity}× ${it.name} @ ${formatCurrency(it.unitPrice)}`);
+      }
+    }
+
+    startTransition(async () => {
+      const res = await createCatalogOrder({
+        total:         totalAmount,
+        supplierCount: supplierGroups.length,
+        itemCount:     items.length,
+        summary:       summaryLines.join("\n"),
+      });
+      if (!res.ok) {
+        toast(`Errore: ${res.error}`);
+        return;
+      }
+      toast("Ordine inviato con successo!");
+      clearCart();
+      router.push("/dashboard");
+    });
   }
 
   if (items.length === 0) {
@@ -112,8 +139,8 @@ export default function CartPage() {
             <p className="text-xs text-sage mt-2 mb-4">
               L&apos;ordine verra suddiviso in {supplierGroups.length} consegne separate.
             </p>
-            <Button className="w-full" size="lg" onClick={handleCheckout}>
-              Conferma Ordine
+            <Button className="w-full" size="lg" onClick={handleCheckout} disabled={pending}>
+              {pending ? "Invio in corso..." : "Conferma Ordine"}
             </Button>
           </Card>
         </div>
