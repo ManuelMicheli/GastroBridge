@@ -44,6 +44,10 @@
   --color-accent-red-muted: rgba(239, 68, 68, 0.10);
   --color-accent-blue: #60A5FA;
   --color-accent-blue-muted: rgba(96, 165, 250, 0.10);
+  --color-accent-amber: #F59E0B;
+  --color-accent-amber-muted: rgba(245, 158, 11, 0.12);
+  --color-accent-yellow: #FACC15;
+  --color-accent-yellow-muted: rgba(250, 204, 21, 0.12);
 
   /* Fonts */
   --font-display: "DM Serif Display", Georgia, serif;
