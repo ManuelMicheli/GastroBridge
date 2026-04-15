@@ -600,6 +600,40 @@ export async function markPacked(splitId: string): Promise<SimpleResult> {
       memberId: member.id,
     });
 
+    // Task 13 (Plan 1D) — Auto-generate DDT appena le deliveries collegate
+    // allo split passano a `loaded` (side-effect di `finalize_split_packing_tx`).
+    // Se fallisce (permesso mancante, render PDF, DDT gia' emesso) logghiamo e
+    // proseguiamo: il DDT puo' essere generato manualmente dal libro DDT.
+    try {
+      const { data: loadedDeliveries } = await (supabase as any)
+        .from("deliveries")
+        .select("id, status")
+        .eq("order_split_id", splitId)
+        .eq("status", "loaded");
+      const rows = Array.isArray(loadedDeliveries) ? loadedDeliveries : [];
+      if (rows.length > 0) {
+        const { generateDdtForDelivery } = await import(
+          "@/lib/supplier/ddt/actions"
+        );
+        for (const row of rows) {
+          try {
+            const res = await generateDdtForDelivery(row.id as string);
+            if (!res.ok) {
+              console.warn(
+                "[markPacked] auto-DDT skipped",
+                row.id,
+                res.error,
+              );
+            }
+          } catch (inner) {
+            console.error("[markPacked] auto-DDT error", row.id, inner);
+          }
+        }
+      }
+    } catch (err) {
+      console.error("[markPacked] auto-DDT lookup failed", err);
+    }
+
     revalidateSupplierOrders(splitId);
     return { ok: true, data: { splitStatus: "packed" } };
   } catch (err) {

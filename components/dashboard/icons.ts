@@ -3,7 +3,7 @@ import {
   ClipboardList, BarChart3, Settings, Package,
   Users, Star, MapPin, Plus, Truck, HelpCircle,
   TrendingUp, TrendingDown, BookMarked, Tag, UserCog,
-  Warehouse,
+  Warehouse, FileText, Bell,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -28,6 +28,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Tag,
   UserCog,
   Warehouse,
+  FileText,
+  Bell,
 };
 
 export function resolveIcon(name: string): LucideIcon {
