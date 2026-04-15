@@ -1,0 +1,748 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+"use server";
+
+/**
+ * Plan 1C Task 7 — Server actions fornitore per il workflow ordini.
+ *
+ * Espone 4 azioni:
+ * - `acceptOrderLines`  — update bulk di `order_split_items` con decisione
+ *                         accept/modify/reject per ogni riga pending. Coordina
+ *                         la transizione dello split (confirmed / cancelled /
+ *                         pending_customer_confirmation) e la prenotazione
+ *                         stock FEFO via `reserveStockForSplit`.
+ * - `markPacked`        — transizione allo stato `packed` (imballato).
+ * - `confirmCustomerResponse` — endpoint usato dalla pagina ristorante
+ *                         `/ordini/[id]/conferma` per approvare o rifiutare
+ *                         modifiche quantità proposte dal fornitore.
+ * - `cancelOrderSplit`  — cancellazione fornitore, con rilascio eventuale
+ *                         prenotazione stock.
+ *
+ * Deviazioni note rispetto al plan:
+ * - L'enum `order_status` (migration 20260325000001) contiene solo
+ *   `draft|submitted|confirmed|preparing|shipping|delivered|cancelled`, senza
+ *   i valori `packed`, `rejected`, `pending_customer_confirmation`,
+ *   `stock_conflict`. Per non forzare una nuova migration dal Task 7, questi
+ *   sotto-stati di workflow sono encodati nel campo testuale
+ *   `order_splits.supplier_notes` con prefisso `[workflow:<stato>]` e lo stato
+ *   enum viene mappato al valore ammesso piu' vicino (vedi `WORKFLOW_STATE_MAP`).
+ *   Il valore reale di workflow resta leggibile tramite `getWorkflowState()`.
+ * - Il token HMAC per la pagina di conferma cliente e' stateless (HMAC-SHA256 su
+ *   `{splitId, exp}`, TTL 48h) firmato con `AUTH_SECRET` con fallback a
+ *   `SUPABASE_JWT_SECRET`. Il single-use via `consumed_at` non e' implementato
+ *   in questo task (opzionale in review — vedi plan §13.2).
+ */
+
+import { createHmac, timingSafeEqual } from "node:crypto";
+import { revalidatePath } from "next/cache";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import { createClient } from "@/lib/supabase/server";
+import { getActiveSupplierMember, requirePermission } from "@/lib/supplier/context";
+import { emitOrderEvent, emitSplitEvent } from "@/lib/orders/events";
+import {
+  reserveStockForSplit,
+  unreserveStockForSplit,
+  type ReservationConflict,
+} from "@/lib/supplier/orders/reservation";
+import { sendEmail } from "@/lib/notifications/email";
+
+// -----------------------------------------------------------------------------
+// Types
+// -----------------------------------------------------------------------------
+
+export type LineDecision =
+  | { lineId: string; action: "accept"; quantityAccepted?: number }
+  | { lineId: string; action: "modify"; quantityAccepted: number }
+  | { lineId: string; action: "reject"; rejectionReason?: string };
+
+export type WorkflowState =
+  | "confirmed"
+  | "cancelled"
+  | "rejected"
+  | "pending_customer_confirmation"
+  | "stock_conflict"
+  | "packed";
+
+export type AcceptOrderLinesInput = {
+  splitId: string;
+  decisions: LineDecision[];
+};
+
+export type AcceptOrderLinesResult =
+  | {
+      ok: true;
+      data: {
+        splitStatus: WorkflowState | "confirmed" | "cancelled";
+        conflicts?: ReservationConflict[];
+      };
+    }
+  | { ok: false; error: string };
+
+export type SimpleResult =
+  | { ok: true; data: { splitStatus: WorkflowState } }
+  | { ok: false; error: string };
+
+// -----------------------------------------------------------------------------
+// Workflow-state encoding (cfr. deviazione in docblock)
+// -----------------------------------------------------------------------------
+
+const WORKFLOW_TAG_RE = /\[workflow:([a-z_]+)\]/i;
+
+/** Mapping workflow-state → valore enum `order_status` piu' vicino. */
+const WORKFLOW_STATE_MAP: Record<WorkflowState, string> = {
+  confirmed: "confirmed",
+  cancelled: "cancelled",
+  rejected: "cancelled",
+  pending_customer_confirmation: "submitted",
+  stock_conflict: "submitted",
+  packed: "preparing",
+};
+
+function stripWorkflowTag(notes: string | null | undefined): string {
+  if (!notes) return "";
+  return notes.replace(WORKFLOW_TAG_RE, "").trim();
+}
+
+function encodeWorkflowNotes(
+  state: WorkflowState,
+  existingNotes: string | null | undefined,
+): string {
+  const base = stripWorkflowTag(existingNotes);
+  const tag = `[workflow:${state}]`;
+  return base ? `${tag} ${base}` : tag;
+}
+
+export function getWorkflowState(
+  splitStatus: string | null | undefined,
+  supplierNotes: string | null | undefined,
+): WorkflowState | string {
+  const m = supplierNotes?.match(WORKFLOW_TAG_RE);
+  if (m) return m[1] as WorkflowState;
+  return splitStatus ?? "submitted";
+}
+
+async function setSplitWorkflow(
+  supabase: SupabaseClient<any, any, any>,
+  splitId: string,
+  state: WorkflowState,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  // Fetch current notes to preserve text content.
+  const { data: current, error: readErr } = await (supabase as any)
+    .from("order_splits")
+    .select("supplier_notes")
+    .eq("id", splitId)
+    .maybeSingle();
+  if (readErr) return { ok: false, error: readErr.message };
+
+  const newStatus = WORKFLOW_STATE_MAP[state];
+  const newNotes = encodeWorkflowNotes(state, current?.supplier_notes);
+
+  const patch: Record<string, unknown> = {
+    status: newStatus,
+    supplier_notes: newNotes,
+  };
+  if (state === "confirmed") patch.confirmed_at = new Date().toISOString();
+
+  const { error } = await (supabase as any)
+    .from("order_splits")
+    .update(patch)
+    .eq("id", splitId);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+// -----------------------------------------------------------------------------
+// HMAC token
+// -----------------------------------------------------------------------------
+
+const CUSTOMER_CONFIRM_TTL_MS = 48 * 60 * 60 * 1000; // 48h
+
+function getHmacSecret(): string {
+  const secret =
+    process.env.AUTH_SECRET ??
+    process.env.NEXTAUTH_SECRET ??
+    process.env.SUPABASE_JWT_SECRET;
+  if (!secret) {
+    throw new Error(
+      "AUTH_SECRET mancante: impossibile firmare token di conferma cliente",
+    );
+  }
+  return secret;
+}
+
+function b64urlEncode(buf: Buffer): string {
+  return buf.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function b64urlDecode(s: string): Buffer {
+  const pad = s.length % 4 === 0 ? "" : "=".repeat(4 - (s.length % 4));
+  return Buffer.from(s.replace(/-/g, "+").replace(/_/g, "/") + pad, "base64");
+}
+
+export function signCustomerConfirmationToken(splitId: string, ttlMs = CUSTOMER_CONFIRM_TTL_MS): string {
+  const payload = { splitId, exp: Date.now() + ttlMs };
+  const payloadEncoded = b64urlEncode(Buffer.from(JSON.stringify(payload), "utf8"));
+  const sig = createHmac("sha256", getHmacSecret()).update(payloadEncoded).digest();
+  return `${payloadEncoded}.${b64urlEncode(sig)}`;
+}
+
+export function verifyCustomerConfirmationToken(
+  token: string,
+  expectedSplitId: string,
+): { ok: true } | { ok: false; error: string } {
+  try {
+    const [payloadEncoded, sigEncoded] = token.split(".");
+    if (!payloadEncoded || !sigEncoded) return { ok: false, error: "Token malformato" };
+
+    const expectedSig = createHmac("sha256", getHmacSecret()).update(payloadEncoded).digest();
+    const actualSig = b64urlDecode(sigEncoded);
+    if (expectedSig.length !== actualSig.length) {
+      return { ok: false, error: "Firma token non valida" };
+    }
+    if (!timingSafeEqual(expectedSig, actualSig)) {
+      return { ok: false, error: "Firma token non valida" };
+    }
+
+    const payload = JSON.parse(b64urlDecode(payloadEncoded).toString("utf8")) as {
+      splitId?: string;
+      exp?: number;
+    };
+    if (!payload.splitId || payload.splitId !== expectedSplitId) {
+      return { ok: false, error: "Token non valido per questo ordine" };
+    }
+    if (!payload.exp || payload.exp < Date.now()) {
+      return { ok: false, error: "Token scaduto" };
+    }
+    return { ok: true };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Verifica token fallita",
+    };
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Helpers
+// -----------------------------------------------------------------------------
+
+function errMsg(err: unknown, fallback: string): string {
+  if (err instanceof Error && err.message) return err.message;
+  return fallback;
+}
+
+async function loadSplitForSupplier(
+  supabase: SupabaseClient<any, any, any>,
+  splitId: string,
+): Promise<
+  | {
+      ok: true;
+      split: {
+        id: string;
+        supplier_id: string;
+        order_id: string;
+        status: string;
+        supplier_notes: string | null;
+      };
+    }
+  | { ok: false; error: string }
+> {
+  const { data, error } = await (supabase as any)
+    .from("order_splits")
+    .select("id, supplier_id, order_id, status, supplier_notes")
+    .eq("id", splitId)
+    .maybeSingle();
+  if (error) return { ok: false, error: error.message };
+  if (!data) return { ok: false, error: "Split ordine non trovato" };
+  return { ok: true, split: data };
+}
+
+function revalidateSupplierOrders(splitId: string) {
+  revalidatePath("/supplier/ordini");
+  revalidatePath(`/supplier/ordini/${splitId}`);
+  revalidatePath("/ordini");
+}
+
+// -----------------------------------------------------------------------------
+// acceptOrderLines
+// -----------------------------------------------------------------------------
+
+/**
+ * Applica le decisioni del fornitore sulle righe di uno split. Le decisioni
+ * devono coprire tutte le righe `pending`: se ne manca una l'operazione viene
+ * rifiutata (difensivo, evita transizioni parziali).
+ *
+ * Esiti globali:
+ *  - tutte `accept` → split `confirmed` + `reserveStockForSplit` (se conflict
+ *    → workflow `stock_conflict`, evento `stock_conflict`);
+ *  - almeno una `modify` o `reject` parziale → workflow
+ *    `pending_customer_confirmation`, email al ristorante con link HMAC;
+ *  - tutte `reject` → workflow `rejected`, niente prenotazione.
+ */
+export async function acceptOrderLines(
+  input: AcceptOrderLinesInput,
+): Promise<AcceptOrderLinesResult> {
+  const { splitId, decisions } = input;
+
+  if (!splitId) return { ok: false, error: "splitId mancante" };
+  if (!Array.isArray(decisions) || decisions.length === 0) {
+    return { ok: false, error: "Nessuna decisione fornita" };
+  }
+
+  try {
+    const supabase = await createClient();
+
+    // 1. Load split + supplier id.
+    const splitRes = await loadSplitForSupplier(supabase, splitId);
+    if (!splitRes.ok) return splitRes;
+    const split = splitRes.split;
+
+    // 2. Auth + permission.
+    await requirePermission(split.supplier_id, "order.accept_line");
+    const member = (await getActiveSupplierMember(split.supplier_id)) as
+      | { id: string; role: string; supplier_id: string }
+      | null;
+    if (!member) return { ok: false, error: "Membro fornitore non trovato" };
+
+    // 3. Carica righe pending dello split.
+    const { data: lines, error: linesErr } = await (supabase as any)
+      .from("order_split_items")
+      .select("id, status, quantity_requested")
+      .eq("order_split_id", splitId);
+    if (linesErr) return { ok: false, error: linesErr.message };
+
+    const pendingIds = new Set(
+      (lines as Array<{ id: string; status: string }>).filter((l) => l.status === "pending").map((l) => l.id),
+    );
+    if (pendingIds.size === 0) {
+      return { ok: false, error: "Nessuna riga in attesa di accettazione" };
+    }
+
+    // 4. Valida copertura: le decisioni coprono tutte e sole le righe pending.
+    const decisionById = new Map<string, LineDecision>();
+    for (const d of decisions) {
+      if (decisionById.has(d.lineId)) {
+        return { ok: false, error: `Decisione duplicata per la riga ${d.lineId}` };
+      }
+      decisionById.set(d.lineId, d);
+    }
+    for (const pid of pendingIds) {
+      if (!decisionById.has(pid)) {
+        return {
+          ok: false,
+          error: "Devi decidere per tutte le righe in attesa prima di confermare",
+        };
+      }
+    }
+    for (const d of decisions) {
+      if (!pendingIds.has(d.lineId)) {
+        return {
+          ok: false,
+          error: `Riga ${d.lineId} non e' in stato pending`,
+        };
+      }
+    }
+
+    // 5. Valida quantita' per modify.
+    const linesById = new Map(
+      (lines as Array<{ id: string; quantity_requested: number }>).map((l) => [l.id, l]),
+    );
+    for (const d of decisions) {
+      if (d.action === "modify") {
+        const ln = linesById.get(d.lineId);
+        if (!ln) return { ok: false, error: `Riga ${d.lineId} non trovata` };
+        if (!(d.quantityAccepted > 0)) {
+          return { ok: false, error: "La quantita' modificata deve essere positiva" };
+        }
+        if (d.quantityAccepted > ln.quantity_requested * 2) {
+          return {
+            ok: false,
+            error: "Quantita' modificata troppo elevata rispetto alla richiesta",
+          };
+        }
+      }
+    }
+
+    // 6. Esegui gli UPDATE per ogni decisione.
+    const counts = { accept: 0, modify: 0, reject: 0 };
+    for (const d of decisions) {
+      const ln = linesById.get(d.lineId)!;
+      let patch: Record<string, unknown>;
+
+      if (d.action === "accept") {
+        patch = {
+          status: "accepted",
+          quantity_accepted: ln.quantity_requested,
+          rejection_reason: null,
+        };
+        counts.accept++;
+      } else if (d.action === "modify") {
+        patch = {
+          status: "modified",
+          quantity_accepted: d.quantityAccepted,
+          rejection_reason: null,
+        };
+        counts.modify++;
+      } else {
+        patch = {
+          status: "rejected",
+          quantity_accepted: 0,
+          rejection_reason: d.rejectionReason ?? null,
+        };
+        counts.reject++;
+      }
+
+      const { error: upErr } = await (supabase as any)
+        .from("order_split_items")
+        .update(patch)
+        .eq("id", d.lineId);
+      if (upErr) {
+        return { ok: false, error: `Aggiornamento riga fallito: ${upErr.message}` };
+      }
+    }
+
+    // 7. Determina esito globale.
+    const totalDecisions = decisions.length;
+
+    // Caso A: tutte accepted → confirmed + reserve.
+    if (counts.accept === totalDecisions) {
+      const reserve = await reserveStockForSplit(split.supplier_id, splitId);
+      if (!reserve.ok && "conflicts" in reserve && reserve.conflicts) {
+        // Conflict stock: segna stock_conflict.
+        await setSplitWorkflow(supabase, splitId, "stock_conflict");
+        await emitSplitEvent(supabase, {
+          splitId,
+          eventType: "stock_conflict",
+          memberId: member.id,
+          metadata: { conflicts: reserve.conflicts },
+        });
+        revalidateSupplierOrders(splitId);
+        return {
+          ok: true,
+          data: { splitStatus: "stock_conflict", conflicts: reserve.conflicts },
+        };
+      }
+      if (!reserve.ok) {
+        return { ok: false, error: reserve.error ?? "Errore prenotazione stock" };
+      }
+      const wf = await setSplitWorkflow(supabase, splitId, "confirmed");
+      if (!wf.ok) return wf;
+      await emitOrderEvent(supabase, {
+        splitId,
+        eventType: "accepted",
+        memberId: member.id,
+        supplierId: split.supplier_id,
+        notificationPayload: {},
+      });
+      revalidateSupplierOrders(splitId);
+      return { ok: true, data: { splitStatus: "confirmed" } };
+    }
+
+    // Caso B: tutte rejected → rejected, niente prenotazione.
+    if (counts.reject === totalDecisions) {
+      const wf = await setSplitWorkflow(supabase, splitId, "rejected");
+      if (!wf.ok) return wf;
+      await emitOrderEvent(supabase, {
+        splitId,
+        eventType: "rejected",
+        memberId: member.id,
+        supplierId: split.supplier_id,
+      });
+      revalidateSupplierOrders(splitId);
+      return { ok: true, data: { splitStatus: "rejected" as WorkflowState } };
+    }
+
+    // Caso C: mix modify/reject/accept → pending_customer_confirmation.
+    const wf = await setSplitWorkflow(
+      supabase,
+      splitId,
+      "pending_customer_confirmation",
+    );
+    if (!wf.ok) return wf;
+    await emitSplitEvent(supabase, {
+      splitId,
+      eventType: "partially_accepted",
+      memberId: member.id,
+      metadata: { accept: counts.accept, modify: counts.modify, reject: counts.reject },
+    });
+
+    // Email al ristorante con link HMAC.
+    await sendCustomerConfirmationEmail(supabase, splitId).catch((err) => {
+      console.error("[supplier-actions] customer confirmation email failed", err);
+    });
+
+    revalidateSupplierOrders(splitId);
+    return {
+      ok: true,
+      data: { splitStatus: "pending_customer_confirmation" as WorkflowState },
+    };
+  } catch (err) {
+    return { ok: false, error: errMsg(err, "Errore accettazione ordine") };
+  }
+}
+
+// -----------------------------------------------------------------------------
+// markPacked
+// -----------------------------------------------------------------------------
+
+/**
+ * Imposta lo split a workflow `packed` (imballato). Richiede che lo split sia
+ * gia' `confirmed`. Permesso: `order.accept_line` (stesso perimetro: sales +
+ * admin possono segnare come imballato; il plan non distingue ulteriormente a
+ * questo stadio e il permesso dedicato `order.pick` sara' introdotto col
+ * picking in Task 11).
+ */
+export async function markPacked(splitId: string): Promise<SimpleResult> {
+  if (!splitId) return { ok: false, error: "splitId mancante" };
+
+  try {
+    const supabase = await createClient();
+
+    const splitRes = await loadSplitForSupplier(supabase, splitId);
+    if (!splitRes.ok) return splitRes;
+    const split = splitRes.split;
+
+    await requirePermission(split.supplier_id, "order.accept_line");
+    const member = (await getActiveSupplierMember(split.supplier_id)) as
+      | { id: string; role: string; supplier_id: string }
+      | null;
+    if (!member) return { ok: false, error: "Membro fornitore non trovato" };
+
+    const currentState = getWorkflowState(split.status, split.supplier_notes);
+    if (currentState !== "confirmed" && currentState !== "preparing") {
+      return {
+        ok: false,
+        error: "Lo split deve essere confermato prima di essere imballato",
+      };
+    }
+
+    const wf = await setSplitWorkflow(supabase, splitId, "packed");
+    if (!wf.ok) return wf;
+
+    await emitSplitEvent(supabase, {
+      splitId,
+      eventType: "packed",
+      memberId: member.id,
+    });
+
+    revalidateSupplierOrders(splitId);
+    return { ok: true, data: { splitStatus: "packed" } };
+  } catch (err) {
+    return { ok: false, error: errMsg(err, "Errore aggiornamento stato") };
+  }
+}
+
+// -----------------------------------------------------------------------------
+// confirmCustomerResponse
+// -----------------------------------------------------------------------------
+
+/**
+ * Endpoint usato dalla pagina cliente `/ordini/[id]/conferma` per approvare o
+ * rifiutare le modifiche fornitore (stato `pending_customer_confirmation`).
+ *
+ * Il token HMAC viene verificato stateless (vedi `verifyCustomerConfirmationToken`).
+ * Non verifica l'autenticazione utente: chi ha il link email ha diritto di
+ * rispondere (use case B2B). Se review richiede hardening, aggiungere controllo
+ * `restaurant.profile_id === user.id` e single-use via tabella token.
+ */
+export async function confirmCustomerResponse(
+  splitId: string,
+  token: string,
+  accepted: boolean,
+): Promise<SimpleResult> {
+  if (!splitId || !token) {
+    return { ok: false, error: "Parametri mancanti" };
+  }
+
+  try {
+    const verify = verifyCustomerConfirmationToken(token, splitId);
+    if (!verify.ok) return { ok: false, error: verify.error };
+
+    const supabase = await createClient();
+
+    const splitRes = await loadSplitForSupplier(supabase, splitId);
+    if (!splitRes.ok) return splitRes;
+    const split = splitRes.split;
+
+    const currentState = getWorkflowState(split.status, split.supplier_notes);
+    if (currentState !== "pending_customer_confirmation") {
+      return {
+        ok: false,
+        error: "Lo split non e' in attesa di conferma cliente",
+      };
+    }
+
+    if (accepted) {
+      const reserve = await reserveStockForSplit(split.supplier_id, splitId);
+      if (!reserve.ok && "conflicts" in reserve && reserve.conflicts) {
+        await setSplitWorkflow(supabase, splitId, "stock_conflict");
+        await emitSplitEvent(supabase, {
+          splitId,
+          eventType: "stock_conflict",
+          metadata: { conflicts: reserve.conflicts },
+        });
+        revalidateSupplierOrders(splitId);
+        return { ok: true, data: { splitStatus: "stock_conflict" } };
+      }
+      if (!reserve.ok) return { ok: false, error: reserve.error ?? "Errore prenotazione stock" };
+
+      const wf = await setSplitWorkflow(supabase, splitId, "confirmed");
+      if (!wf.ok) return wf;
+
+      await emitOrderEvent(supabase, {
+        splitId,
+        eventType: "accepted",
+        supplierId: split.supplier_id,
+        note: "Conferma ricevuta dal ristorante",
+      });
+      revalidateSupplierOrders(splitId);
+      return { ok: true, data: { splitStatus: "confirmed" } };
+    }
+
+    // Rifiuto cliente: cancellazione.
+    const wf = await setSplitWorkflow(supabase, splitId, "cancelled");
+    if (!wf.ok) return wf;
+
+    await emitSplitEvent(supabase, {
+      splitId,
+      eventType: "canceled",
+      note: "Rifiuto ricevuto dal ristorante",
+    });
+    revalidateSupplierOrders(splitId);
+    return { ok: true, data: { splitStatus: "cancelled" } };
+  } catch (err) {
+    return { ok: false, error: errMsg(err, "Errore conferma cliente") };
+  }
+}
+
+// -----------------------------------------------------------------------------
+// cancelOrderSplit
+// -----------------------------------------------------------------------------
+
+/**
+ * Cancella uno split lato fornitore. Se lo split era `confirmed` (stock
+ * prenotato), rilascia la prenotazione via `unreserveStockForSplit` prima di
+ * cambiare lo stato.
+ */
+export async function cancelOrderSplit(splitId: string): Promise<SimpleResult> {
+  if (!splitId) return { ok: false, error: "splitId mancante" };
+
+  try {
+    const supabase = await createClient();
+
+    const splitRes = await loadSplitForSupplier(supabase, splitId);
+    if (!splitRes.ok) return splitRes;
+    const split = splitRes.split;
+
+    await requirePermission(split.supplier_id, "order.accept_line");
+    const member = (await getActiveSupplierMember(split.supplier_id)) as
+      | { id: string; role: string; supplier_id: string }
+      | null;
+    if (!member) return { ok: false, error: "Membro fornitore non trovato" };
+
+    const currentState = getWorkflowState(split.status, split.supplier_notes);
+    if (currentState === "cancelled" || currentState === "rejected") {
+      return { ok: false, error: "Lo split e' gia' cancellato" };
+    }
+    if (currentState === "delivered") {
+      return { ok: false, error: "Uno split gia' consegnato non puo' essere cancellato" };
+    }
+
+    // Se era confermato o packed → stock era prenotato, rilascialo.
+    if (
+      currentState === "confirmed" ||
+      currentState === "preparing" ||
+      currentState === "packed"
+    ) {
+      const un = await unreserveStockForSplit(split.supplier_id, splitId);
+      if (!un.ok) {
+        return { ok: false, error: `Rilascio prenotazione fallito: ${un.error}` };
+      }
+    }
+
+    const wf = await setSplitWorkflow(supabase, splitId, "cancelled");
+    if (!wf.ok) return wf;
+
+    await emitSplitEvent(supabase, {
+      splitId,
+      eventType: "canceled",
+      memberId: member.id,
+    });
+
+    revalidateSupplierOrders(splitId);
+    return { ok: true, data: { splitStatus: "cancelled" as WorkflowState } };
+  } catch (err) {
+    return { ok: false, error: errMsg(err, "Errore cancellazione split") };
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Customer confirmation email (direct, no dispatcher)
+// -----------------------------------------------------------------------------
+
+async function sendCustomerConfirmationEmail(
+  supabase: SupabaseClient<any, any, any>,
+  splitId: string,
+): Promise<void> {
+  // Fetch order → restaurant → profile email.
+  const { data: joined } = await (supabase as any)
+    .from("order_splits")
+    .select(
+      "id, order_id, orders:order_id ( restaurant_id, restaurants:restaurant_id ( profile_id, name ) )",
+    )
+    .eq("id", splitId)
+    .maybeSingle();
+
+  if (!joined) return;
+  const profileId: string | undefined =
+    joined?.orders?.restaurants?.profile_id ?? undefined;
+  const restaurantName: string =
+    joined?.orders?.restaurants?.name ?? "Ristorante";
+  if (!profileId) return;
+
+  // Recupera email via admin (profiles non espone email; leggiamo da auth).
+  let email: string | undefined;
+  try {
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const admin = createAdminClient();
+    const { data: authUser } = await (admin as any).auth.admin.getUserById(profileId);
+    email = authUser?.user?.email;
+  } catch (err) {
+    console.warn("[supplier-actions] admin email lookup failed", err);
+  }
+  if (!email) return;
+
+  const token = signCustomerConfirmationToken(splitId);
+  const baseUrl =
+    process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? "";
+  const link = `${baseUrl}/ordini/${splitId}/conferma?token=${encodeURIComponent(token)}`;
+  const shortId = splitId.slice(0, 8);
+
+  const title = `Conferma richiesta per l'ordine #${shortId}`;
+  const intro = `Il fornitore ha proposto modifiche alle quantita' del tuo ordine. Per completare la conferma apri il link qui sotto entro 48 ore.`;
+
+  const html = `<!doctype html>
+<html lang="it"><head><meta charset="utf-8"><title>${title}</title></head>
+<body style="margin:0;padding:0;background:#f6f7f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f7f8;padding:24px 0;">
+    <tr><td align="center">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+        <tr><td style="background:#16a34a;padding:16px 24px;color:#fff;font-weight:600;font-size:16px;">GastroBridge</td></tr>
+        <tr><td style="padding:24px;color:#111;line-height:1.5;font-size:14px;">
+          <h1 style="margin:0 0 12px;font-size:18px;">${title}</h1>
+          <p>Ciao ${restaurantName},</p>
+          <p>${intro}</p>
+          <p style="margin:24px 0 0;">
+            <a href="${link}" style="background:#16a34a;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;display:inline-block;font-weight:500;">Apri conferma ordine</a>
+          </p>
+          <p style="margin-top:16px;color:#6b7280;font-size:12px;">Se non riconosci questa richiesta, ignora questo messaggio.</p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`;
+
+  const text = `${title}\n\n${intro}\n\nApri: ${link}\n`;
+
+  await sendEmail({ to: email, subject: title, html, text });
+}
