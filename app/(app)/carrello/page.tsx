@@ -10,6 +10,8 @@ import { formatCurrency, formatUnitShort } from "@/lib/utils/formatters";
 import { Trash2, Plus, Minus, ShoppingCart, AlertTriangle } from "lucide-react";
 import type { UnitType } from "@/types/database";
 import { createCatalogOrder } from "@/lib/orders/actions";
+import { submitOrder } from "@/lib/orders/submit";
+import { createClient } from "@/lib/supabase/client";
 
 export default function CartPage() {
   const router = useRouter();
@@ -18,8 +20,38 @@ export default function CartPage() {
 
   const supplierGroups = getCartBySupplier();
 
+  /**
+   * Il carrello può contenere due tipi di righe:
+   *  - real product: `productId` è un UUID di `products` → submitOrder (RPC
+   *    atomica con order_splits / order_split_items).
+   *  - catalog item: `productId` ha prefisso `catalog_<id>` (cataloghi importati
+   *    da PDF/Excel) → createCatalogOrder (header-only, senza FK su products).
+   *
+   * Se il carrello mischia i due tipi, inviamo prima l'ordine marketplace e
+   * poi l'ordine catalog come fallback.
+   */
+  function isCatalogItem(productId: string): boolean {
+    return productId.startsWith("catalog_");
+  }
+
+  async function getCurrentRestaurantId(): Promise<string | null> {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    const { data } = await supabase
+      .from("restaurants")
+      .select("id")
+      .eq("profile_id", user.id)
+      .limit(1)
+      .maybeSingle<{ id: string }>();
+    return data?.id ?? null;
+  }
+
   function handleCheckout() {
     if (items.length === 0) return;
+
+    const realItems    = items.filter((it) => !isCatalogItem(it.productId));
+    const catalogItems = items.filter((it) => isCatalogItem(it.productId));
 
     const summaryLines: string[] = [];
     for (const g of supplierGroups) {
@@ -30,18 +62,67 @@ export default function CartPage() {
     }
 
     startTransition(async () => {
-      const res = await createCatalogOrder({
-        total:         totalAmount,
-        supplierCount: supplierGroups.length,
-        itemCount:     items.length,
-        summary:       summaryLines.join("\n"),
-      });
-      if (!res.ok) {
-        toast(`Errore: ${res.error}`);
+      let anyOk = false;
+
+      // 1. Marketplace items via submitOrder (RPC atomica).
+      if (realItems.length > 0) {
+        const restaurantId = await getCurrentRestaurantId();
+        if (!restaurantId) {
+          toast("Errore: Ristorante non trovato");
+          return;
+        }
+        const res = await submitOrder({
+          restaurantId,
+          items: realItems.map((it) => ({
+            productId:  it.productId,
+            supplierId: it.supplierId,
+            quantity:   it.quantity,
+            unitPrice:  it.unitPrice,
+          })),
+          notes: `Ordine da carrello (${realItems.length} righe)`,
+        });
+        if (!res.ok) {
+          toast(`Errore ordine: ${res.error}`);
+          return;
+        }
+        anyOk = true;
+      }
+
+      // 2. Catalog items via createCatalogOrder (legacy, header-only).
+      if (catalogItems.length > 0) {
+        const catalogGroups = supplierGroups.filter((g) =>
+          g.items.some((it) => isCatalogItem(it.productId))
+        );
+        const catalogIds = catalogGroups.map((g) => g.supplierId);
+        const catalogTotal = catalogItems.reduce(
+          (s, it) => s + it.unitPrice * it.quantity, 0);
+
+        const res = await createCatalogOrder({
+          total:         catalogTotal,
+          supplierCount: catalogGroups.length,
+          itemCount:     catalogItems.length,
+          summary:       summaryLines.join("\n"),
+          catalogIds,
+        });
+        if (!res.ok) {
+          toast(`Errore ordine catalogo: ${res.error}`);
+          return;
+        }
+        anyOk = true;
+      }
+
+      if (!anyOk) {
+        toast("Errore: nessun ordine inviato");
         return;
       }
+
       toast("Ordine inviato con successo!");
       clearCart();
+      try {
+        localStorage.removeItem("gb.typical-order");
+      } catch {
+        /* ignore */
+      }
       router.push("/dashboard");
     });
   }
