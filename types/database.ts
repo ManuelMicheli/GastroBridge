@@ -64,6 +64,13 @@ export type CertificationType =
   | "MSC"
   | "ASC"
   | "FAIRTRADE";
+export type PresetProfile =
+  | "custom"
+  | "stellato"
+  | "trattoria"
+  | "pizzeria"
+  | "bar"
+  | "mensa";
 
 export interface Database {
   public: {
@@ -672,6 +679,100 @@ export interface Database {
           updated_at?: string;
         };
       };
+      restaurant_preferences: {
+        Row: {
+          id: string;
+          restaurant_id: string;
+          min_order_max_eur: number | null;
+          lead_time_max_days: number | null;
+          required_certifications: CertificationType[];
+          blocked_supplier_ids: string[];
+          max_distance_km: number | null;
+          price_weight: number;
+          quality_weight: number;
+          delivery_weight: number;
+          prefer_bio: boolean;
+          prefer_km0: boolean;
+          preset_profile: PresetProfile;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          restaurant_id: string;
+          min_order_max_eur?: number | null;
+          lead_time_max_days?: number | null;
+          required_certifications?: CertificationType[];
+          blocked_supplier_ids?: string[];
+          max_distance_km?: number | null;
+          price_weight?: number;
+          quality_weight?: number;
+          delivery_weight?: number;
+          prefer_bio?: boolean;
+          prefer_km0?: boolean;
+          preset_profile?: PresetProfile;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          restaurant_id?: string;
+          min_order_max_eur?: number | null;
+          lead_time_max_days?: number | null;
+          required_certifications?: CertificationType[];
+          blocked_supplier_ids?: string[];
+          max_distance_km?: number | null;
+          price_weight?: number;
+          quality_weight?: number;
+          delivery_weight?: number;
+          prefer_bio?: boolean;
+          prefer_km0?: boolean;
+          preset_profile?: PresetProfile;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      restaurant_category_preferences: {
+        Row: {
+          id: string;
+          restaurant_id: string;
+          macro_category: CategoryMacro;
+          min_quality_tier: QualityTier | null;
+          lead_time_max_days: number | null;
+          required_certifications: CertificationType[];
+          price_weight: number | null;
+          quality_weight: number | null;
+          delivery_weight: number | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          restaurant_id: string;
+          macro_category: CategoryMacro;
+          min_quality_tier?: QualityTier | null;
+          lead_time_max_days?: number | null;
+          required_certifications?: CertificationType[];
+          price_weight?: number | null;
+          quality_weight?: number | null;
+          delivery_weight?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          restaurant_id?: string;
+          macro_category?: CategoryMacro;
+          min_quality_tier?: QualityTier | null;
+          lead_time_max_days?: number | null;
+          required_certifications?: CertificationType[];
+          price_weight?: number | null;
+          quality_weight?: number | null;
+          delivery_weight?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Functions: {
       get_user_role: {
@@ -700,6 +801,7 @@ export interface Database {
       quality_tier: QualityTier;
       category_macro: CategoryMacro;
       certification_type: CertificationType;
+      preset_profile: PresetProfile;
     };
   };
 }
