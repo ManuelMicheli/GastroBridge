@@ -2,6 +2,9 @@
   "name": "gastrobridge",
   "version": "0.1.0",
   "private": true,
+  "overrides": {
+    "@react-pdf/image": "3.0.4"
+  },
   "scripts": {
     "dev": "set NODE_OPTIONS=--max-http-header-size=65536&& next dev --turbopack",
     "build": "next build",
@@ -13,10 +16,12 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@gsap/react": "^2.1.2",
     "@react-email/components": "^1.0.10",
+    "@react-pdf/renderer": "^4.5.0",
     "@stripe/stripe-js": "^8.11.0",
     "@supabase/ssr": "^0.9.0",
     "@supabase/supabase-js": "^2.100.0",
     "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "gsap": "^3.14.2",
     "lucide-react": "^1.6.0",
     "meilisearch": "^0.56.0",
@@ -27,7 +32,9 @@
     "posthog-node": "^5.28.5",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "recharts": "^3.8.1",
     "resend": "^6.9.4",
+    "signature_pad": "^5.1.3",
     "sonner": "^2.0.7",
     "stripe": "^20.4.1",
     "tailwind-merge": "^3.5.0",
