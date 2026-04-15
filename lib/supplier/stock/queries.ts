@@ -310,3 +310,51 @@ export async function listAtRiskLots(
   if (error) throw new Error(error.message);
   return (data ?? []) as AtRiskLotRow[];
 }
+
+/**
+ * Conta prodotti sotto-scorta e lotti in scadenza entro `withinDays` giorni
+ * per il supplier corrente. Swallow errors: in caso di fallimento restituisce
+ * zeri in modo che la dashboard non vada in errore hard. Usata dal widget
+ * "Alert magazzino" e dal badge in sidebar.
+ */
+export async function getStockAlertCounts(
+  supplierId: string,
+  withinDays = 7,
+): Promise<{ lowStockCount: number; expiringCount: number }> {
+  try {
+    await assertReadPermission(supplierId);
+  } catch {
+    return { lowStockCount: 0, expiringCount: 0 };
+  }
+  const supabase = await createClient();
+
+  // Low stock: aggrega per product_id sommando quantita disponibile, confronta
+  // contro la soglia di prodotto.
+  let lowStockCount = 0;
+  try {
+    const overview = await getStockOverview(supplierId);
+    lowStockCount = overview.filter((r) => r.is_low).length;
+  } catch {
+    lowStockCount = 0;
+  }
+
+  // Expiring: conta distinct lot_id nella view mv_stock_at_risk con
+  // days_to_expiry <= withinDays.
+  let expiringCount = 0;
+  try {
+    const { data } = await (supabase as any)
+      .from("mv_stock_at_risk")
+      .select("lot_id, days_to_expiry")
+      .eq("supplier_id", supplierId)
+      .lte("days_to_expiry", withinDays);
+    if (Array.isArray(data)) {
+      expiringCount = new Set(
+        (data as Array<{ lot_id: string }>).map((r) => r.lot_id),
+      ).size;
+    }
+  } catch {
+    expiringCount = 0;
+  }
+
+  return { lowStockCount, expiringCount };
+}

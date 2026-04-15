@@ -1,6 +1,12 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import { Inbox } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { SupplierDashboard } from "@/components/dashboard/supplier/supplier-dashboard";
+import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
+import { getPendingRequestsForSupplier } from "@/lib/relationships/queries";
+import { getStockAlertCounts } from "@/lib/supplier/stock/queries";
+import { StockAlertsWidget } from "@/components/supplier/inventory/stock-alerts-widget";
 
 export const metadata: Metadata = { title: "Dashboard Fornitore — GastroBridge" };
 
@@ -193,21 +199,59 @@ export default async function SupplierDashboardPage() {
     .slice(0, 5)
     .map(([name, data]) => ({ name, ...data }));
 
+  const pendingRequests = await getPendingRequestsForSupplier();
+  const stockAlerts = await getStockAlertCounts(supplierId, 7);
+
   return (
-    <SupplierDashboard
-      companyName={profile?.company_name || "Fornitore"}
-      kpi={{
-        ordersToday: todayFiltered.length,
-        monthlyRevenue,
-        prevRevenue,
-        activeClients: clientSet.size,
-        activeProducts: products.length,
-      }}
-      revenueSparkline={Object.values(sparklineMap)}
-      chartData={chartData}
-      recentOrders={recentOrders}
-      topProducts={topProducts}
-      topClients={topClients}
-    />
+    <>
+      <RealtimeRefresh
+        subscriptions={[
+          { table: "order_splits", filter: `supplier_id=eq.${supplierId}` },
+          { table: "products", filter: `supplier_id=eq.${supplierId}` },
+          { table: "restaurant_suppliers", filter: `supplier_id=eq.${supplierId}` },
+        ]}
+      />
+      {pendingRequests.length > 0 && (
+        <Link
+          href="/supplier/clienti?tab=pending"
+          className="block mx-6 mt-6 rounded-xl border border-terracotta/40 bg-terracotta-light/20 px-4 py-3 hover:bg-terracotta-light/30 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <Inbox className="h-5 w-5 text-terracotta" />
+            <div className="flex-1">
+              <p className="font-semibold text-charcoal text-sm">
+                Hai {pendingRequests.length} richiest
+                {pendingRequests.length === 1 ? "a" : "e"} di collegamento in sospeso
+              </p>
+              <p className="text-xs text-sage">
+                Ristoratori interessati a lavorare con te. Rispondi dalla sezione Clienti.
+              </p>
+            </div>
+            <span className="text-sm font-semibold text-terracotta">Vai →</span>
+          </div>
+        </Link>
+      )}
+      <div className="mx-6 mt-6">
+        <StockAlertsWidget
+          lowStockCount={stockAlerts.lowStockCount}
+          expiringCount={stockAlerts.expiringCount}
+        />
+      </div>
+      <SupplierDashboard
+        companyName={profile?.company_name || "Fornitore"}
+        kpi={{
+          ordersToday: todayFiltered.length,
+          monthlyRevenue,
+          prevRevenue,
+          activeClients: clientSet.size,
+          activeProducts: products.length,
+        }}
+        revenueSparkline={Object.values(sparklineMap)}
+        chartData={chartData}
+        recentOrders={recentOrders}
+        topProducts={topProducts}
+        topClients={topClients}
+      />
+    </>
   );
 }

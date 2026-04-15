@@ -5,6 +5,7 @@ import { DashboardShell } from "@/components/dashboard/shell";
 import type { NavItem } from "@/components/dashboard/sidebar/sidebar-item";
 import type { MobileNavItem } from "@/components/dashboard/mobile/dark-mobile-nav";
 import { isPhase1Enabled } from "@/lib/supplier/feature-flags";
+import { getStockAlertCounts } from "@/lib/supplier/stock/queries";
 import type { SupplierRole } from "@/types/database";
 
 type GatedNavItem = NavItem & {
@@ -19,6 +20,13 @@ const BASE_NAV: GatedNavItem[] = [
   { href: "/supplier/clienti", label: "Clienti", iconName: "Users" },
   { href: "/supplier/analytics", label: "Analytics", iconName: "BarChart3", section: "Insights" },
   { href: "/supplier/recensioni", label: "Recensioni", iconName: "Star", section: "Insights" },
+  {
+    href: "/supplier/magazzino",
+    label: "Magazzino",
+    iconName: "Warehouse",
+    section: "Gestione",
+    requiresPhase1: true,
+  },
   {
     href: "/supplier/listini",
     label: "Listini",
@@ -57,6 +65,7 @@ const MOBILE_NAV: MobileNavItem[] = [
 function buildNavItems(
   currentRole: SupplierRole | null,
   phase1Enabled: boolean,
+  stockBadge = 0,
 ): NavItem[] {
   return BASE_NAV.filter((item) => {
     if (item.requiresPhase1 && !phase1Enabled) return false;
@@ -64,7 +73,12 @@ function buildNavItems(
       return false;
     }
     return true;
-  }).map(({ roles: _roles, requiresPhase1: _rp1, ...nav }) => nav);
+  }).map(({ roles: _roles, requiresPhase1: _rp1, ...nav }) => {
+    if (nav.href === "/supplier/magazzino" && stockBadge > 0) {
+      return { ...nav, badge: stockBadge };
+    }
+    return nav;
+  });
 }
 
 export default async function SupplierLayout({ children }: { children: ReactNode }) {
@@ -83,6 +97,7 @@ export default async function SupplierLayout({ children }: { children: ReactNode
   // multi-tenant è rinviato a Fase 1B — per ora scegliamo il primo disponibile.
   let currentRole: SupplierRole | null = null;
   let phase1Enabled = false;
+  let stockBadge = 0;
 
   if (user) {
     const { data: member } = await supabase
@@ -102,10 +117,22 @@ export default async function SupplierLayout({ children }: { children: ReactNode
         .eq("id", member.supplier_id)
         .maybeSingle<{ feature_flags: Record<string, unknown> }>();
       phase1Enabled = isPhase1Enabled(supplier);
+
+      if (phase1Enabled) {
+        try {
+          const { lowStockCount, expiringCount } = await getStockAlertCounts(
+            member.supplier_id,
+            7,
+          );
+          stockBadge = lowStockCount + expiringCount;
+        } catch {
+          stockBadge = 0;
+        }
+      }
     }
   }
 
-  const navItems = buildNavItems(currentRole, phase1Enabled);
+  const navItems = buildNavItems(currentRole, phase1Enabled, stockBadge);
 
   return (
     <SidebarProvider>

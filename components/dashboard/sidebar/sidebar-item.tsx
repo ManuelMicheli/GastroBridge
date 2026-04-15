@@ -12,9 +12,11 @@ export type NavItem = {
   label: string;
   iconName: string;
   section?: string;
+  /** Numero da mostrare come pallino rosso accanto all'icona (omesso se 0). */
+  badge?: number;
 };
 
-export function SidebarItem({ href, label, iconName }: NavItem) {
+export function SidebarItem({ href, label, iconName, badge }: NavItem) {
   const pathname = usePathname();
   const { isCollapsed } = useSidebar();
   const isActive = pathname === href || pathname.startsWith(href + "/");
@@ -42,7 +44,15 @@ export function SidebarItem({ href, label, iconName }: NavItem) {
         />
       )}
 
-      <Icon className="h-5 w-5 shrink-0" />
+      <div className="relative shrink-0">
+        <Icon className="h-5 w-5" />
+        {badge !== undefined && badge > 0 && isCollapsed && (
+          <span
+            aria-label={`${badge} avvisi`}
+            className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-accent-red shadow-[0_0_0_2px_var(--surface-base,#0b0b0b)]"
+          />
+        )}
+      </div>
 
       <AnimatePresence mode="wait">
         {!isCollapsed && (
@@ -57,6 +67,15 @@ export function SidebarItem({ href, label, iconName }: NavItem) {
           </motion.span>
         )}
       </AnimatePresence>
+
+      {badge !== undefined && badge > 0 && !isCollapsed && (
+        <span
+          aria-label={`${badge} avvisi`}
+          className="ml-auto inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-accent-red px-1.5 py-0.5 text-[0.625rem] font-semibold leading-none text-white"
+        >
+          {badge > 99 ? "99+" : badge}
+        </span>
+      )}
 
       {/* Tooltip for collapsed state */}
       {isCollapsed && (
