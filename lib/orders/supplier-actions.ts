@@ -45,15 +45,22 @@ import {
 } from "@/lib/supplier/orders/reservation";
 import { sendEmail } from "@/lib/notifications/email";
 import {
+  CUSTOMER_CONFIRM_TTL_MS,
   signCustomerConfirmationToken,
   verifyCustomerConfirmationToken,
 } from "./customer-confirmation-token";
 import {
   encodeWorkflowNotes,
   getWorkflowState,
+  stripWorkflowTag,
   WORKFLOW_STATE_MAP,
   type WorkflowState,
 } from "./workflow-state";
+
+// `getWorkflowState` non puo' essere re-esportato da questo modulo "use server":
+// tutti gli export a runtime devono essere async. I consumer devono importarlo
+// direttamente da "@/lib/orders/workflow-state".
+export type { WorkflowState };
 
 // -----------------------------------------------------------------------------
 // Types
@@ -82,9 +89,6 @@ export type AcceptOrderLinesResult =
 export type SimpleResult =
   | { ok: true; data: { splitStatus: WorkflowState } }
   | { ok: false; error: string };
-
-// Suppress unused warnings for type-only re-use and linter-safe local bindings
-void getWorkflowState;
 
 async function setSplitWorkflow(
   supabase: SupabaseClient<any, any, any>,
@@ -115,8 +119,6 @@ async function setSplitWorkflow(
   if (error) return { ok: false, error: error.message };
   return { ok: true };
 }
-
-void CUSTOMER_CONFIRM_TTL_MS;
 
 // -----------------------------------------------------------------------------
 // Helpers
@@ -378,15 +380,184 @@ export async function acceptOrderLines(
 }
 
 // -----------------------------------------------------------------------------
-// markPacked
+// transitionToPreparing — Task 12
 // -----------------------------------------------------------------------------
 
 /**
- * Imposta lo split a workflow `packed` (imballato). Richiede che lo split sia
- * gia' `confirmed`. Permesso: `order.accept_line` (stesso perimetro: sales +
- * admin possono segnare come imballato; il plan non distingue ulteriormente a
- * questo stadio e il permesso dedicato `order.pick` sara' introdotto col
- * picking in Task 11).
+ * Task 12 — Alla prima apertura della pagina di preparazione, se lo split e'
+ * in stato workflow `confirmed`, lo portiamo a `preparing` ed emettiamo
+ * l'evento `preparing`. Idempotente. Permesso: `order.prepare`.
+ */
+export async function transitionToPreparing(splitId: string): Promise<SimpleResult> {
+  if (!splitId) return { ok: false, error: "splitId mancante" };
+
+  try {
+    const supabase = await createClient();
+
+    const splitRes = await loadSplitForSupplier(supabase, splitId);
+    if (!splitRes.ok) return splitRes;
+    const split = splitRes.split;
+
+    await requirePermission(split.supplier_id, "order.prepare");
+    const member = (await getActiveSupplierMember(split.supplier_id)) as
+      | { id: string; role: string; supplier_id: string }
+      | null;
+    if (!member) return { ok: false, error: "Membro fornitore non trovato" };
+
+    const currentState = getWorkflowState(split.status, split.supplier_notes);
+    if (currentState === "preparing") {
+      return {
+        ok: true,
+        data: { splitStatus: "preparing" as unknown as WorkflowState },
+      };
+    }
+    if (currentState !== "confirmed") {
+      return {
+        ok: false,
+        error: "Lo split deve essere confermato per iniziare la preparazione",
+      };
+    }
+
+    // `preparing` e' un valore enum valido di order_status.
+    const newNotes = stripWorkflowTag(split.supplier_notes) || null;
+    const { error: upErr } = await (supabase as any)
+      .from("order_splits")
+      .update({ status: "preparing", supplier_notes: newNotes })
+      .eq("id", splitId);
+    if (upErr) return { ok: false, error: upErr.message };
+
+    await emitSplitEvent(supabase, {
+      splitId,
+      eventType: "preparing",
+      memberId: member.id,
+    });
+
+    revalidateSupplierOrders(splitId);
+    return {
+      ok: true,
+      data: { splitStatus: "preparing" as unknown as WorkflowState },
+    };
+  } catch (err) {
+    return { ok: false, error: errMsg(err, "Errore transizione preparazione") };
+  }
+}
+
+// -----------------------------------------------------------------------------
+// pickItem — Task 12
+// -----------------------------------------------------------------------------
+
+export type PickItemInput = {
+  splitItemId: string;
+  lotId: string;
+  quantityBase: number;
+};
+
+export type PickItemResult =
+  | {
+      ok: true;
+      data: {
+        deliveryId: string;
+        lotId: string;
+        quantityBase: number;
+        quantitySalesUnit: number;
+      };
+    }
+  | { ok: false; error: string };
+
+/**
+ * Task 12 — Conferma picking fisico di una riga. Stock gia' prenotato dalla
+ * reservation. La transazione (`pick_split_item_tx`):
+ *  - FOR UPDATE su split + riga + lotto,
+ *  - decrementa `stock_lots.quantity_base` e `quantity_reserved_base` dello
+ *    stesso valore (invariante reserved<=base preservata),
+ *  - inserisce `stock_movements` type `order_ship` negativo,
+ *  - crea/riusa `deliveries` (planned) e inserisce `delivery_items`.
+ *
+ * Non modifica lo status della riga (`order_line_status` non include
+ * `picked`): la UI considera "picked" quando la somma dei `delivery_items`
+ * copre `quantity_accepted`.
+ */
+export async function pickItem(input: PickItemInput): Promise<PickItemResult> {
+  const { splitItemId, lotId, quantityBase } = input;
+  if (!splitItemId || !lotId) return { ok: false, error: "Parametri mancanti" };
+  if (!Number.isFinite(quantityBase) || quantityBase <= 0) {
+    return { ok: false, error: "Quantita' non valida" };
+  }
+
+  try {
+    const supabase = await createClient();
+
+    const { data: item, error: itemErr } = await (supabase as any)
+      .from("order_split_items")
+      .select("id, order_split_id")
+      .eq("id", splitItemId)
+      .maybeSingle();
+    if (itemErr) return { ok: false, error: itemErr.message };
+    if (!item) return { ok: false, error: "Riga non trovata" };
+
+    const splitRes = await loadSplitForSupplier(supabase, item.order_split_id);
+    if (!splitRes.ok) return splitRes;
+    const split = splitRes.split;
+
+    await requirePermission(split.supplier_id, "order.prepare");
+    const member = (await getActiveSupplierMember(split.supplier_id)) as
+      | { id: string; role: string; supplier_id: string }
+      | null;
+    if (!member) return { ok: false, error: "Membro fornitore non trovato" };
+
+    const currentState = getWorkflowState(split.status, split.supplier_notes);
+    if (currentState !== "confirmed" && currentState !== "preparing") {
+      return { ok: false, error: "Lo split non e' in fase di preparazione" };
+    }
+
+    const { data, error } = await (supabase.rpc as any)("pick_split_item_tx", {
+      p_split_item_id: splitItemId,
+      p_lot_id: lotId,
+      p_quantity_base: quantityBase,
+      p_member_id: member.id,
+    });
+    if (error) return { ok: false, error: error.message ?? "Errore picking" };
+
+    const payload = (data ?? {}) as {
+      ok?: boolean;
+      delivery_id?: string;
+      lot_id?: string;
+      quantity_base?: number;
+      quantity_sales_unit?: number;
+    };
+    if (!payload.ok) return { ok: false, error: "Errore picking" };
+
+    revalidatePath(`/supplier/ordini/${split.id}`);
+    revalidatePath(`/supplier/ordini/${split.id}/preparazione`);
+    revalidatePath("/supplier/magazzino");
+    revalidatePath("/supplier/magazzino/movimenti");
+
+    return {
+      ok: true,
+      data: {
+        deliveryId: payload.delivery_id!,
+        lotId: payload.lot_id!,
+        quantityBase: payload.quantity_base!,
+        quantitySalesUnit: payload.quantity_sales_unit ?? 0,
+      },
+    };
+  } catch (err) {
+    return { ok: false, error: errMsg(err, "Errore picking") };
+  }
+}
+
+// -----------------------------------------------------------------------------
+// markPacked — Task 12
+// -----------------------------------------------------------------------------
+
+/**
+ * Task 12 — Finalizza il picking via RPC `finalize_split_packing_tx`:
+ * verifica che tutte le righe abbiano delivery_items coprenti
+ * `quantity_accepted`, porta la delivery da `planned` a `loaded` e marca
+ * lo split workflow `packed`.
+ *
+ * Deviazione: in Task 7 questa action usava `order.accept_line`; Task 12
+ * sposta la responsabilita' al magazziniere → `order.prepare`.
  */
 export async function markPacked(splitId: string): Promise<SimpleResult> {
   if (!splitId) return { ok: false, error: "splitId mancante" };
@@ -398,7 +569,7 @@ export async function markPacked(splitId: string): Promise<SimpleResult> {
     if (!splitRes.ok) return splitRes;
     const split = splitRes.split;
 
-    await requirePermission(split.supplier_id, "order.accept_line");
+    await requirePermission(split.supplier_id, "order.prepare");
     const member = (await getActiveSupplierMember(split.supplier_id)) as
       | { id: string; role: string; supplier_id: string }
       | null;
@@ -408,8 +579,16 @@ export async function markPacked(splitId: string): Promise<SimpleResult> {
     if (currentState !== "confirmed" && currentState !== "preparing") {
       return {
         ok: false,
-        error: "Lo split deve essere confermato prima di essere imballato",
+        error: "Lo split deve essere in preparazione per essere imballato",
       };
+    }
+
+    const { error: rpcErr } = await (supabase.rpc as any)(
+      "finalize_split_packing_tx",
+      { p_split_id: splitId, p_member_id: member.id },
+    );
+    if (rpcErr) {
+      return { ok: false, error: rpcErr.message ?? "Errore finalizzazione" };
     }
 
     const wf = await setSplitWorkflow(supabase, splitId, "packed");
