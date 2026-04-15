@@ -70,8 +70,6 @@ export function CatalogDetailClient({
           <div className="mt-1 text-sm text-text-secondary flex flex-wrap gap-x-4 gap-y-1">
             <span>{initialItems.length} prodotti</span>
             <span>Prezzo medio € {avgPrice.toFixed(2)}</span>
-            {catalog.delivery_days !== null && <span>Consegna {catalog.delivery_days} gg</span>}
-            {catalog.min_order_amount !== null && <span>Min. ordine € {catalog.min_order_amount.toFixed(2)}</span>}
           </div>
           {catalog.notes && <p className="mt-2 text-sm text-text-tertiary">{catalog.notes}</p>}
         </div>

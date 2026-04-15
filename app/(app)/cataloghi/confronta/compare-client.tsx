@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Download, Star } from "lucide-react";
+import { ArrowLeft, Download } from "lucide-react";
 import { buildPivot, type SupplierCol } from "@/lib/catalogs/compare";
 import type { CatalogItemRow } from "@/lib/catalogs/types";
 
@@ -13,18 +13,8 @@ type Props = {
 
 export function CompareClient({ suppliers, items }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set(suppliers.map((s) => s.id)));
-  const [wPrezzo, setWPrezzo] = useState(0.7);
   const [query, setQuery] = useState("");
   const [onlyMulti, setOnlyMulti] = useState(false);
-
-  useEffect(() => {
-    const raw = localStorage.getItem("gb.compare.weights");
-    if (raw) {
-      const v = Number(raw);
-      if (Number.isFinite(v) && v >= 0 && v <= 1) setWPrezzo(v);
-    }
-  }, []);
-  useEffect(() => { localStorage.setItem("gb.compare.weights", String(wPrezzo)); }, [wPrezzo]);
 
   const filteredSuppliers = useMemo(
     () => suppliers.filter((s) => selected.has(s.id)),
@@ -36,8 +26,8 @@ export function CompareClient({ suppliers, items }: Props) {
   );
 
   const pivot = useMemo(
-    () => buildPivot(filteredSuppliers, filteredItems, { w_prezzo: wPrezzo, w_consegna: 1 - wPrezzo }),
-    [filteredSuppliers, filteredItems, wPrezzo],
+    () => buildPivot(filteredSuppliers, filteredItems, { w_prezzo: 1, w_consegna: 0 }),
+    [filteredSuppliers, filteredItems],
   );
 
   const visibleRows = useMemo(() => {
@@ -57,7 +47,7 @@ export function CompareClient({ suppliers, items }: Props) {
   const savingPct = mostExpensiveTotal > 0 ? (saving / mostExpensiveTotal) * 100 : 0;
 
   const exportCsv = () => {
-    const head = ["Prodotto", "Unità", ...filteredSuppliers.map((s) => s.supplier_name), "Miglior prezzo", "Miglior composito"];
+    const head = ["Prodotto", "Unità", ...filteredSuppliers.map((s) => s.supplier_name), "Miglior prezzo"];
     const lines = [head.join(";")];
     for (const r of visibleRows) {
       const cells = [
@@ -65,7 +55,6 @@ export function CompareClient({ suppliers, items }: Props) {
         quote(r.unit),
         ...filteredSuppliers.map((s) => r.prices[s.id] == null ? "" : r.prices[s.id]!.toFixed(2)),
         supplierName(filteredSuppliers, r.bestPriceSupplierId),
-        supplierName(filteredSuppliers, r.bestCompositeSupplierId),
       ];
       lines.push(cells.join(";"));
     }
@@ -88,14 +77,14 @@ export function CompareClient({ suppliers, items }: Props) {
       <header className="space-y-2">
         <h1 className="text-2xl font-semibold text-text-primary">Confronto prezzi</h1>
         <p className="text-sm text-text-secondary">
-          Il miglior prezzo per riga è evidenziato in verde. Il miglior complessivo (prezzo + consegna) con una stella.
+          Per ogni prodotto, il prezzo più basso è evidenziato in verde.
         </p>
       </header>
 
       {/* Supplier toggle */}
       <div className="flex flex-wrap gap-2">
         {suppliers.map((s) => (
-          <label key={s.id} className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm ${
+          <label key={s.id} className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm cursor-pointer ${
             selected.has(s.id) ? "border-accent-green/50 bg-accent-green/10 text-accent-green" : "border-border-subtle text-text-secondary"
           }`}>
             <input type="checkbox" className="sr-only" checked={selected.has(s.id)}
@@ -108,17 +97,6 @@ export function CompareClient({ suppliers, items }: Props) {
             {s.supplier_name}
           </label>
         ))}
-      </div>
-
-      {/* Weights */}
-      <div className="rounded-xl bg-surface-card border border-border-subtle p-4 space-y-2 max-w-xl">
-        <div className="flex justify-between text-sm text-text-secondary">
-          <span>Peso prezzo: {(wPrezzo * 100).toFixed(0)}%</span>
-          <span>Peso consegna: {((1 - wPrezzo) * 100).toFixed(0)}%</span>
-        </div>
-        <input type="range" min={0} max={1} step={0.05} value={wPrezzo}
-          onChange={(e) => setWPrezzo(Number(e.target.value))}
-          className="w-full" />
       </div>
 
       {/* Filters */}
@@ -135,7 +113,7 @@ export function CompareClient({ suppliers, items }: Props) {
         </button>
       </div>
 
-      {/* Pivot table */}
+      {/* Pivot table — desktop */}
       <div className="hidden md:block rounded-xl border border-border-subtle overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead className="bg-surface-card text-text-tertiary">
@@ -143,21 +121,16 @@ export function CompareClient({ suppliers, items }: Props) {
               <th className="text-left px-3 py-2 font-medium">Prodotto</th>
               <th className="text-left px-3 py-2 font-medium">Unità</th>
               {filteredSuppliers.map((s) => (
-                <th key={s.id} className="text-right px-3 py-2 font-medium">
-                  <div className="text-text-primary">{s.supplier_name}</div>
-                  <div className="text-[10px] text-text-tertiary">
-                    {s.delivery_days !== null ? `🚚 ${s.delivery_days} gg` : "— gg"}
-                    {s.min_order_amount !== null ? ` · min € ${s.min_order_amount.toFixed(2)}` : ""}
-                  </div>
+                <th key={s.id} className="text-right px-3 py-2 font-medium text-text-primary">
+                  {s.supplier_name}
                 </th>
               ))}
               <th className="text-left px-3 py-2 font-medium">Miglior prezzo</th>
-              <th className="text-left px-3 py-2 font-medium">Miglior composito</th>
             </tr>
           </thead>
           <tbody>
             {visibleRows.length === 0 ? (
-              <tr><td colSpan={filteredSuppliers.length + 4} className="px-3 py-6 text-center text-text-tertiary">Nessun prodotto da confrontare</td></tr>
+              <tr><td colSpan={filteredSuppliers.length + 3} className="px-3 py-6 text-center text-text-tertiary">Nessun prodotto da confrontare</td></tr>
             ) : visibleRows.map((r) => (
               <tr key={r.key} className="border-t border-border-subtle">
                 <td className="px-3 py-2 text-text-primary">{r.productName}</td>
@@ -165,17 +138,15 @@ export function CompareClient({ suppliers, items }: Props) {
                 {filteredSuppliers.map((s) => {
                   const p = r.prices[s.id];
                   const isBestPrice = r.bestPriceSupplierId === s.id;
-                  const isBestComposite = r.bestCompositeSupplierId === s.id;
                   return (
                     <td key={s.id} className={`px-3 py-2 text-right tabular-nums ${
                       isBestPrice ? "bg-accent-green/10 text-accent-green font-medium" : "text-text-primary"
                     }`}>
-                      {p == null ? "—" : <>€ {p.toFixed(2)} {isBestComposite && <Star className="inline h-3 w-3 ml-0.5" />}</>}
+                      {p == null ? "—" : <>€ {p.toFixed(2)}</>}
                     </td>
                   );
                 })}
                 <td className="px-3 py-2 text-accent-green">{supplierName(filteredSuppliers, r.bestPriceSupplierId)}</td>
-                <td className="px-3 py-2 text-text-primary">{supplierName(filteredSuppliers, r.bestCompositeSupplierId)}</td>
               </tr>
             ))}
           </tbody>
@@ -184,35 +155,24 @@ export function CompareClient({ suppliers, items }: Props) {
               <td colSpan={2} className="px-3 py-2 font-medium text-text-primary">Totale per fornitore</td>
               {filteredSuppliers.map((s) => {
                 const total = pivot.totals[s.id] ?? 0;
-                const belowMin = s.min_order_amount !== null && total > 0 && total < s.min_order_amount;
                 return (
-                  <td key={s.id} className="px-3 py-2 text-right tabular-nums">
-                    <div className="text-text-primary">€ {total.toFixed(2)}</div>
-                    {belowMin && (
-                      <div className="text-[10px] text-red-400">Sotto soglia (−€ {(s.min_order_amount! - total).toFixed(2)})</div>
-                    )}
+                  <td key={s.id} className="px-3 py-2 text-right tabular-nums text-text-primary">
+                    € {total.toFixed(2)}
                   </td>
                 );
               })}
-              <td colSpan={2} />
+              <td />
             </tr>
             <tr className="border-t border-border-subtle">
-              <td colSpan={2} className="px-3 py-2 font-medium text-text-primary">Basket ottimale (prezzo)</td>
+              <td colSpan={2} className="px-3 py-2 font-medium text-text-primary">Basket ottimale</td>
               <td colSpan={filteredSuppliers.length} className="px-3 py-2 text-right tabular-nums text-accent-green font-medium">
                 € {pivot.basketOptimalPrice.toFixed(2)}
               </td>
-              <td colSpan={2} />
-            </tr>
-            <tr>
-              <td colSpan={2} className="px-3 py-2 font-medium text-text-primary">Basket ottimale (composito)</td>
-              <td colSpan={filteredSuppliers.length} className="px-3 py-2 text-right tabular-nums text-text-primary">
-                € {pivot.basketOptimalComposite.toFixed(2)}
-              </td>
-              <td colSpan={2} />
+              <td />
             </tr>
             {saving > 0 && (
               <tr>
-                <td colSpan={2 + filteredSuppliers.length + 2} className="px-3 py-2">
+                <td colSpan={3 + filteredSuppliers.length} className="px-3 py-2">
                   <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-accent-green/10 text-accent-green text-sm">
                     Risparmio potenziale: € {saving.toFixed(2)} ({savingPct.toFixed(0)}%)
                   </span>
@@ -241,11 +201,10 @@ export function CompareClient({ suppliers, items }: Props) {
               <ul className="mt-2 space-y-1 text-sm">
                 {offers.map(({ s, price }) => {
                   const isBestPrice = r.bestPriceSupplierId === s.id;
-                  const isBestComposite = r.bestCompositeSupplierId === s.id;
                   return (
                     <li key={s.id} className="flex justify-between">
                       <span className={isBestPrice ? "text-accent-green" : "text-text-secondary"}>
-                        {s.supplier_name} {isBestComposite && <Star className="inline h-3 w-3 ml-0.5" />}
+                        {s.supplier_name}
                       </span>
                       <span className={`tabular-nums ${isBestPrice ? "text-accent-green font-medium" : "text-text-primary"}`}>
                         € {price.toFixed(2)}

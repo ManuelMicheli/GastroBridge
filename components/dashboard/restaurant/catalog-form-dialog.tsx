@@ -14,31 +14,17 @@ type Props = {
 
 export function CatalogFormDialog({ open, onClose, catalog, onSaved }: Props) {
   const [supplierName, setSupplierName] = useState(catalog?.supplier_name ?? "");
-  const [deliveryDays, setDeliveryDays] = useState<string>(catalog?.delivery_days?.toString() ?? "");
-  const [minOrder, setMinOrder]         = useState<string>(catalog?.min_order_amount?.toString() ?? "");
   const [notes, setNotes]               = useState(catalog?.notes ?? "");
   const [pending, startTransition] = useTransition();
 
   if (!open) return null;
 
-  const parseOptionalNumber = (raw: string): number | null | undefined => {
-    const trimmed = raw.trim();
-    if (trimmed === "") return null;
-    const n = Number(trimmed.replace(",", "."));
-    return Number.isFinite(n) && n >= 0 ? n : undefined; // undefined → invalid
-  };
-
   const submit = () => {
-    const dd = parseOptionalNumber(deliveryDays);
-    const mo = parseOptionalNumber(minOrder);
-    if (dd === undefined) { toast.error("Giorni di consegna non validi"); return; }
-    if (mo === undefined) { toast.error("Importo minimo non valido"); return; }
-
     startTransition(async () => {
       const payload = {
         supplier_name:    supplierName.trim(),
-        delivery_days:    dd === null ? null : Math.round(dd),
-        min_order_amount: mo,
+        delivery_days:    null,
+        min_order_amount: null,
         notes:            notes.trim() || null,
       };
       const res = catalog
@@ -72,29 +58,6 @@ export function CatalogFormDialog({ open, onClose, catalog, onSaved }: Props) {
               placeholder="Es. Metro Italia"
             />
           </label>
-
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block">
-              <span className="text-sm text-text-secondary">Consegna (gg)</span>
-              <input
-                type="number" inputMode="numeric" min={0}
-                value={deliveryDays}
-                onChange={(e) => setDeliveryDays(e.target.value)}
-                className="mt-1 w-full rounded-lg bg-surface-base border border-border-subtle px-3 py-2 text-text-primary"
-                placeholder="2"
-              />
-            </label>
-            <label className="block">
-              <span className="text-sm text-text-secondary">Min. ordine (€)</span>
-              <input
-                type="number" inputMode="decimal" min={0} step="0.01"
-                value={minOrder}
-                onChange={(e) => setMinOrder(e.target.value)}
-                className="mt-1 w-full rounded-lg bg-surface-base border border-border-subtle px-3 py-2 text-text-primary"
-                placeholder="150"
-              />
-            </label>
-          </div>
 
           <label className="block">
             <span className="text-sm text-text-secondary">Note</span>

@@ -61,8 +61,6 @@ export function CatalogsClient({ initialCatalogs }: { initialCatalogs: Catalog[]
               id={c.id}
               supplierName={c.supplier_name}
               itemCount={c.item_count}
-              deliveryDays={c.delivery_days}
-              minOrder={c.min_order_amount}
               updatedAt={c.updated_at}
             />
           ))}
