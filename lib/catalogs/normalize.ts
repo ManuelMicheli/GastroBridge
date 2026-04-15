@@ -1,11 +1,52 @@
-/** Lowercase, trim, and collapse internal whitespace. */
+/**
+ * Normalize a product name for matching:
+ * lowercase + trim + strip diacritics + strip punctuation + collapse whitespace.
+ */
 export function normalizeName(raw: string): string {
-  return raw.trim().toLowerCase().replace(/\s+/g, " ");
+  return raw
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[.,;:!?'"`´()\[\]{}]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-/** Lowercase + trim. */
+/**
+ * Map of unit synonyms to canonical short form so "Kg", "kilogrammo",
+ * "Litro", "L.", "Pz", "Cad" all collapse to a single bucket.
+ */
+const UNIT_SYNONYMS: Record<string, string> = {
+  // weight
+  kg: "kg", "kg.": "kg", chilogrammo: "kg", chilogrammi: "kg", chilo: "kg",
+  chili: "kg", kilo: "kg", kilogrammo: "kg", kilogrammi: "kg",
+  g: "g", gr: "g", grammo: "g", grammi: "g", "g.": "g", "gr.": "g",
+  hg: "hg", etto: "hg", etti: "hg",
+  // volume
+  l: "l", "l.": "l", lt: "l", litro: "l", litri: "l", "lt.": "l",
+  ml: "ml", millilitro: "ml", millilitri: "ml",
+  cl: "cl", centilitro: "cl", centilitri: "cl",
+  // count
+  pz: "pz", "pz.": "pz", pezzo: "pz", pezzi: "pz", cad: "pz",
+  cadauno: "pz", cadaun: "pz", n: "pz", "n.": "pz", nr: "pz", "nr.": "pz",
+  // packaging
+  cf: "cf", conf: "cf", "conf.": "cf", confezione: "cf", confezioni: "cf",
+  cassa: "cassa", casse: "cassa",
+  cartone: "cartone", cartoni: "cartone", ct: "cartone",
+  bottiglia: "bottiglia", bottiglie: "bottiglia", btg: "bottiglia",
+};
+
+/**
+ * Normalize a unit and map common Italian synonyms to a canonical form.
+ * Unknown units are returned lowercased + diacritics-stripped + trimmed.
+ */
 export function normalizeUnit(raw: string): string {
-  return raw.trim().toLowerCase();
+  const cleaned = raw
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+  return UNIT_SYNONYMS[cleaned] ?? cleaned;
 }
 
 /**

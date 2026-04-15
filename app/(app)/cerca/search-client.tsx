@@ -493,7 +493,7 @@ const MAX_ROWS = 5000;
 type WizardStep = "upload" | "map" | "preview";
 type Mapping = { name: string; unit: string; qty: string };
 type ValidatedRow =
-  | { ok: true; matchedKey: string | null; productName: string; unit: string; qty: number }
+  | { ok: true; matchType: "exact" | "name" | "none"; matchedKey: string | null; productName: string; unit: string; qty: number; rawName: string; rawUnit: string }
   | { ok: false; reason: string; raw: { name: string; unit: string; qty: string } };
 
 function TypicalOrderImportWizard({
@@ -528,6 +528,16 @@ function TypicalOrderImportWizard({
     return m;
   }, [groups]);
 
+  // Fallback index: normalized name -> all matching groups (cheapest first variant preferred)
+  const groupsByName = useMemo(() => {
+    const m = new Map<string, Group>();
+    for (const g of groups) {
+      const nk = normalizeName(g.productName);
+      if (!m.has(nk)) m.set(nk, g);
+    }
+    return m;
+  }, [groups]);
+
   const validated: ValidatedRow[] = useMemo(() => {
     if (!sheet) return [];
     return sheet.rows.map((r) => {
@@ -536,24 +546,40 @@ function TypicalOrderImportWizard({
       const qtyRaw = (r[mapping.qty] ?? "").trim();
 
       if (!name) return { ok: false, reason: "Nome vuoto", raw: { name, unit, qty: qtyRaw } };
-      if (!unit) return { ok: false, reason: "Unità vuota", raw: { name, unit, qty: qtyRaw } };
 
       const qtyNum = Number(qtyRaw.replace(",", "."));
       if (!Number.isFinite(qtyNum) || qtyNum <= 0) {
         return { ok: false, reason: "Quantità non valida", raw: { name, unit, qty: qtyRaw } };
       }
 
-      const key = `${normalizeName(name)}::${normalizeUnit(unit)}`;
-      const matched = groupByNormKey.get(key);
+      const nameNorm = normalizeName(name);
+      const unitNorm = unit ? normalizeUnit(unit) : "";
+
+      // 1) Exact match on (name + unit) if unit provided
+      let matched: Group | undefined;
+      let matchType: "exact" | "name" | "none" = "none";
+      if (unit) {
+        matched = groupByNormKey.get(`${nameNorm}::${unitNorm}`);
+        if (matched) matchType = "exact";
+      }
+      // 2) Fallback: match by name only
+      if (!matched) {
+        matched = groupsByName.get(nameNorm);
+        if (matched) matchType = "name";
+      }
+
       return {
         ok: true,
+        matchType,
         matchedKey: matched ? matched.key : null,
         productName: matched?.productName ?? name,
-        unit:        matched?.unit ?? unit,
+        unit:        matched?.unit ?? (unit || "—"),
         qty:         qtyNum,
+        rawName:     name,
+        rawUnit:     unit,
       };
     });
-  }, [sheet, mapping, groupByNormKey]);
+  }, [sheet, mapping, groupByNormKey, groupsByName]);
 
   if (!open) return null;
 
@@ -586,8 +612,9 @@ function TypicalOrderImportWizard({
 
   const validRows = validated.filter((v): v is Extract<ValidatedRow, { ok: true }> => v.ok);
   const invalidCount = validated.length - validRows.length;
-  const matchedCount = validRows.filter((v) => v.matchedKey !== null).length;
-  const unmatchedCount = validRows.length - matchedCount;
+  const exactCount   = validRows.filter((v) => v.matchType === "exact").length;
+  const fuzzyCount   = validRows.filter((v) => v.matchType === "name").length;
+  const unmatchedCount = validRows.filter((v) => v.matchType === "none").length;
 
   const confirmImport = () => {
     if (validRows.length === 0) return;
@@ -630,14 +657,14 @@ function TypicalOrderImportWizard({
               <UploadCloud className="mx-auto h-8 w-8 text-text-tertiary" />
               <p className="mt-3 text-text-primary">Clicca per scegliere un file</p>
               <p className="mt-1 text-xs text-text-tertiary">CSV, XLS, XLSX · max 2MB · max 5000 righe</p>
-              <p className="mt-1 text-xs text-text-tertiary">Colonne attese: nome, unità, quantità</p>
+              <p className="mt-1 text-xs text-text-tertiary">Colonne attese: nome, quantità (unità opzionale)</p>
               <input
                 type="file" accept=".csv,.xls,.xlsx" className="hidden"
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
               />
             </label>
             <a
-              href="data:text/csv;charset=utf-8,nome;unita;quantita%0AFarina%2000;kg;10%0AOlio%20EVO;L;5%0APomodoro%20pelato;kg;8"
+              href="data:text/csv;charset=utf-8,nome;quantita%0AFarina%2000;10%0AOlio%20EVO;5%0APomodoro%20pelato;8%0AAceto%20Balsamico%20di%20Modena%20IGP;2"
               download="template-ordine-tipico.csv"
               className="inline-flex items-center gap-1 text-sm text-accent-green hover:underline"
             >
@@ -652,7 +679,7 @@ function TypicalOrderImportWizard({
               {(["name", "unit", "qty"] as const).map((field) => (
                 <label key={field} className="block">
                   <span className="text-sm text-text-secondary">
-                    {field === "name" ? "Nome prodotto" : field === "unit" ? "Unità" : "Quantità"} *
+                    {field === "name" ? "Nome prodotto *" : field === "unit" ? "Unità (opzionale)" : "Quantità *"}
                   </span>
                   <select
                     value={mapping[field]}
@@ -685,7 +712,7 @@ function TypicalOrderImportWizard({
               </button>
               <button
                 onClick={() => setStep("preview")}
-                disabled={!mapping.name || !mapping.unit || !mapping.qty}
+                disabled={!mapping.name || !mapping.qty}
                 className="px-4 py-2 rounded-lg bg-accent-green text-surface-base font-medium disabled:opacity-50"
               >
                 Continua
@@ -698,10 +725,13 @@ function TypicalOrderImportWizard({
           <div className="space-y-4">
             <div className="flex items-center gap-4 text-sm flex-wrap">
               <span className="inline-flex items-center gap-1 text-accent-green">
-                <Check className="h-4 w-4" /> {matchedCount} trovate nei cataloghi
+                <Check className="h-4 w-4" /> {exactCount} match esatti
               </span>
+              {fuzzyCount > 0 && (
+                <span className="text-accent-green">{fuzzyCount} match per nome</span>
+              )}
               {unmatchedCount > 0 && (
-                <span className="text-yellow-400">{unmatchedCount} non disponibili nei cataloghi</span>
+                <span className="text-yellow-400">{unmatchedCount} non in catalogo</span>
               )}
               {invalidCount > 0 && <span className="text-red-400">{invalidCount} scartate</span>}
             </div>
@@ -723,15 +753,19 @@ function TypicalOrderImportWizard({
                       {v.ok ? (
                         <>
                           <td className="px-2 py-1">
-                            {v.matchedKey
-                              ? <span className="text-accent-green">OK</span>
-                              : <span className="text-yellow-400">Non in catalogo</span>}
+                            {v.matchType === "exact" && <span className="text-accent-green">OK</span>}
+                            {v.matchType === "name" && <span className="text-accent-green">~</span>}
+                            {v.matchType === "none" && <span className="text-yellow-400">?</span>}
                           </td>
                           <td className="px-2 py-1 text-text-primary">{v.productName}</td>
                           <td className="px-2 py-1 text-text-secondary">{v.unit}</td>
                           <td className="px-2 py-1 text-right text-text-primary tabular-nums">{v.qty}</td>
                           <td className="px-2 py-1 text-text-tertiary text-xs">
-                            {v.matchedKey ? "Trovato nei tuoi cataloghi" : "Sarà aggiunto come 'non disponibile'"}
+                            {v.matchType === "exact" && "Match esatto nei cataloghi"}
+                            {v.matchType === "name" && (
+                              <>Match per nome{v.rawUnit ? <> (unità &quot;{v.rawUnit}&quot; → &quot;{v.unit}&quot;)</> : null}</>
+                            )}
+                            {v.matchType === "none" && "Non presente nei cataloghi"}
                           </td>
                         </>
                       ) : (
