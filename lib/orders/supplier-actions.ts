@@ -32,7 +32,6 @@
  *   in questo task (opzionale in review — vedi plan §13.2).
  */
 
-import { createHmac, timingSafeEqual } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -45,6 +44,16 @@ import {
   type ReservationConflict,
 } from "@/lib/supplier/orders/reservation";
 import { sendEmail } from "@/lib/notifications/email";
+import {
+  signCustomerConfirmationToken,
+  verifyCustomerConfirmationToken,
+} from "./customer-confirmation-token";
+import {
+  encodeWorkflowNotes,
+  getWorkflowState,
+  WORKFLOW_STATE_MAP,
+  type WorkflowState,
+} from "./workflow-state";
 
 // -----------------------------------------------------------------------------
 // Types
@@ -54,14 +63,6 @@ export type LineDecision =
   | { lineId: string; action: "accept"; quantityAccepted?: number }
   | { lineId: string; action: "modify"; quantityAccepted: number }
   | { lineId: string; action: "reject"; rejectionReason?: string };
-
-export type WorkflowState =
-  | "confirmed"
-  | "cancelled"
-  | "rejected"
-  | "pending_customer_confirmation"
-  | "stock_conflict"
-  | "packed";
 
 export type AcceptOrderLinesInput = {
   splitId: string;
@@ -82,44 +83,8 @@ export type SimpleResult =
   | { ok: true; data: { splitStatus: WorkflowState } }
   | { ok: false; error: string };
 
-// -----------------------------------------------------------------------------
-// Workflow-state encoding (cfr. deviazione in docblock)
-// -----------------------------------------------------------------------------
-
-const WORKFLOW_TAG_RE = /\[workflow:([a-z_]+)\]/i;
-
-/** Mapping workflow-state → valore enum `order_status` piu' vicino. */
-const WORKFLOW_STATE_MAP: Record<WorkflowState, string> = {
-  confirmed: "confirmed",
-  cancelled: "cancelled",
-  rejected: "cancelled",
-  pending_customer_confirmation: "submitted",
-  stock_conflict: "submitted",
-  packed: "preparing",
-};
-
-function stripWorkflowTag(notes: string | null | undefined): string {
-  if (!notes) return "";
-  return notes.replace(WORKFLOW_TAG_RE, "").trim();
-}
-
-function encodeWorkflowNotes(
-  state: WorkflowState,
-  existingNotes: string | null | undefined,
-): string {
-  const base = stripWorkflowTag(existingNotes);
-  const tag = `[workflow:${state}]`;
-  return base ? `${tag} ${base}` : tag;
-}
-
-export function getWorkflowState(
-  splitStatus: string | null | undefined,
-  supplierNotes: string | null | undefined,
-): WorkflowState | string {
-  const m = supplierNotes?.match(WORKFLOW_TAG_RE);
-  if (m) return m[1] as WorkflowState;
-  return splitStatus ?? "submitted";
-}
+// Suppress unused warnings for type-only re-use and linter-safe local bindings
+void getWorkflowState;
 
 async function setSplitWorkflow(
   supabase: SupabaseClient<any, any, any>,
@@ -151,76 +116,7 @@ async function setSplitWorkflow(
   return { ok: true };
 }
 
-// -----------------------------------------------------------------------------
-// HMAC token
-// -----------------------------------------------------------------------------
-
-const CUSTOMER_CONFIRM_TTL_MS = 48 * 60 * 60 * 1000; // 48h
-
-function getHmacSecret(): string {
-  const secret =
-    process.env.AUTH_SECRET ??
-    process.env.NEXTAUTH_SECRET ??
-    process.env.SUPABASE_JWT_SECRET;
-  if (!secret) {
-    throw new Error(
-      "AUTH_SECRET mancante: impossibile firmare token di conferma cliente",
-    );
-  }
-  return secret;
-}
-
-function b64urlEncode(buf: Buffer): string {
-  return buf.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-}
-
-function b64urlDecode(s: string): Buffer {
-  const pad = s.length % 4 === 0 ? "" : "=".repeat(4 - (s.length % 4));
-  return Buffer.from(s.replace(/-/g, "+").replace(/_/g, "/") + pad, "base64");
-}
-
-export function signCustomerConfirmationToken(splitId: string, ttlMs = CUSTOMER_CONFIRM_TTL_MS): string {
-  const payload = { splitId, exp: Date.now() + ttlMs };
-  const payloadEncoded = b64urlEncode(Buffer.from(JSON.stringify(payload), "utf8"));
-  const sig = createHmac("sha256", getHmacSecret()).update(payloadEncoded).digest();
-  return `${payloadEncoded}.${b64urlEncode(sig)}`;
-}
-
-export function verifyCustomerConfirmationToken(
-  token: string,
-  expectedSplitId: string,
-): { ok: true } | { ok: false; error: string } {
-  try {
-    const [payloadEncoded, sigEncoded] = token.split(".");
-    if (!payloadEncoded || !sigEncoded) return { ok: false, error: "Token malformato" };
-
-    const expectedSig = createHmac("sha256", getHmacSecret()).update(payloadEncoded).digest();
-    const actualSig = b64urlDecode(sigEncoded);
-    if (expectedSig.length !== actualSig.length) {
-      return { ok: false, error: "Firma token non valida" };
-    }
-    if (!timingSafeEqual(expectedSig, actualSig)) {
-      return { ok: false, error: "Firma token non valida" };
-    }
-
-    const payload = JSON.parse(b64urlDecode(payloadEncoded).toString("utf8")) as {
-      splitId?: string;
-      exp?: number;
-    };
-    if (!payload.splitId || payload.splitId !== expectedSplitId) {
-      return { ok: false, error: "Token non valido per questo ordine" };
-    }
-    if (!payload.exp || payload.exp < Date.now()) {
-      return { ok: false, error: "Token scaduto" };
-    }
-    return { ok: true };
-  } catch (err) {
-    return {
-      ok: false,
-      error: err instanceof Error ? err.message : "Verifica token fallita",
-    };
-  }
-}
+void CUSTOMER_CONFIRM_TTL_MS;
 
 // -----------------------------------------------------------------------------
 // Helpers
@@ -527,6 +423,176 @@ export async function markPacked(splitId: string): Promise<SimpleResult> {
 
     revalidateSupplierOrders(splitId);
     return { ok: true, data: { splitStatus: "packed" } };
+  } catch (err) {
+    return { ok: false, error: errMsg(err, "Errore aggiornamento stato") };
+  }
+}
+
+// -----------------------------------------------------------------------------
+// markShipped
+// -----------------------------------------------------------------------------
+
+/**
+ * Transizione da `packed` a `shipping`. `shipping` e' un valore enum valido di
+ * `order_status`, quindi non usiamo il tag workflow (lo rimuoviamo se presente).
+ */
+export async function markShipped(splitId: string): Promise<SimpleResult> {
+  if (!splitId) return { ok: false, error: "splitId mancante" };
+
+  try {
+    const supabase = await createClient();
+
+    const splitRes = await loadSplitForSupplier(supabase, splitId);
+    if (!splitRes.ok) return splitRes;
+    const split = splitRes.split;
+
+    await requirePermission(split.supplier_id, "order.accept_line");
+    const member = (await getActiveSupplierMember(split.supplier_id)) as
+      | { id: string; role: string; supplier_id: string }
+      | null;
+    if (!member) return { ok: false, error: "Membro fornitore non trovato" };
+
+    const currentState = getWorkflowState(split.status, split.supplier_notes);
+    if (currentState !== "packed") {
+      return {
+        ok: false,
+        error: "Lo split deve essere imballato prima della spedizione",
+      };
+    }
+
+    const newNotes = stripWorkflowTag(split.supplier_notes) || null;
+    const { error: upErr } = await (supabase as any)
+      .from("order_splits")
+      .update({ status: "shipping", supplier_notes: newNotes })
+      .eq("id", splitId);
+    if (upErr) return { ok: false, error: upErr.message };
+
+    await emitOrderEvent(supabase, {
+      splitId,
+      eventType: "shipped",
+      memberId: member.id,
+      supplierId: split.supplier_id,
+    });
+
+    revalidateSupplierOrders(splitId);
+    return { ok: true, data: { splitStatus: "shipping" as unknown as WorkflowState } };
+  } catch (err) {
+    return { ok: false, error: errMsg(err, "Errore aggiornamento stato") };
+  }
+}
+
+// -----------------------------------------------------------------------------
+// transitionSplitStatus (kanban drag & drop)
+// -----------------------------------------------------------------------------
+
+export type KanbanTargetStatus =
+  | "preparing"
+  | "packed"
+  | "shipped"
+  | "delivered";
+
+export type TransitionSplitStatusInput = {
+  splitId: string;
+  targetStatus: KanbanTargetStatus;
+};
+
+export type TransitionSplitStatusResult =
+  | { ok: true; data: { splitStatus: string } }
+  | { ok: false; error: string };
+
+/**
+ * Transizioni legali permesse via drag & drop sulla kanban:
+ *  - `confirmed → preparing`
+ *  - `preparing → packed`
+ *  - `packed → shipped`
+ *  - `shipped → delivered`
+ *
+ * Le transizioni `pending*` / `stock_conflict` / `rejected` / `cancelled`
+ * richiedono sempre il dettaglio ordine (accettazione per riga): in quei casi
+ * l'azione ritorna un errore informativo cosi' il client puo' mostrare un toast.
+ */
+export async function transitionSplitStatus(
+  input: TransitionSplitStatusInput,
+): Promise<TransitionSplitStatusResult> {
+  const { splitId, targetStatus } = input;
+  if (!splitId) return { ok: false, error: "splitId mancante" };
+  if (!targetStatus) return { ok: false, error: "targetStatus mancante" };
+
+  const LEGAL: Record<KanbanTargetStatus, string[]> = {
+    preparing: ["confirmed"],
+    packed: ["preparing"],
+    shipped: ["packed"],
+    delivered: ["shipping", "shipped"],
+  };
+
+  try {
+    const supabase = await createClient();
+
+    const splitRes = await loadSplitForSupplier(supabase, splitId);
+    if (!splitRes.ok) return splitRes;
+    const split = splitRes.split;
+
+    await requirePermission(split.supplier_id, "order.accept_line");
+    const member = (await getActiveSupplierMember(split.supplier_id)) as
+      | { id: string; role: string; supplier_id: string }
+      | null;
+    if (!member) return { ok: false, error: "Membro fornitore non trovato" };
+
+    const currentState = getWorkflowState(split.status, split.supplier_notes);
+    const allowed = LEGAL[targetStatus];
+    if (!allowed || !allowed.includes(currentState)) {
+      return {
+        ok: false,
+        error:
+          "Transizione non consentita — apri il dettaglio ordine per gestire questo passaggio",
+      };
+    }
+
+    const nowIso = new Date().toISOString();
+
+    if (targetStatus === "packed") {
+      const wf = await setSplitWorkflow(supabase, splitId, "packed");
+      if (!wf.ok) return wf;
+      await emitSplitEvent(supabase, {
+        splitId,
+        eventType: "packed",
+        memberId: member.id,
+      });
+    } else {
+      const enumStatus =
+        targetStatus === "shipped" ? "shipping" : targetStatus;
+      const patch: Record<string, unknown> = {
+        status: enumStatus,
+        supplier_notes: stripWorkflowTag(split.supplier_notes) || null,
+      };
+      if (targetStatus === "shipped") patch.shipped_at = nowIso;
+      if (targetStatus === "delivered") patch.delivered_at = nowIso;
+      const { error } = await (supabase as any)
+        .from("order_splits")
+        .update(patch)
+        .eq("id", splitId);
+      if (error) return { ok: false, error: error.message };
+
+      if (targetStatus === "shipped" || targetStatus === "delivered") {
+        await emitOrderEvent(supabase, {
+          splitId,
+          eventType: targetStatus,
+          memberId: member.id,
+          supplierId: split.supplier_id,
+        });
+      } else {
+        await emitSplitEvent(supabase, {
+          splitId,
+          eventType: "preparing",
+          memberId: member.id,
+        });
+      }
+    }
+
+    revalidateSupplierOrders(splitId);
+    revalidatePath("/supplier/ordini/kanban");
+
+    return { ok: true, data: { splitStatus: targetStatus } };
   } catch (err) {
     return { ok: false, error: errMsg(err, "Errore aggiornamento stato") };
   }

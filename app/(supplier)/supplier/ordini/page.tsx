@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
 import { getWorkflowState } from "@/lib/orders/supplier-actions";
@@ -156,11 +157,19 @@ export default async function SupplierOrdersPage({
         />
       )}
 
-      <div>
-        <h1 className="text-2xl font-bold text-text-primary">Ordini Ricevuti</h1>
-        <p className="text-sm text-text-secondary">
-          Gestisci gli ordini dei tuoi clienti con filtri stato, ristorante e periodo.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary">Ordini Ricevuti</h1>
+          <p className="text-sm text-text-secondary">
+            Gestisci gli ordini dei tuoi clienti con filtri stato, ristorante e periodo.
+          </p>
+        </div>
+        <Link
+          href="/supplier/ordini/kanban"
+          className="text-sm text-forest underline hover:text-forest-dark whitespace-nowrap"
+        >
+          Vista kanban
+        </Link>
       </div>
 
       <SupplierOrdersClient
