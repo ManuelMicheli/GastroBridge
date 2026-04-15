@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Search as SearchIcon, BookMarked, Plus, Trash2, ShoppingBasket } from "lucide-react";
+import { Search as SearchIcon, BookMarked, Plus, Trash2, ShoppingBasket, Upload, UploadCloud, Check, ArrowLeft, Download } from "lucide-react";
+import { parseCsv, parseXlsx, suggestMapping, type ParsedSheet } from "@/lib/catalogs/parse-file";
+import { normalizeName, normalizeUnit } from "@/lib/catalogs/normalize";
 
 export type SupplierLite = { id: string; supplier_name: string };
 export type CatalogItemLite = {
@@ -91,16 +93,22 @@ export function SearchPageClient({ suppliers, items }: Props) {
         </p>
       </header>
 
-      <div className="relative max-w-xl">
-        <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-tertiary" />
-        <input
-          autoFocus
-          type="search"
-          placeholder="Es. farina, olio, pomodoro..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          className="w-full rounded-lg bg-surface-base border border-border-subtle pl-9 pr-3 py-2.5 text-text-primary"
-        />
+      <TypicalOrderSection groups={groups} />
+
+      <div className="border-t border-border-subtle pt-6 space-y-4">
+        <h2 className="text-xl font-semibold text-text-primary flex items-center gap-2">
+          <SearchIcon className="h-5 w-5 text-accent-green" /> Ricerca singolo prodotto
+        </h2>
+        <div className="relative max-w-xl">
+          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-tertiary" />
+          <input
+            type="search"
+            placeholder="Es. farina, olio, pomodoro..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            className="w-full rounded-lg bg-surface-base border border-border-subtle pl-9 pr-3 py-2.5 text-text-primary"
+          />
+        </div>
       </div>
 
       <p className="text-xs text-text-tertiary">
@@ -157,8 +165,6 @@ export function SearchPageClient({ suppliers, items }: Props) {
           })}
         </ul>
       )}
-
-      <TypicalOrderSection groups={groups} />
     </div>
   );
 }
@@ -281,14 +287,37 @@ function TypicalOrderSection({ groups }: { groups: Group[] }) {
       return a.total - b.total;
     });
 
+  const [importOpen, setImportOpen] = useState(false);
+
+  const onImported = (incoming: OrderLine[], mode: "append" | "replace") => {
+    setLines((prev) => {
+      const base = mode === "replace" ? [] : prev;
+      const merged = [...base];
+      for (const line of incoming) {
+        const existing = merged.find((l) => l.key === line.key);
+        if (existing) existing.qty += line.qty;
+        else merged.push(line);
+      }
+      return merged;
+    });
+  };
+
   return (
-    <section className="mt-12 border-t border-border-subtle pt-8">
-      <header className="flex items-center gap-2 mb-2">
-        <ShoppingBasket className="h-5 w-5 text-accent-green" />
-        <h2 className="text-xl font-semibold text-text-primary">Il tuo ordine tipico</h2>
+    <section>
+      <header className="flex items-center justify-between gap-2 mb-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <ShoppingBasket className="h-5 w-5 text-accent-green" />
+          <h2 className="text-xl font-semibold text-text-primary">Il tuo ordine tipico</h2>
+        </div>
+        <button
+          onClick={() => setImportOpen(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border-subtle text-text-primary hover:bg-surface-hover text-sm"
+        >
+          <Upload className="h-4 w-4" /> Importa da file
+        </button>
       </header>
       <p className="text-sm text-text-secondary mb-4">
-        Aggiungi i prodotti che acquisti regolarmente con la quantità: vedi subito il prezzo migliore per riga e il totale del basket ottimale.
+        Aggiungi i prodotti che acquisti regolarmente con la quantità: vedi subito il prezzo migliore per riga e il totale del basket ottimale. Puoi anche importarli da un file Excel/CSV.
       </p>
 
       {/* Add row */}
@@ -325,6 +354,13 @@ function TypicalOrderSection({ groups }: { groups: Group[] }) {
           <Plus className="h-4 w-4" /> Aggiungi
         </button>
       </div>
+
+      <TypicalOrderImportWizard
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        groups={groups}
+        onImported={onImported}
+      />
 
       {lines.length === 0 ? (
         <p className="text-sm text-text-tertiary py-6 text-center border border-dashed border-border-subtle rounded-lg">
@@ -432,5 +468,299 @@ function TypicalOrderSection({ groups }: { groups: Group[] }) {
         </>
       )}
     </section>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Import wizard for typical order — accepts CSV/XLSX with name+unit+qty.
+// ---------------------------------------------------------------------------
+
+const MAX_BYTES = 2 * 1024 * 1024;
+const MAX_ROWS = 5000;
+
+type WizardStep = "upload" | "map" | "preview";
+type Mapping = { name: string; unit: string; qty: string };
+type ValidatedRow =
+  | { ok: true; matchedKey: string | null; productName: string; unit: string; qty: number }
+  | { ok: false; reason: string; raw: { name: string; unit: string; qty: string } };
+
+function TypicalOrderImportWizard({
+  open,
+  onClose,
+  groups,
+  onImported,
+}: {
+  open: boolean;
+  onClose: () => void;
+  groups: Group[];
+  onImported: (lines: OrderLine[], mode: "append" | "replace") => void;
+}) {
+  const [step, setStep] = useState<WizardStep>("upload");
+  const [hasHeader, setHasHeader] = useState(true);
+  const [sheet, setSheet] = useState<ParsedSheet | null>(null);
+  const [mapping, setMapping] = useState<Mapping>({ name: "", unit: "", qty: "" });
+  const [mode, setMode] = useState<"append" | "replace">("append");
+  const [error, setError] = useState<string | null>(null);
+
+  const reset = () => {
+    setStep("upload");
+    setSheet(null);
+    setMapping({ name: "", unit: "", qty: "" });
+    setError(null);
+  };
+  const closeAll = () => { reset(); onClose(); };
+
+  const groupByNormKey = useMemo(() => {
+    const m = new Map<string, Group>();
+    for (const g of groups) m.set(`${normalizeName(g.productName)}::${normalizeUnit(g.unit)}`, g);
+    return m;
+  }, [groups]);
+
+  const validated: ValidatedRow[] = useMemo(() => {
+    if (!sheet) return [];
+    return sheet.rows.map((r) => {
+      const name = (r[mapping.name] ?? "").trim();
+      const unit = (r[mapping.unit] ?? "").trim();
+      const qtyRaw = (r[mapping.qty] ?? "").trim();
+
+      if (!name) return { ok: false, reason: "Nome vuoto", raw: { name, unit, qty: qtyRaw } };
+      if (!unit) return { ok: false, reason: "Unità vuota", raw: { name, unit, qty: qtyRaw } };
+
+      const qtyNum = Number(qtyRaw.replace(",", "."));
+      if (!Number.isFinite(qtyNum) || qtyNum <= 0) {
+        return { ok: false, reason: "Quantità non valida", raw: { name, unit, qty: qtyRaw } };
+      }
+
+      const key = `${normalizeName(name)}::${normalizeUnit(unit)}`;
+      const matched = groupByNormKey.get(key);
+      return {
+        ok: true,
+        matchedKey: matched ? matched.key : null,
+        productName: matched?.productName ?? name,
+        unit:        matched?.unit ?? unit,
+        qty:         qtyNum,
+      };
+    });
+  }, [sheet, mapping, groupByNormKey]);
+
+  if (!open) return null;
+
+  const handleFile = async (file: File) => {
+    setError(null);
+    if (file.size > MAX_BYTES) { setError("File troppo grande (max 2MB)"); return; }
+    try {
+      const ext = file.name.toLowerCase().split(".").pop() ?? "";
+      let parsed: ParsedSheet;
+      if (ext === "csv") parsed = await parseCsv(file, hasHeader);
+      else if (ext === "xlsx" || ext === "xls") parsed = await parseXlsx(file, hasHeader);
+      else { setError("Formato non supportato"); return; }
+
+      if (parsed.rows.length === 0) { setError("Nessuna riga di dati nel file"); return; }
+      if (parsed.rows.length > MAX_ROWS) { setError(`Troppe righe (max ${MAX_ROWS})`); return; }
+
+      setSheet(parsed);
+      const suggested = suggestMapping(parsed.headers);
+      const qtyHeader = parsed.headers.find((h) => /quant|q.tà|qta|qty/i.test(h));
+      setMapping({
+        name: suggested.name ?? parsed.headers[0] ?? "",
+        unit: suggested.unit ?? parsed.headers[1] ?? "",
+        qty:  qtyHeader ?? parsed.headers[2] ?? "",
+      });
+      setStep("map");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Errore lettura file");
+    }
+  };
+
+  const validRows = validated.filter((v): v is Extract<ValidatedRow, { ok: true }> => v.ok);
+  const invalidCount = validated.length - validRows.length;
+  const matchedCount = validRows.filter((v) => v.matchedKey !== null).length;
+  const unmatchedCount = validRows.length - matchedCount;
+
+  const confirmImport = () => {
+    if (validRows.length === 0) return;
+    const lines: OrderLine[] = validRows.map((v) => ({
+      key: v.matchedKey ?? `${normalizeName(v.productName)}::${normalizeUnit(v.unit)}`,
+      productName: v.productName,
+      unit: v.unit,
+      qty: v.qty,
+    }));
+    onImported(lines, mode);
+    closeAll();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={closeAll}>
+      <div
+        className="w-full max-w-3xl rounded-xl bg-surface-card border border-border-subtle p-6 space-y-5 max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-text-primary">Importa ordine tipico</h2>
+          <div className="text-xs text-text-tertiary">
+            {step === "upload" ? "1/3 Upload" : step === "map" ? "2/3 Mappa colonne" : "3/3 Anteprima"}
+          </div>
+        </header>
+
+        {error && (
+          <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-sm text-red-400">
+            {error}
+          </div>
+        )}
+
+        {step === "upload" && (
+          <div className="space-y-4">
+            <label className="flex items-center gap-2 text-sm text-text-secondary">
+              <input type="checkbox" checked={hasHeader} onChange={(e) => setHasHeader(e.target.checked)} />
+              Il file ha un&apos;intestazione sulla prima riga
+            </label>
+            <label className="block rounded-xl border-2 border-dashed border-border-subtle p-12 text-center cursor-pointer hover:border-accent-green/40">
+              <UploadCloud className="mx-auto h-8 w-8 text-text-tertiary" />
+              <p className="mt-3 text-text-primary">Clicca per scegliere un file</p>
+              <p className="mt-1 text-xs text-text-tertiary">CSV, XLS, XLSX · max 2MB · max 5000 righe</p>
+              <p className="mt-1 text-xs text-text-tertiary">Colonne attese: nome, unità, quantità</p>
+              <input
+                type="file" accept=".csv,.xls,.xlsx" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+              />
+            </label>
+            <a
+              href="data:text/csv;charset=utf-8,nome;unita;quantita%0AFarina%2000;kg;10%0AOlio%20EVO;L;5%0APomodoro%20pelato;kg;8"
+              download="template-ordine-tipico.csv"
+              className="inline-flex items-center gap-1 text-sm text-accent-green hover:underline"
+            >
+              <Download className="h-4 w-4" /> Scarica template CSV
+            </a>
+          </div>
+        )}
+
+        {step === "map" && sheet && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {(["name", "unit", "qty"] as const).map((field) => (
+                <label key={field} className="block">
+                  <span className="text-sm text-text-secondary">
+                    {field === "name" ? "Nome prodotto" : field === "unit" ? "Unità" : "Quantità"} *
+                  </span>
+                  <select
+                    value={mapping[field]}
+                    onChange={(e) => setMapping((m) => ({ ...m, [field]: e.target.value }))}
+                    className="mt-1 w-full rounded-lg bg-surface-base border border-border-subtle px-3 py-2 text-text-primary"
+                  >
+                    <option value="">—</option>
+                    {sheet.headers.map((h) => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                </label>
+              ))}
+            </div>
+            <div className="rounded-lg border border-border-subtle overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-surface-base text-text-tertiary">
+                  <tr>{sheet.headers.map((h) => <th key={h} className="text-left px-2 py-1 font-medium">{h}</th>)}</tr>
+                </thead>
+                <tbody>
+                  {sheet.rows.slice(0, 5).map((r, i) => (
+                    <tr key={i} className="border-t border-border-subtle">
+                      {sheet.headers.map((h) => <td key={h} className="px-2 py-1 text-text-secondary">{r[h]}</td>)}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="flex justify-between">
+              <button onClick={() => setStep("upload")} className="inline-flex items-center gap-1 text-text-secondary hover:text-text-primary">
+                <ArrowLeft className="h-4 w-4" /> Indietro
+              </button>
+              <button
+                onClick={() => setStep("preview")}
+                disabled={!mapping.name || !mapping.unit || !mapping.qty}
+                className="px-4 py-2 rounded-lg bg-accent-green text-surface-base font-medium disabled:opacity-50"
+              >
+                Continua
+              </button>
+            </div>
+          </div>
+        )}
+
+        {step === "preview" && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 text-sm flex-wrap">
+              <span className="inline-flex items-center gap-1 text-accent-green">
+                <Check className="h-4 w-4" /> {matchedCount} trovate nei cataloghi
+              </span>
+              {unmatchedCount > 0 && (
+                <span className="text-yellow-400">{unmatchedCount} non disponibili nei cataloghi</span>
+              )}
+              {invalidCount > 0 && <span className="text-red-400">{invalidCount} scartate</span>}
+            </div>
+
+            <div className="rounded-lg border border-border-subtle max-h-64 overflow-y-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-surface-base text-text-tertiary sticky top-0">
+                  <tr>
+                    <th className="text-left px-2 py-1 font-medium">Stato</th>
+                    <th className="text-left px-2 py-1 font-medium">Nome</th>
+                    <th className="text-left px-2 py-1 font-medium">Unità</th>
+                    <th className="text-right px-2 py-1 font-medium">Q.tà</th>
+                    <th className="text-left px-2 py-1 font-medium">Note</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {validated.map((v, i) => (
+                    <tr key={i} className="border-t border-border-subtle">
+                      {v.ok ? (
+                        <>
+                          <td className="px-2 py-1">
+                            {v.matchedKey
+                              ? <span className="text-accent-green">OK</span>
+                              : <span className="text-yellow-400">Non in catalogo</span>}
+                          </td>
+                          <td className="px-2 py-1 text-text-primary">{v.productName}</td>
+                          <td className="px-2 py-1 text-text-secondary">{v.unit}</td>
+                          <td className="px-2 py-1 text-right text-text-primary tabular-nums">{v.qty}</td>
+                          <td className="px-2 py-1 text-text-tertiary text-xs">
+                            {v.matchedKey ? "Trovato nei tuoi cataloghi" : "Sarà aggiunto come 'non disponibile'"}
+                          </td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="px-2 py-1 text-red-400">✗</td>
+                          <td className="px-2 py-1 text-text-tertiary">{v.raw.name || "—"}</td>
+                          <td className="px-2 py-1 text-text-tertiary">{v.raw.unit || "—"}</td>
+                          <td className="px-2 py-1 text-right text-text-tertiary tabular-nums">{v.raw.qty || "—"}</td>
+                          <td className="px-2 py-1 text-red-400 text-xs">{v.reason}</td>
+                        </>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <fieldset className="flex gap-4 text-sm">
+              <label className="inline-flex items-center gap-1">
+                <input type="radio" checked={mode === "append"} onChange={() => setMode("append")} /> Aggiungi all&apos;ordine
+              </label>
+              <label className="inline-flex items-center gap-1">
+                <input type="radio" checked={mode === "replace"} onChange={() => setMode("replace")} /> Sostituisci ordine
+              </label>
+            </fieldset>
+
+            <div className="flex justify-between">
+              <button onClick={() => setStep("map")} className="inline-flex items-center gap-1 text-text-secondary hover:text-text-primary">
+                <ArrowLeft className="h-4 w-4" /> Indietro
+              </button>
+              <button
+                onClick={confirmImport}
+                disabled={validRows.length === 0}
+                className="px-4 py-2 rounded-lg bg-accent-green text-surface-base font-medium disabled:opacity-50"
+              >
+                Conferma ({validRows.length} righe)
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
