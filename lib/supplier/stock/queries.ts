@@ -31,6 +31,7 @@ export type MovementRow = StockMovementRow & {
   product_name: string;
   warehouse_name: string;
   created_by_name: string | null;
+  lot_code: string | null;
 };
 
 export type AtRiskLotRow = {
@@ -222,6 +223,7 @@ export async function getMovements(filter: {
       *,
       products:product_id ( id, name, supplier_id ),
       warehouses:warehouse_id ( id, name, supplier_id ),
+      lot:lot_id ( id, lot_code ),
       member:created_by_member_id (
         id,
         profile:profile_id ( full_name )
@@ -243,6 +245,7 @@ export async function getMovements(filter: {
   type RawMov = StockMovementRow & {
     products: { id: string; name: string; supplier_id: string } | null;
     warehouses: { id: string; name: string; supplier_id: string } | null;
+    lot: { id: string; lot_code: string } | null;
     member: {
       id: string;
       profile: { full_name: string | null } | null;
@@ -257,12 +260,13 @@ export async function getMovements(filter: {
         r.warehouses?.supplier_id === filter.supplierId,
     )
     .map((r) => {
-      const { products, warehouses, member, ...rest } = r;
+      const { products, warehouses, lot, member, ...rest } = r;
       return {
         ...(rest as StockMovementRow),
         product_name: products?.name ?? "",
         warehouse_name: warehouses?.name ?? "",
         created_by_name: member?.profile?.full_name ?? null,
+        lot_code: lot?.lot_code ?? null,
       };
     });
 }
