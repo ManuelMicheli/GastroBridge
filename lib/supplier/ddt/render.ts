@@ -32,6 +32,13 @@ export interface RenderDdtOptions {
   copia?: boolean;
   /** Signed URL expiry (default 1h). */
   signedUrlTtlSeconds?: number;
+  /**
+   * Optional suffix appended to the storage key before `.pdf`. Used by the
+   * COPIA reprint flow (Task 8) to avoid overwriting the canonical DDT PDF
+   * with a watermarked variant. Must be URL-safe; leading separator is
+   * caller-provided (e.g. `-copy-1713190000000`).
+   */
+  pathSuffix?: string;
 }
 
 export interface RenderDdtResult {
@@ -266,7 +273,8 @@ export async function renderDdtPdf(
     DdtPdfDocument(data),
   )) as unknown as Buffer;
 
-  const path = `${ddt.supplier_id}/${ddt.year}/${ddt.number}.pdf`;
+  const suffix = options.pathSuffix ?? "";
+  const path = `${ddt.supplier_id}/${ddt.year}/${ddt.number}${suffix}.pdf`;
 
   const { error: upErr } = await admin.storage
     .from(DDT_BUCKET)
