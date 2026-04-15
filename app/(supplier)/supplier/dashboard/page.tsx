@@ -7,6 +7,7 @@ import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
 import { getPendingRequestsForSupplier } from "@/lib/relationships/queries";
 import { getStockAlertCounts } from "@/lib/supplier/stock/queries";
 import { StockAlertsWidget } from "@/components/supplier/inventory/stock-alerts-widget";
+import { getKpiTiles, getDashboardAlerts } from "@/lib/supplier/dashboard/queries";
 
 export const metadata: Metadata = { title: "Dashboard Fornitore — GastroBridge" };
 
@@ -199,8 +200,24 @@ export default async function SupplierDashboardPage() {
     .slice(0, 5)
     .map(([name, data]) => ({ name, ...data }));
 
-  const pendingRequests = await getPendingRequestsForSupplier();
-  const stockAlerts = await getStockAlertCounts(supplierId, 7);
+  const [pendingRequests, stockAlerts, kpiTiles, dashboardAlerts] = await Promise.all([
+    getPendingRequestsForSupplier(),
+    getStockAlertCounts(supplierId, 7),
+    getKpiTiles(supplierId),
+    getDashboardAlerts(supplierId),
+  ]);
+
+  // Backlog: ordini pending totali (non solo > 24h) e eta del piu vecchio in ore.
+  const pendingSplits = allSplits.filter(
+    (s) => s.status === "submitted" || s.status === "pending",
+  );
+  const backlogAges = pendingSplits
+    .map((s) => ordersMap.get(s.order_id)?.created_at)
+    .filter((t): t is string => !!t)
+    .map((t) => (Date.now() - new Date(t).getTime()) / (1000 * 60 * 60));
+  const orderBacklogOldestHours = backlogAges.length
+    ? Math.round(Math.max(...backlogAges))
+    : 0;
 
   return (
     <>
@@ -245,12 +262,18 @@ export default async function SupplierDashboardPage() {
           prevRevenue,
           activeClients: clientSet.size,
           activeProducts: products.length,
+          avgTicket: kpiTiles.avgTicketLast14,
+          avgTicketPrev: kpiTiles.avgTicketPrev14,
+          revenueYoYDeltaPct: kpiTiles.revenueDeltaPct,
+          orderBacklogCount: pendingSplits.length,
+          orderBacklogOldestHours,
         }}
         revenueSparkline={Object.values(sparklineMap)}
         chartData={chartData}
         recentOrders={recentOrders}
         topProducts={topProducts}
         topClients={topClients}
+        alerts={dashboardAlerts}
       />
     </>
   );
