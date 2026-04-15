@@ -44,6 +44,35 @@ export type DashboardAlerts = {
   failedDeliveriesCount: number; // deliveries failed ultima settimana
 };
 
+export type RevenueChartPoint = {
+  day: string; // YYYY-MM-DD
+  label: string; // dd MMM (it-IT)
+  value: number;
+};
+
+export type TopClientRow = {
+  restaurant_id: string;
+  name: string;
+  orders: number;
+  revenue: number;
+};
+
+export type TopProductRow = {
+  product_id: string;
+  name: string;
+  quantity: number;
+  revenue: number;
+};
+
+export type RecentDeliveryRow = {
+  id: string;
+  status: "planned" | "loaded" | "in_transit" | "delivered" | "failed";
+  scheduled_date: string;
+  delivered_at: string | null;
+  restaurant_name: string;
+  order_split_id: string;
+};
+
 function pctDelta(curr: number, prev: number): number | null {
   if (prev === 0) return curr === 0 ? 0 : null;
   return ((curr - prev) / prev) * 100;
@@ -231,4 +260,265 @@ export async function getDashboardAlerts(supplierId: string): Promise<DashboardA
     expiringLotsCount,
     failedDeliveriesCount,
   };
+}
+
+/**
+ * Revenue chart ultimi 30 giorni (oggi incluso). Pad dei giorni mancanti a 0.
+ * Etichetta in it-IT (es. "14 apr").
+ */
+export async function getRevenueChart30Days(
+  supplierId: string,
+): Promise<RevenueChartPoint[]> {
+  const today = new Date();
+  const start = new Date(today);
+  start.setDate(today.getDate() - 29); // 30 giorni incluso oggi
+
+  // Pre-build 30 days padded to 0
+  const days: RevenueChartPoint[] = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const key = isoDate(d);
+    const label = d.toLocaleDateString("it-IT", { day: "2-digit", month: "short" });
+    days.push({ day: key, label, value: 0 });
+  }
+
+  try {
+    const supabase = await createClient();
+    const { data, error } = await (supabase as any)
+      .from("mv_supplier_kpi_daily")
+      .select("day, revenue")
+      .eq("supplier_id", supplierId)
+      .gte("day", isoDate(start))
+      .lte("day", isoDate(today));
+
+    if (error || !Array.isArray(data)) return days;
+
+    const byDay = new Map<string, number>();
+    for (const r of data as Array<{ day: string; revenue: number | null }>) {
+      byDay.set(r.day, Number(r.revenue ?? 0));
+    }
+    for (const p of days) {
+      if (byDay.has(p.day)) p.value = byDay.get(p.day)!;
+    }
+    return days;
+  } catch {
+    return days;
+  }
+}
+
+/**
+ * Top 5 ristoranti per revenue nel mese corrente (o in `month` = YYYY-MM-01).
+ */
+export async function getTopClients(
+  supplierId: string,
+  opts: { month?: Date } = {},
+): Promise<TopClientRow[]> {
+  try {
+    const supabase = await createClient();
+    const now = opts.month ?? new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+    // Pull all splits joined to orders for this supplier in current month
+    const { data, error } = await (supabase as any)
+      .from("order_splits")
+      .select("id, subtotal, status, orders!inner(id, restaurant_id, created_at)")
+      .eq("supplier_id", supplierId)
+      .in("status", ["confirmed", "preparing", "shipping", "delivered"])
+      .gte("orders.created_at", startOfMonth.toISOString())
+      .lt("orders.created_at", startOfNextMonth.toISOString());
+
+    if (error || !Array.isArray(data)) return [];
+
+    const rows = data as Array<{
+      id: string;
+      subtotal: number | null;
+      orders: { id: string; restaurant_id: string; created_at: string } | null;
+    }>;
+
+    const byRestaurant = new Map<string, { orders: number; revenue: number }>();
+    for (const r of rows) {
+      const rid = r.orders?.restaurant_id;
+      if (!rid) continue;
+      const curr = byRestaurant.get(rid) ?? { orders: 0, revenue: 0 };
+      curr.orders += 1;
+      curr.revenue += Number(r.subtotal ?? 0);
+      byRestaurant.set(rid, curr);
+    }
+
+    const restaurantIds = [...byRestaurant.keys()];
+    if (restaurantIds.length === 0) return [];
+
+    const { data: rests } = await (supabase as any)
+      .from("restaurants")
+      .select("id, name")
+      .in("id", restaurantIds);
+
+    const nameById = new Map<string, string>();
+    for (const r of (rests ?? []) as Array<{ id: string; name: string }>) {
+      nameById.set(r.id, r.name);
+    }
+
+    return [...byRestaurant.entries()]
+      .map(([restaurant_id, v]) => ({
+        restaurant_id,
+        name: nameById.get(restaurant_id) ?? "—",
+        orders: v.orders,
+        revenue: v.revenue,
+      }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Top 5 prodotti per revenue nel mese corrente, via order_split_items.
+ */
+export async function getTopProducts(
+  supplierId: string,
+  opts: { month?: Date } = {},
+): Promise<TopProductRow[]> {
+  try {
+    const supabase = await createClient();
+    const now = opts.month ?? new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
+    // 1. Get relevant split IDs for this supplier in the month.
+    const { data: splits } = await (supabase as any)
+      .from("order_splits")
+      .select("id, orders!inner(created_at)")
+      .eq("supplier_id", supplierId)
+      .in("status", ["confirmed", "preparing", "shipping", "delivered"])
+      .gte("orders.created_at", startOfMonth.toISOString())
+      .lt("orders.created_at", startOfNextMonth.toISOString());
+
+    const splitIds = Array.isArray(splits)
+      ? (splits as Array<{ id: string }>).map((s) => s.id)
+      : [];
+
+    if (splitIds.length === 0) return [];
+
+    const { data: items } = await (supabase as any)
+      .from("order_split_items")
+      .select("product_id, quantity_requested, quantity_accepted, unit_price")
+      .in("order_split_id", splitIds);
+
+    if (!Array.isArray(items)) return [];
+
+    const byProduct = new Map<string, { quantity: number; revenue: number }>();
+    for (const it of items as Array<{
+      product_id: string;
+      quantity_requested: number | null;
+      quantity_accepted: number | null;
+      unit_price: number | null;
+    }>) {
+      const qty = Number(it.quantity_accepted ?? it.quantity_requested ?? 0);
+      const price = Number(it.unit_price ?? 0);
+      const curr = byProduct.get(it.product_id) ?? { quantity: 0, revenue: 0 };
+      curr.quantity += qty;
+      curr.revenue += qty * price;
+      byProduct.set(it.product_id, curr);
+    }
+
+    const productIds = [...byProduct.keys()];
+    if (productIds.length === 0) return [];
+
+    const { data: prods } = await (supabase as any)
+      .from("products")
+      .select("id, name")
+      .in("id", productIds);
+
+    const nameById = new Map<string, string>();
+    for (const p of (prods ?? []) as Array<{ id: string; name: string }>) {
+      nameById.set(p.id, p.name);
+    }
+
+    return [...byProduct.entries()]
+      .map(([product_id, v]) => ({
+        product_id,
+        name: nameById.get(product_id) ?? "—",
+        quantity: v.quantity,
+        revenue: v.revenue,
+      }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Ultime N consegne con status + nome ristorante.
+ * Ordina per delivered_at desc (fallback scheduled_date desc, created_at desc).
+ */
+export async function getRecentDeliveries(
+  supplierId: string,
+  opts: { limit?: number } = {},
+): Promise<RecentDeliveryRow[]> {
+  const limit = opts.limit ?? 8;
+  try {
+    const supabase = await createClient();
+    const { data, error } = await (supabase as any)
+      .from("deliveries")
+      .select(
+        "id, order_split_id, status, scheduled_date, delivered_at, created_at, order_splits!inner(id, supplier_id, orders!inner(id, restaurant_id))",
+      )
+      .eq("order_splits.supplier_id", supplierId)
+      .order("created_at", { ascending: false })
+      .limit(limit * 3); // sovradimensiona per compensare il ri-ordinamento lato client
+
+    if (error || !Array.isArray(data)) return [];
+
+    const rows = data as Array<{
+      id: string;
+      order_split_id: string;
+      status: RecentDeliveryRow["status"];
+      scheduled_date: string;
+      delivered_at: string | null;
+      created_at: string;
+      order_splits: { orders: { restaurant_id: string } | null } | null;
+    }>;
+
+    // Preferisci delivered_at, poi scheduled_date, poi created_at per ordinamento recency
+    const sorted = [...rows].sort((a, b) => {
+      const ta = a.delivered_at ?? a.scheduled_date ?? a.created_at;
+      const tb = b.delivered_at ?? b.scheduled_date ?? b.created_at;
+      return tb.localeCompare(ta);
+    });
+
+    const restaurantIds = [
+      ...new Set(
+        sorted
+          .map((r) => r.order_splits?.orders?.restaurant_id)
+          .filter((x): x is string => !!x),
+      ),
+    ];
+
+    const nameById = new Map<string, string>();
+    if (restaurantIds.length > 0) {
+      const { data: rests } = await (supabase as any)
+        .from("restaurants")
+        .select("id, name")
+        .in("id", restaurantIds);
+      for (const r of (rests ?? []) as Array<{ id: string; name: string }>) {
+        nameById.set(r.id, r.name);
+      }
+    }
+
+    return sorted.slice(0, limit).map((r) => ({
+      id: r.id,
+      status: r.status,
+      scheduled_date: r.scheduled_date,
+      delivered_at: r.delivered_at,
+      order_split_id: r.order_split_id,
+      restaurant_name:
+        nameById.get(r.order_splits?.orders?.restaurant_id ?? "") ?? "—",
+    }));
+  } catch {
+    return [];
+  }
 }

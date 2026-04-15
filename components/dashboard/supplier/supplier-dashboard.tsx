@@ -5,8 +5,12 @@ import { motion } from "motion/react";
 import {
   ClipboardList, TrendingUp, Users, Package,
   Plus, MapPin, BarChart3, Star,
-  AlertTriangle, Clock, PackageX, Receipt, Hourglass,
+  AlertTriangle, Clock, PackageX, Receipt, Hourglass, Truck,
 } from "lucide-react";
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 import { KPICard } from "../cards/kpi-card";
 import { DarkCard, DarkCardHeader, DarkCardTitle } from "../cards/dark-card";
 import { QuickAction } from "../cards/quick-action";
@@ -37,6 +41,31 @@ type TopClient = {
   total: number;
 };
 
+type RevenueChartPoint = { day: string; label: string; value: number };
+
+type TopClientRich = {
+  restaurant_id: string;
+  name: string;
+  orders: number;
+  revenue: number;
+};
+
+type TopProductRich = {
+  product_id: string;
+  name: string;
+  quantity: number;
+  revenue: number;
+};
+
+type RecentDelivery = {
+  id: string;
+  status: "planned" | "loaded" | "in_transit" | "delivered" | "failed";
+  scheduled_date: string;
+  delivered_at: string | null;
+  restaurant_name: string;
+  order_split_id: string;
+};
+
 type Props = {
   companyName: string;
   kpi: {
@@ -62,7 +91,35 @@ type Props = {
     expiringLotsCount: number;
     failedDeliveriesCount: number;
   };
+  // Task 12
+  revenueChart30d?: RevenueChartPoint[];
+  topClientsRich?: TopClientRich[];
+  topProductsRich?: TopProductRich[];
+  recentDeliveries?: RecentDelivery[];
 };
+
+const DELIVERY_STATUS_META: Record<
+  RecentDelivery["status"],
+  { label: string; dot: string; text: string; bg: string }
+> = {
+  planned: { label: "Pianificata", dot: "bg-text-tertiary", text: "text-text-tertiary", bg: "bg-surface-hover" },
+  loaded: { label: "Caricata", dot: "bg-accent-orange", text: "text-accent-orange", bg: "bg-accent-orange-muted" },
+  in_transit: { label: "In viaggio", dot: "bg-accent-blue", text: "text-accent-blue", bg: "bg-accent-blue-muted" },
+  delivered: { label: "Consegnata", dot: "bg-accent-green", text: "text-accent-green", bg: "bg-accent-green-muted" },
+  failed: { label: "Fallita", dot: "bg-accent-red", text: "text-accent-red", bg: "bg-accent-red-muted" },
+};
+
+function formatDeliveryWhen(d: RecentDelivery): string {
+  const ts = d.delivered_at ?? d.scheduled_date;
+  try {
+    return new Date(ts).toLocaleDateString("it-IT", {
+      day: "2-digit",
+      month: "short",
+    });
+  } catch {
+    return ts;
+  }
+}
 
 const stagger = {
   hidden: {},
@@ -153,9 +210,30 @@ export function SupplierDashboard({
   topProducts,
   topClients,
   alerts,
+  revenueChart30d,
+  topClientsRich,
+  topProductsRich,
+  recentDeliveries,
 }: Props) {
   const router = useRouter();
   const alertItems = buildAlerts(alerts);
+  const chart30 = revenueChart30d ?? [];
+  const hasRecharts = chart30.some((d) => d.value > 0);
+  const topClientsList = (topClientsRich && topClientsRich.length > 0)
+    ? topClientsRich
+    : [];
+  const topProductsList = (topProductsRich && topProductsRich.length > 0)
+    ? topProductsRich
+    : [];
+  const recentDeliveriesList = recentDeliveries ?? [];
+  const topClientsMax = topClientsList.reduce(
+    (m, c) => (c.revenue > m ? c.revenue : m),
+    0,
+  );
+  const topProductsMax = topProductsList.reduce(
+    (m, p) => (p.revenue > m ? p.revenue : m),
+    0,
+  );
 
   return (
     <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-6">
@@ -290,9 +368,79 @@ export function SupplierDashboard({
               <span className="text-xs text-text-tertiary">Ultimi 30 giorni</span>
             </DarkCardHeader>
           </div>
-          <div className="px-2 pb-3">
-            <AreaChart data={chartData} height={220} color="var(--color-accent-orange)" />
-          </div>
+          {chart30.length > 0 ? (
+            <div className="px-4 pb-4" style={{ height: 240 }}>
+              {hasRecharts ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart
+                    data={chart30}
+                    margin={{ top: 8, right: 12, left: 0, bottom: 4 }}
+                  >
+                    <defs>
+                      <linearGradient id="revenueLine" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="var(--color-accent-green)" />
+                        <stop offset="100%" stopColor="var(--color-accent-orange)" />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid
+                      stroke="var(--color-border-subtle)"
+                      strokeDasharray="2 4"
+                      vertical={false}
+                    />
+                    <XAxis
+                      dataKey="label"
+                      stroke="var(--color-text-tertiary)"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={false}
+                      minTickGap={24}
+                    />
+                    <YAxis
+                      stroke="var(--color-text-tertiary)"
+                      fontSize={11}
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(v: number) =>
+                        v >= 1000 ? `€${Math.round(v / 1000)}k` : `€${Math.round(v)}`
+                      }
+                      width={48}
+                    />
+                    <Tooltip
+                      cursor={{ stroke: "var(--color-border-default)", strokeWidth: 1 }}
+                      contentStyle={{
+                        backgroundColor: "var(--color-surface-elevated)",
+                        border: "1px solid var(--color-border-default)",
+                        borderRadius: 12,
+                        fontSize: 12,
+                        color: "var(--color-text-primary)",
+                      }}
+                      labelStyle={{ color: "var(--color-text-tertiary)", fontSize: 11 }}
+                      formatter={(value) => [
+                        formatCurrency(typeof value === "number" ? value : Number(value ?? 0)),
+                        "Fatturato",
+                      ]}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="value"
+                      stroke="url(#revenueLine)"
+                      strokeWidth={2.2}
+                      dot={false}
+                      activeDot={{ r: 4, fill: "var(--color-accent-green)" }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full text-sm text-text-tertiary">
+                  Nessun fatturato registrato negli ultimi 30 giorni.
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="px-2 pb-3">
+              <AreaChart data={chartData} height={220} color="var(--color-accent-orange)" />
+            </div>
+          )}
         </DarkCard>
 
         <DarkCard>
@@ -347,8 +495,159 @@ export function SupplierDashboard({
         </DarkCard>
       </div>
 
-      {/* Row 4: Top Clients */}
-      {topClients.length > 0 && (
+      {/* Row 4: Top Clienti + Top Prodotti (Task 12) */}
+      {(topClientsList.length > 0 || topProductsList.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* Top Clienti ranked */}
+          <DarkCard>
+            <DarkCardHeader>
+              <DarkCardTitle>Top clienti (mese)</DarkCardTitle>
+              <span className="text-xs text-text-tertiary">
+                {topClientsList.length > 0 ? `Top ${topClientsList.length}` : ""}
+              </span>
+            </DarkCardHeader>
+            {topClientsList.length > 0 ? (
+              <ul className="space-y-2">
+                {topClientsList.map((c, i) => {
+                  const pct = topClientsMax > 0 ? (c.revenue / topClientsMax) * 100 : 0;
+                  return (
+                    <li
+                      key={c.restaurant_id}
+                      className="relative rounded-xl bg-surface-hover/40 border border-border-subtle/50 p-3 overflow-hidden"
+                    >
+                      <div
+                        className="absolute inset-y-0 left-0 bg-accent-blue/10"
+                        style={{ width: `${pct}%` }}
+                      />
+                      <div className="relative flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-lg bg-accent-blue-muted flex items-center justify-center shrink-0">
+                          <span className="text-[11px] font-bold text-accent-blue">
+                            {i + 1}
+                          </span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-text-primary truncate">
+                            {c.name}
+                          </p>
+                          <p className="text-xs text-text-tertiary">
+                            {c.orders} ordin{c.orders === 1 ? "e" : "i"}
+                          </p>
+                        </div>
+                        <span className="text-sm font-mono font-semibold text-text-primary whitespace-nowrap">
+                          {formatCurrency(c.revenue)}
+                        </span>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="text-sm text-text-tertiary py-6 text-center">
+                Nessun ordine questo mese.
+              </p>
+            )}
+          </DarkCard>
+
+          {/* Top Prodotti ranked */}
+          <DarkCard>
+            <DarkCardHeader>
+              <DarkCardTitle>Top prodotti (mese)</DarkCardTitle>
+              <span className="text-xs text-text-tertiary">
+                {topProductsList.length > 0 ? `Top ${topProductsList.length}` : ""}
+              </span>
+            </DarkCardHeader>
+            {topProductsList.length > 0 ? (
+              <ul className="space-y-2">
+                {topProductsList.map((p, i) => {
+                  const pct = topProductsMax > 0 ? (p.revenue / topProductsMax) * 100 : 0;
+                  return (
+                    <li
+                      key={p.product_id}
+                      className="relative rounded-xl bg-surface-hover/40 border border-border-subtle/50 p-3 overflow-hidden"
+                    >
+                      <div
+                        className="absolute inset-y-0 left-0 bg-accent-green/10"
+                        style={{ width: `${pct}%` }}
+                      />
+                      <div className="relative flex items-center gap-3">
+                        <div className="h-8 w-8 rounded-lg bg-accent-green-muted flex items-center justify-center shrink-0">
+                          <span className="text-[11px] font-bold text-accent-green">
+                            {i + 1}
+                          </span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-text-primary truncate">
+                            {p.name}
+                          </p>
+                          <p className="text-xs text-text-tertiary">
+                            {p.quantity.toLocaleString("it-IT", {
+                              maximumFractionDigits: 2,
+                            })} unità
+                          </p>
+                        </div>
+                        <span className="text-sm font-mono font-semibold text-text-primary whitespace-nowrap">
+                          {formatCurrency(p.revenue)}
+                        </span>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="text-sm text-text-tertiary py-6 text-center">
+                Nessun prodotto venduto questo mese.
+              </p>
+            )}
+          </DarkCard>
+        </div>
+      )}
+
+      {/* Row 5: Consegne recenti (Task 12) */}
+      {recentDeliveriesList.length > 0 && (
+        <DarkCard>
+          <DarkCardHeader>
+            <DarkCardTitle>Consegne recenti</DarkCardTitle>
+            <Link
+              href="/supplier/consegne"
+              className="text-xs text-text-link hover:text-accent-green transition-colors"
+            >
+              Vedi tutte →
+            </Link>
+          </DarkCardHeader>
+          <ul className="divide-y divide-border-subtle/60">
+            {recentDeliveriesList.map((d) => {
+              const meta = DELIVERY_STATUS_META[d.status] ?? DELIVERY_STATUS_META.planned;
+              return (
+                <li
+                  key={d.id}
+                  className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"
+                >
+                  <div className="h-8 w-8 rounded-lg bg-surface-hover flex items-center justify-center shrink-0">
+                    <Truck className="h-4 w-4 text-text-tertiary" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-text-primary truncate">
+                      {d.restaurant_name}
+                    </p>
+                    <p className="text-xs text-text-tertiary">
+                      {formatDeliveryWhen(d)}
+                    </p>
+                  </div>
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${meta.text} ${meta.bg}`}
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
+                    {meta.label}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </DarkCard>
+      )}
+
+      {/* Fallback: legacy topClients (empty state backward compat) */}
+      {topClientsList.length === 0 && topClients.length > 0 && (
         <DarkCard>
           <DarkCardHeader>
             <DarkCardTitle>Top Clienti</DarkCardTitle>

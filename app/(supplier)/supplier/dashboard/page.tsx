@@ -7,7 +7,14 @@ import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
 import { getPendingRequestsForSupplier } from "@/lib/relationships/queries";
 import { getStockAlertCounts } from "@/lib/supplier/stock/queries";
 import { StockAlertsWidget } from "@/components/supplier/inventory/stock-alerts-widget";
-import { getKpiTiles, getDashboardAlerts } from "@/lib/supplier/dashboard/queries";
+import {
+  getKpiTiles,
+  getDashboardAlerts,
+  getRevenueChart30Days,
+  getTopClients,
+  getTopProducts,
+  getRecentDeliveries,
+} from "@/lib/supplier/dashboard/queries";
 
 export const metadata: Metadata = { title: "Dashboard Fornitore — GastroBridge" };
 
@@ -200,11 +207,24 @@ export default async function SupplierDashboardPage() {
     .slice(0, 5)
     .map(([name, data]) => ({ name, ...data }));
 
-  const [pendingRequests, stockAlerts, kpiTiles, dashboardAlerts] = await Promise.all([
+  const [
+    pendingRequests,
+    stockAlerts,
+    kpiTiles,
+    dashboardAlerts,
+    revenueChart30d,
+    topClientsRich,
+    topProductsRich,
+    recentDeliveries,
+  ] = await Promise.all([
     getPendingRequestsForSupplier(),
     getStockAlertCounts(supplierId, 7),
     getKpiTiles(supplierId),
     getDashboardAlerts(supplierId),
+    getRevenueChart30Days(supplierId),
+    getTopClients(supplierId),
+    getTopProducts(supplierId),
+    getRecentDeliveries(supplierId, { limit: 8 }),
   ]);
 
   // Backlog: ordini pending totali (non solo > 24h) e eta del piu vecchio in ore.
@@ -274,6 +294,10 @@ export default async function SupplierDashboardPage() {
         topProducts={topProducts}
         topClients={topClients}
         alerts={dashboardAlerts}
+        revenueChart30d={revenueChart30d}
+        topClientsRich={topClientsRich}
+        topProductsRich={topProductsRich}
+        recentDeliveries={recentDeliveries}
       />
     </>
   );
