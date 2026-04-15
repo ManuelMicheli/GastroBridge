@@ -309,12 +309,24 @@ function TypicalOrderSection({ groups }: { groups: Group[] }) {
           <ShoppingBasket className="h-5 w-5 text-accent-green" />
           <h2 className="text-xl font-semibold text-text-primary">Il tuo ordine tipico</h2>
         </div>
-        <button
-          onClick={() => setImportOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border-subtle text-text-primary hover:bg-surface-hover text-sm"
-        >
-          <Upload className="h-4 w-4" /> Importa da file
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setImportOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border-subtle text-text-primary hover:bg-surface-hover text-sm"
+          >
+            <Upload className="h-4 w-4" /> Importa da file
+          </button>
+          <Link
+            href="/cerca/ordine"
+            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium ${
+              lines.length === 0
+                ? "bg-surface-base text-text-tertiary opacity-50 pointer-events-none"
+                : "bg-accent-green text-surface-base"
+            }`}
+          >
+            <ShoppingBasket className="h-4 w-4" /> Carrello ottimale
+          </Link>
+        </div>
       </header>
       <p className="text-sm text-text-secondary mb-4">
         Aggiungi i prodotti che acquisti regolarmente con la quantità: vedi subito il prezzo migliore per riga e il totale del basket ottimale. Puoi anche importarli da un file Excel/CSV.
