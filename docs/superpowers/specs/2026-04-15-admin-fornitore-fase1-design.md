@@ -474,6 +474,8 @@ Migration unica `20260417_phase1_foundations.sql` in transazione:
 
 `suppliers.feature_flags.phase1_enabled` (default false in staging). Rollout: 1 supplier pilota → 5 → tutti. Vecchia UI e nuova coesistono 30 giorni.
 
+**Rollout completato (Plan 1D Task 14, 2026-04-15).** `phase1_enabled` è ora forzato `true` per tutti i supplier (backfill + default di colonna in `20260501000004_phase1_flag_default_true.sql`). Il helper `isPhase1Enabled` ritorna sempre `true` ed è deprecato; i wrapper `<FeatureFlagGate>` residui restano nel codice come pass-through e verranno rimossi in Fase 2. La colonna `feature_flags` resta disponibile per nuovi flag.
+
 ### 11.3 Observability
 
 - Pino logger su server actions con correlation id.
