@@ -462,6 +462,12 @@ body {
   --glow-accent: 0 0 24px rgba(185, 28, 60, 0.18);
   --glow-brand: 0 0 20px rgba(185, 28, 60, 0.14);
   --glow-brand-strong: 0 0 36px rgba(185, 28, 60, 0.24);
+
+  /* Phase A foundations — elevation + caption bound to scope (light) */
+  --elevation-card-active: var(--elevation-card);
+  --elevation-card-active-hover: var(--elevation-card-hover);
+  --elevation-modal-active: var(--elevation-modal);
+  --caption-color: var(--color-brand-depth);
 }
 
 /* =========================================
@@ -511,6 +517,12 @@ body {
   --glow-accent: 0 0 28px rgba(232, 69, 96, 0.28);
   --glow-brand: 0 0 24px rgba(232, 69, 96, 0.25);
   --glow-brand-strong: 0 0 40px rgba(232, 69, 96, 0.40);
+
+  /* Phase A foundations — elevation + caption bound to scope (dark) */
+  --elevation-card-active: var(--elevation-card-dark);
+  --elevation-card-active-hover: var(--elevation-card-hover-dark);
+  --elevation-modal-active: var(--elevation-modal-dark);
+  --caption-color: var(--color-brand-depth);
 }
 
 /* =========================================
