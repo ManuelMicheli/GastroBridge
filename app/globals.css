@@ -861,3 +861,8 @@ body {
   0%   { opacity: 1; transform: scale(1); }
   100% { opacity: 0; transform: scale(2.2); }
 }
+
+@keyframes ticker-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
