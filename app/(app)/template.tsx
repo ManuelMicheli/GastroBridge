@@ -19,6 +19,18 @@ export default function RestaurantRouteTemplate({
     if (!el) return;
 
     if (isRouteChange) {
+      // Scroll top instant on route change.
+      window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior });
+
+      // Focus the h1 of the new page for screen readers.
+      requestAnimationFrame(() => {
+        const h1 = el.querySelector("h1");
+        if (h1) {
+          if (!h1.hasAttribute("tabindex")) h1.setAttribute("tabindex", "-1");
+          (h1 as HTMLElement).focus({ preventScroll: true });
+        }
+      });
+
       const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       if (reduced) return;
       el.style.opacity = "0";
