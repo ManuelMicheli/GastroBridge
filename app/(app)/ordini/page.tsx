@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
+import { EmptyOrdersIllustration } from "@/components/illustrations";
 import { formatCurrency, formatDate } from "@/lib/utils/formatters";
 import { ORDER_STATUS_LABELS } from "@/lib/utils/constants";
 import Link from "next/link";
@@ -27,14 +30,24 @@ export default async function OrdersPage() {
     .order("created_at", { ascending: false })
     .returns<Array<{ id: string; total: number; status: string; notes: string | null; created_at: string }>>();
 
+  const orderList = orders ?? [];
+
   return (
     <div>
-      <h1 className="text-2xl font-bold text-charcoal mb-6">I tuoi Ordini</h1>
-      {(orders ?? []).length > 0 ? (
-        <div className="space-y-3">
-          {(orders ?? []).map((order) => (
+      <PageHeader
+        title="Ordini"
+        subtitle="Gestione ordini e ricezione merce dai tuoi fornitori."
+        meta={
+          orderList.length > 0 ? (
+            <Badge variant="default">{orderList.length} totali</Badge>
+          ) : undefined
+        }
+      />
+      {orderList.length > 0 ? (
+        <div className="space-y-2">
+          {orderList.map((order) => (
             <Link key={order.id} href={`/ordini/${order.id}`}>
-              <Card className="hover:shadow-elevated transition-shadow">
+              <Card className="motion-lift hover:shadow-elevated transition-shadow">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-mono text-sm text-sage">#{order.id.slice(0, 8)}</p>
@@ -54,9 +67,12 @@ export default async function OrdersPage() {
           ))}
         </div>
       ) : (
-        <div className="text-center py-16">
-          <p className="text-sage">Nessun ordine ancora.</p>
-        </div>
+        <EmptyState
+          title="Nessun ordine ancora"
+          description="Quando crei il primo ordine, comparirà qui con stato e timeline."
+          illustration={<EmptyOrdersIllustration />}
+          context="page"
+        />
       )}
     </div>
   );

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { PageHeader } from "@/components/ui/page-header";
+import { SectionHeader } from "@/components/ui/section-header";
 import Link from "next/link";
 import { User, MapPin, Users, CreditCard, ChevronRight, SlidersHorizontal, Target } from "lucide-react";
 
@@ -24,14 +26,18 @@ export default async function SettingsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-charcoal mb-6">Impostazioni</h1>
+      <PageHeader
+        title="Impostazioni"
+        subtitle="Gestisci profilo, sedi, team e parametri della piattaforma."
+      />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+      <SectionHeader title="Sezioni" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-10">
         {SETTINGS_SECTIONS.map((section) => (
           <Link key={section.href} href={section.href}>
-            <Card className="hover:shadow-elevated transition-shadow">
+            <Card className="motion-lift hover:shadow-elevated transition-shadow">
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-sage-muted/20 rounded-xl">
+                <div className="p-3 bg-sage-muted/20 rounded-lg">
                   <section.icon className="h-5 w-5 text-forest" />
                 </div>
                 <div className="flex-1">
@@ -45,8 +51,9 @@ export default async function SettingsPage() {
         ))}
       </div>
 
+      <SectionHeader title="Profilo Azienda" />
       <Card>
-        <CardHeader><CardTitle>Profilo Azienda</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Dati anagrafici</CardTitle></CardHeader>
         <CardContent>
           <div className="space-y-3 text-sm">
             <div className="flex justify-between py-2 border-b border-sage-muted/20">
