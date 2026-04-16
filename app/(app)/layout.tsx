@@ -38,6 +38,12 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   return (
     <CartProvider>
       <SidebarProvider>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:rounded-md focus:bg-[color:var(--color-brand-primary)] focus:px-4 focus:py-2 focus:text-white focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-[color:var(--color-brand-primary)] focus:ring-offset-2"
+        >
+          Vai al contenuto
+        </a>
         <DashboardShell
           navItems={NAV_ITEMS}
           mobileNavItems={MOBILE_NAV}
@@ -45,7 +51,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           companyName={profile?.company_name || "Ristorante"}
           userEmail={user?.email || ""}
         >
-          {children}
+          <div id="main-content" tabIndex={-1} className="outline-none">
+            {children}
+          </div>
         </DashboardShell>
       </SidebarProvider>
     </CartProvider>
