@@ -47,3 +47,38 @@ export const ProductBasePatchSchema = z
   .partial();
 
 export type ProductBasePatch = z.infer<typeof ProductBasePatchSchema>;
+
+// Creation schema — stricter than patch: required fields must be present.
+export const ProductCreateSchema = z.object({
+  supplier_id: z.string().uuid(),
+  category_id: z.string().uuid(),
+  name: z.string().trim().min(1).max(200),
+  description: z.string().trim().nullish(),
+  brand: z.string().trim().max(120).nullish(),
+  sku: z.string().trim().max(80).nullish(),
+  // Accepts both legacy Italian values and the newer English set the
+  // sales-units editor uses. The DB enum (`unit_type`) covers both.
+  unit: z.enum([
+    "kg",
+    "g",
+    "lt",
+    "ml",
+    "pz",
+    "cartone",
+    "bottiglia",
+    "latta",
+    "confezione",
+    "piece",
+    "l",
+    "box",
+    "pallet",
+    "bundle",
+    "other",
+  ]),
+  price: z.number().nonnegative(),
+  min_quantity: z.number().positive().default(1),
+  is_available: z.boolean().default(true),
+  lead_time_days: z.number().int().nonnegative().default(0),
+});
+
+export type ProductCreateInput = z.infer<typeof ProductCreateSchema>;

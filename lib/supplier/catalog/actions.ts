@@ -9,8 +9,10 @@ import { requirePermission } from "@/lib/supplier/context";
 import type { Database } from "@/types/database";
 import {
   ProductBasePatchSchema,
+  ProductCreateSchema,
   SalesUnitsArraySchema,
   type ProductBasePatch,
+  type ProductCreateInput,
   type SalesUnitInput,
 } from "./schemas";
 
@@ -221,6 +223,151 @@ export async function deleteSalesUnit(
         err instanceof Error ? err.message : "Errore eliminazione unità",
     };
   }
+}
+
+async function refreshCatalogSummary(supabase: Awaited<ReturnType<typeof createClient>>) {
+  try {
+    await (supabase.rpc as unknown as (fn: "refresh_catalog_summary") => Promise<{ data: unknown; error: unknown }>)(
+      "refresh_catalog_summary",
+    );
+  } catch {
+    // Non-fatal: stale MV for a few seconds is acceptable.
+  }
+}
+
+export async function createProduct(
+  input: ProductCreateInput,
+): Promise<Result<ProductRow>> {
+  try {
+    const parsed = ProductCreateSchema.safeParse(input);
+    if (!parsed.success) {
+      return {
+        ok: false,
+        error: parsed.error.issues[0]?.message ?? "Dati non validi",
+      };
+    }
+
+    await requirePermission(parsed.data.supplier_id, "catalog.edit");
+
+    const supabase = await createClient();
+    const { data, error } = await (supabase as any)
+      .from("products")
+      .insert(parsed.data)
+      .select("*")
+      .single();
+    if (error || !data) {
+      return { ok: false, error: error?.message ?? "Errore creazione" };
+    }
+
+    await refreshCatalogSummary(supabase);
+    revalidatePath("/supplier/catalogo");
+    return { ok: true, data: data as ProductRow };
+  } catch (err) {
+    return {
+      ok: false,
+      error:
+        err instanceof Error ? err.message : "Errore creazione prodotto",
+    };
+  }
+}
+
+export async function deleteProduct(
+  productId: string,
+): Promise<Result> {
+  try {
+    if (!productId) return { ok: false, error: "Prodotto non valido" };
+
+    const supplierId = await resolveSupplierId(productId);
+    if (!supplierId) return { ok: false, error: "Prodotto non trovato" };
+    await requirePermission(supplierId, "catalog.edit");
+
+    const supabase = await createClient();
+    const { error } = await (supabase as any)
+      .from("products")
+      .delete()
+      .eq("id", productId);
+    if (error) return { ok: false, error: error.message };
+
+    await refreshCatalogSummary(supabase);
+    revalidatePath("/supplier/catalogo");
+    return { ok: true, data: undefined };
+  } catch (err) {
+    return {
+      ok: false,
+      error:
+        err instanceof Error ? err.message : "Errore eliminazione prodotto",
+    };
+  }
+}
+
+export async function toggleProductAvailability(
+  productId: string,
+  value: boolean,
+): Promise<Result> {
+  try {
+    if (!productId) return { ok: false, error: "Prodotto non valido" };
+
+    const supplierId = await resolveSupplierId(productId);
+    if (!supplierId) return { ok: false, error: "Prodotto non trovato" };
+    await requirePermission(supplierId, "catalog.edit");
+
+    const supabase = await createClient();
+    const { error } = await (supabase as any)
+      .from("products")
+      .update({ is_available: value })
+      .eq("id", productId);
+    if (error) return { ok: false, error: error.message };
+
+    revalidatePath("/supplier/catalogo");
+    revalidatePath(`/supplier/catalogo/${productId}`);
+    return { ok: true, data: undefined };
+  } catch (err) {
+    return {
+      ok: false,
+      error:
+        err instanceof Error
+          ? err.message
+          : "Errore aggiornamento disponibilità",
+    };
+  }
+}
+
+// ------------------------------------------------------------------
+// Bulk ops — Phase 2C.
+// Shims provided here so the UI (Phase 2A) can wire the invocation
+// paths without breakage when 2C lands.
+// ------------------------------------------------------------------
+
+export async function bulkDeleteProducts(
+  _supplierId: string,
+  _productIds: string[],
+): Promise<Result> {
+  return {
+    ok: false,
+    error: "Bulk delete disponibile dalla Fase 2C",
+  };
+}
+
+export async function bulkToggleAvailability(
+  _supplierId: string,
+  _productIds: string[],
+  _value: boolean,
+): Promise<Result> {
+  return {
+    ok: false,
+    error: "Bulk toggle disponibile dalla Fase 2C",
+  };
+}
+
+export async function bulkUpdateCategory(
+  _supplierId: string,
+  _productIds: string[],
+  _categoryId: string,
+): Promise<Result> {
+  return {
+    ok: false,
+    error: "Bulk categoria disponibile dalla Fase 2C",
+  };
 }
 
 export async function updateProductBase(
