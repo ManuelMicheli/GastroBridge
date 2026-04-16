@@ -13,6 +13,9 @@
 # testing
 /coverage
 
+# superpowers brainstorm mockups
+.superpowers/
+
 # next.js
 /.next/
 /out/
