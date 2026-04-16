@@ -96,16 +96,27 @@ export default async function DashboardPage() {
   });
   const spendingSparkline = Object.values(sparklineMap);
 
-  // Count unique suppliers from order_items
-  const { data: supplierItems } = (await supabase
-    .from("order_items")
+  // Count active partnerships (restaurant_suppliers with status=active).
+  // Fallback to unique suppliers from order_items when the partnership table
+  // is unavailable or RLS hides it, so historical orders still count.
+  const { data: activeRels } = (await supabase
+    .from("restaurant_suppliers")
     .select("supplier_id")
-    .in(
-      "order_id",
-      currentOrders.map((o) => o.id)
-    )) as { data: { supplier_id: string }[] | null };
+    .in("restaurant_id", restaurantIds)
+    .eq("status", "active")) as { data: { supplier_id: string }[] | null };
 
-  const uniqueSuppliers = new Set((supplierItems || []).map((i) => i.supplier_id)).size;
+  let uniqueSuppliers = new Set((activeRels ?? []).map((r) => r.supplier_id)).size;
+
+  if (uniqueSuppliers === 0 && currentOrders.length > 0) {
+    const { data: supplierItems } = (await supabase
+      .from("order_items")
+      .select("supplier_id")
+      .in(
+        "order_id",
+        currentOrders.map((o) => o.id),
+      )) as { data: { supplier_id: string }[] | null };
+    uniqueSuppliers = new Set((supplierItems ?? []).map((i) => i.supplier_id)).size;
+  }
 
   // Chart data (last 30 days)
   const chartData: Array<{ label: string; value: number }> = [];

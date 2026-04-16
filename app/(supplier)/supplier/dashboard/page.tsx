@@ -127,15 +127,25 @@ export default async function SupplierDashboardPage() {
   const monthlyRevenue = monthFiltered.reduce((s, o) => s + (o.subtotal || 0), 0);
   const prevRevenue = prevFiltered.reduce((s, o) => s + (o.subtotal || 0), 0);
 
-  // Unique clients
-  const clientSet = new Set<string>();
-  monthFiltered.forEach((s) => {
-    const o = ordersMap.get(s.order_id);
-    if (o) {
-      const name = restaurantMap.get(o.restaurant_id);
-      if (name) clientSet.add(name);
-    }
-  });
+  // Active clients: count partnerships with status='active' (clienti effettivamente
+  // collegati), fallback a clienti che hanno ordinato questo mese se la tabella
+  // partnership è vuota o nascosta da RLS.
+  const { data: activeRels } = (await supabase
+    .from("restaurant_suppliers")
+    .select("restaurant_id")
+    .eq("supplier_id", supplierId)
+    .eq("status", "active")) as { data: { restaurant_id: string }[] | null };
+
+  let activeClientsCount = new Set((activeRels ?? []).map((r) => r.restaurant_id)).size;
+
+  if (activeClientsCount === 0) {
+    const orderBasedClients = new Set<string>();
+    monthFiltered.forEach((s) => {
+      const o = ordersMap.get(s.order_id);
+      if (o) orderBasedClients.add(o.restaurant_id);
+    });
+    activeClientsCount = orderBasedClients.size;
+  }
 
   // Sparkline (14 days)
   const sparklineMap: Record<string, number> = {};
@@ -280,7 +290,7 @@ export default async function SupplierDashboardPage() {
           ordersToday: todayFiltered.length,
           monthlyRevenue,
           prevRevenue,
-          activeClients: clientSet.size,
+          activeClients: activeClientsCount,
           activeProducts: products.length,
           avgTicket: kpiTiles.avgTicketLast14,
           avgTicketPrev: kpiTiles.avgTicketPrev14,

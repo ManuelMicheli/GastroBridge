@@ -11,7 +11,7 @@ import {
   type Offer,
   type Preferences,
 } from "@/lib/scoring";
-import { ScoreBadge } from "@/components/shared/scoring/score-badge";
+import { scoreColorClass } from "@/components/shared/scoring/score-badge";
 import { BreakdownTooltip } from "@/components/shared/scoring/breakdown-tooltip";
 import { ActiveFiltersBar } from "@/components/shared/scoring/active-filters-bar";
 
@@ -237,26 +237,22 @@ export function CompareClient({ suppliers, items, orderedNormalizedNames, prefer
                   const p = r.prices[s.id];
                   const isBestPrice = r.bestPriceSupplierId === s.id;
                   const cell = rowScores?.get(s.id);
+                  const priceColor = cell ? scoreColorClass(cell.score) : "text-text-primary";
                   return (
-                    <td key={s.id} className={`px-3 py-2 text-right tabular-nums ${
-                      isBestPrice ? "bg-accent-green/10 text-accent-green font-medium" : "text-text-primary"
-                    }`}>
+                    <td key={s.id} className={`px-3 py-2 text-right tabular-nums font-medium ${
+                      isBestPrice ? "bg-accent-green/10" : ""
+                    } ${priceColor}`}>
                       {p == null ? (
-                        "—"
+                        <span className="text-text-tertiary font-normal">—</span>
+                      ) : cell ? (
+                        <details className="relative">
+                          <summary className="list-none cursor-pointer">€ {p.toFixed(2)}</summary>
+                          <div className="absolute right-0 top-full mt-1 z-10 text-left">
+                            <BreakdownTooltip breakdown={cell.breakdown} />
+                          </div>
+                        </details>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 justify-end">
-                          {cell && (
-                            <details className="relative">
-                              <summary className="list-none cursor-pointer">
-                                <ScoreBadge score={cell.score} size="sm" />
-                              </summary>
-                              <div className="absolute right-0 top-full mt-1 z-10 text-left">
-                                <BreakdownTooltip breakdown={cell.breakdown} />
-                              </div>
-                            </details>
-                          )}
-                          <span>€ {p.toFixed(2)}</span>
-                        </span>
+                        <span>€ {p.toFixed(2)}</span>
                       )}
                     </td>
                   );
@@ -304,6 +300,7 @@ export function CompareClient({ suppliers, items, orderedNormalizedNames, prefer
         {visibleRows.length === 0 ? (
           <p className="text-center text-text-tertiary py-6">Nessun prodotto</p>
         ) : visibleRows.map((r) => {
+          const rowScores = scoresByRow.get(r.key);
           const offers = filteredSuppliers
             .map((s) => ({ s, price: r.prices[s.id] }))
             .filter((x): x is { s: SupplierCol; price: number } => x.price !== null && x.price !== undefined)
@@ -317,12 +314,14 @@ export function CompareClient({ suppliers, items, orderedNormalizedNames, prefer
               <ul className="mt-2 space-y-1 text-sm">
                 {offers.map(({ s, price }) => {
                   const isBestPrice = r.bestPriceSupplierId === s.id;
+                  const cell = rowScores?.get(s.id);
+                  const priceColor = cell ? scoreColorClass(cell.score) : "text-text-primary";
                   return (
                     <li key={s.id} className="flex justify-between">
                       <span className={isBestPrice ? "text-accent-green" : "text-text-secondary"}>
                         {s.supplier_name}
                       </span>
-                      <span className={`tabular-nums ${isBestPrice ? "text-accent-green font-medium" : "text-text-primary"}`}>
+                      <span className={`tabular-nums font-medium ${priceColor}`}>
                         € {price.toFixed(2)}
                       </span>
                     </li>

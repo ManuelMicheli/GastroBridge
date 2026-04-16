@@ -6,6 +6,7 @@ import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
 import type { SupplierCol } from "@/lib/catalogs/compare";
 import type { CatalogItemRow } from "@/lib/catalogs/types";
 import { normalizeName } from "@/lib/catalogs/normalize";
+import { loadConnectedSupplierCatalogs } from "@/lib/catalogs/connected-suppliers";
 import { getPreferences } from "@/lib/restaurants/preferences";
 import { bundleToScoringPrefs } from "@/lib/scoring";
 import type { Preferences } from "@/lib/scoring";
@@ -13,47 +14,61 @@ import type { Preferences } from "@/lib/scoring";
 export default async function CatalogComparePage() {
   const supabase = await createClient();
 
-  const { data: catalogs } = await supabase
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const userId = user?.id ?? "";
+
+  // --- 1. Cataloghi manuali del ristoratore (restaurant_catalogs)
+  const { data: manualCatalogs } = await supabase
     .from("restaurant_catalogs")
     .select("id, supplier_name, delivery_days, min_order_amount")
     .order("supplier_name", { ascending: true });
 
-  const suppliers: SupplierCol[] = (catalogs ?? []).map((c: any) => ({
+  const manualSuppliers: SupplierCol[] = (manualCatalogs ?? []).map((c: any) => ({
     id:               c.id,
     supplier_name:    c.supplier_name,
     delivery_days:    c.delivery_days,
     min_order_amount: c.min_order_amount !== null ? Number(c.min_order_amount) : null,
   }));
 
+  let manualItems: (CatalogItemRow & { catalog_id: string })[] = [];
+  if (manualSuppliers.length > 0) {
+    const manualIds = manualSuppliers.map((s) => s.id);
+    const { data: items } = await supabase
+      .from("restaurant_catalog_items")
+      .select("*")
+      .in("catalog_id", manualIds as any);
+    manualItems = (items ?? []).map((r: any) => ({ ...r, price: Number(r.price) }));
+  }
+
+  // --- 2. Fornitori reali collegati (restaurant_suppliers status='active')
+  const { suppliers: connectedSuppliers, items: connectedItemsRaw } =
+    await loadConnectedSupplierCatalogs(userId);
+  const connectedItems: (CatalogItemRow & { catalog_id: string })[] = connectedItemsRaw;
+
+  const suppliers: SupplierCol[] = [...connectedSuppliers, ...manualSuppliers];
+  const rows: (CatalogItemRow & { catalog_id: string })[] = [...connectedItems, ...manualItems];
+
   if (suppliers.length < 2) {
     return (
       <div className="p-6 space-y-3">
         <h1 className="text-2xl font-semibold text-text-primary">Confronto prezzi</h1>
-        <p className="text-text-secondary">Servono almeno 2 cataloghi per confrontare.</p>
-        <Link href="/cataloghi" className="text-accent-green hover:underline">← Torna ai cataloghi</Link>
+        <p className="text-text-secondary">
+          Servono almeno 2 cataloghi per confrontare. Collega fornitori dalla pagina{" "}
+          <Link href="/fornitori/cerca" className="text-accent-green hover:underline">
+            Cerca fornitori
+          </Link>{" "}
+          o aggiungi cataloghi manuali.
+        </p>
+        <Link href="/cataloghi" className="text-accent-green hover:underline">
+          ← Torna ai cataloghi
+        </Link>
       </div>
     );
   }
 
-  const ids = suppliers.map((s) => s.id);
-  const { data: items } = await supabase
-    .from("restaurant_catalog_items")
-    .select("*")
-    .in("catalog_id", ids as any);
-
-  const rows: (CatalogItemRow & { catalog_id: string })[] = (items ?? []).map((r: any) => ({
-    ...r,
-    price: Number(r.price),
-  }));
-
-  // Collect the set of product names (normalized) the user has actually ordered.
-  // Catalog-based orders store item lines in `notes`; marketplace orders link to
-  // `order_items.products.name`. We union both sources.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const userId = user?.id ?? "";
-
+  // --- 3. Prodotti ordinati (filtro "solo i miei più ordinati")
   const { data: userRestaurants } = (await supabase
     .from("restaurants")
     .select("id, is_primary, created_at")
@@ -84,8 +99,6 @@ export default async function CatalogComparePage() {
     for (const o of recentOrders ?? []) {
       if (!o.notes) continue;
       for (const line of o.notes.split(/\r?\n/)) {
-        // Lines look like: "  30× Farina 00 (kg) @ 12,80 €". Strip the
-        // trailing "(unit)" hint so we match against the bare product name.
         const m = line.match(/^\s{2,}\S+?×\s*(.+?)(?:\s*\([^)]+\))?\s*@\s*.+$/);
         if (m && m[1]) orderedNamesSet.add(normalizeName(m[1]));
       }
@@ -112,6 +125,8 @@ export default async function CatalogComparePage() {
         subscriptions={[
           { table: "restaurant_catalogs" },
           { table: "restaurant_catalog_items" },
+          { table: "restaurant_suppliers" },
+          { table: "products" },
           { table: "orders" },
         ]}
       />

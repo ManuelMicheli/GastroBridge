@@ -15,7 +15,7 @@ import {
   type Preferences,
   type ScoredOffer,
 } from "@/lib/scoring";
-import { ScoreBadge } from "@/components/shared/scoring/score-badge";
+import { scoreColorClass } from "@/components/shared/scoring/score-badge";
 import { BreakdownTooltip } from "@/components/shared/scoring/breakdown-tooltip";
 
 export type SupplierLite = {
@@ -403,7 +403,6 @@ export function OptimalCartClient({
               <thead className="text-text-tertiary">
                 <tr>
                   <th className="text-left px-2 py-1 font-medium">Prodotto</th>
-                  <th className="text-left px-2 py-1 font-medium">Score</th>
                   <th className="text-right px-2 py-1 font-medium">Q.tà</th>
                   <th className="text-left px-2 py-1 font-medium">Unità</th>
                   <th className="text-right px-2 py-1 font-medium">Prezzo</th>
@@ -422,23 +421,18 @@ export function OptimalCartClient({
                         </span>
                       )}
                     </td>
-                    <td className="px-2 py-1.5">
-                      <details className="relative print:hidden">
-                        <summary className="list-none cursor-pointer">
-                          <ScoreBadge score={p.scored.score} size="sm" />
-                        </summary>
-                        <div className="absolute left-0 top-full mt-1 z-10">
+                    <td className="px-2 py-1.5 text-right tabular-nums text-text-primary">{p.qty}</td>
+                    <td className="px-2 py-1.5 text-text-secondary" title={p.unit}>{p.unit}</td>
+                    <td className={`px-2 py-1.5 text-right tabular-nums font-medium ${scoreColorClass(p.scored.score)}`}>
+                      <details className="relative print:hidden inline-block">
+                        <summary className="list-none cursor-pointer">€ {p.price.toFixed(2)}</summary>
+                        <div className="absolute right-0 top-full mt-1 z-10">
                           <BreakdownTooltip breakdown={p.scored.breakdown} />
                         </div>
                       </details>
-                      <span className="hidden print:inline">
-                        <ScoreBadge score={p.scored.score} size="sm" />
-                      </span>
+                      <span className="hidden print:inline">€ {p.price.toFixed(2)}</span>
                     </td>
-                    <td className="px-2 py-1.5 text-right tabular-nums text-text-primary">{p.qty}</td>
-                    <td className="px-2 py-1.5 text-text-secondary" title={p.unit}>{p.unit}</td>
-                    <td className="px-2 py-1.5 text-right tabular-nums text-text-secondary">€ {p.price.toFixed(2)}</td>
-                    <td className="px-2 py-1.5 text-right tabular-nums text-text-primary font-medium">€ {p.lineTotal.toFixed(2)}</td>
+                    <td className={`px-2 py-1.5 text-right tabular-nums font-medium ${scoreColorClass(p.scored.score)}`}>€ {p.lineTotal.toFixed(2)}</td>
                     <td className="px-2 py-1.5 print:hidden">
                       {p.alternatives.length > 0 ? (
                         <select
@@ -453,7 +447,7 @@ export function OptimalCartClient({
                           <option value="">Cambia fornitore…</option>
                           {p.alternatives.map((a) => (
                             <option key={a.itemId} value={a.itemId}>
-                              {a.supplierName} — € {a.price.toFixed(2)} (score {Math.round(a.scored.score)})
+                              {a.supplierName} — € {a.price.toFixed(2)}
                             </option>
                           ))}
                         </select>

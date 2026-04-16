@@ -28,7 +28,7 @@ import { ArrowLeft, AlertTriangle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyCustomerConfirmationToken } from "@/lib/orders/customer-confirmation-token";
-import { getWorkflowState } from "@/lib/orders/supplier-actions";
+import { getWorkflowState } from "@/lib/orders/workflow-state";
 
 import ConfirmClient, {
   type CustomerConfirmLine,

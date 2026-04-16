@@ -1,18 +1,25 @@
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Plus, MapPin } from "lucide-react";
+import type { Metadata } from "next";
+import { createClient } from "@/lib/supabase/server";
+import { SediClient } from "./sedi-client";
+import type { RestaurantRow } from "@/lib/restaurants/types";
 
-export default function LocationsPage() {
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-charcoal">Sedi</h1>
-        <Button size="sm"><Plus className="h-4 w-4" /> Nuova Sede</Button>
-      </div>
-      <Card className="text-center py-16">
-        <MapPin className="h-12 w-12 text-sage-muted mx-auto mb-4" />
-        <p className="text-sage">Nessuna sede configurata. Aggiungi il tuo primo ristorante.</p>
-      </Card>
-    </div>
-  );
+export const metadata: Metadata = { title: "Sedi" };
+
+export default async function LocationsPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data } = await supabase
+    .from("restaurants")
+    .select(
+      "id, profile_id, name, cuisine, covers, address, city, province, zip_code, phone, email, is_primary, created_at, updated_at",
+    )
+    .eq("profile_id", user?.id ?? "")
+    .order("is_primary", { ascending: false })
+    .order("created_at", { ascending: true })
+    .returns<RestaurantRow[]>();
+
+  return <SediClient initialLocations={data ?? []} />;
 }

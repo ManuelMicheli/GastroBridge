@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { getWorkflowState } from "@/lib/orders/supplier-actions";
+import { getWorkflowState } from "@/lib/orders/workflow-state";
 import { KanbanClient, type KanbanCard } from "./kanban-client";
 
 export const metadata: Metadata = { title: "Kanban Ordini — Fornitore" };

@@ -1625,6 +1625,10 @@ export interface Database {
         Args: { p_supplier_id: string; p_permission: string };
         Returns: boolean;
       };
+      next_ddt_number: {
+        Args: { p_supplier_id: string; p_year: number };
+        Returns: number;
+      };
     };
     Enums: {
       user_role: UserRole;

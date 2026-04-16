@@ -15,7 +15,16 @@
       "Bash(rm -rf \"app/\\(supplier\\)/dashboard\" \"app/\\(supplier\\)/catalogo\" \"app/\\(supplier\\)/ordini\" \"app/\\(supplier\\)/clienti\" \"app/\\(supplier\\)/analytics\" \"app/\\(supplier\\)/recensioni\" \"app/\\(supplier\\)/impostazioni\")",
       "Bash(mkdir -p \"app/\\(marketing\\)/per-fornitori\")",
       "Bash(mv \"app/\\(marketing\\)/fornitori/page.tsx\" \"app/\\(marketing\\)/per-fornitori/page.tsx\")",
-      "Bash(rm -rf \"app/\\(marketing\\)/fornitori\")"
+      "Bash(rm -rf \"app/\\(marketing\\)/fornitori\")",
+      "mcp__claude_ai_Supabase__list_extensions",
+      "Bash(grep -l \"delivery_failed\\\\|dispatchEvent\" D:/Manum/GastroBridge/lib/notifications/*.ts)",
+      "Bash(mv \"app/\\(supplier\\)/supplier/consegne/calendario\" /tmp/_cal_bak)",
+      "Bash(mv \"components/supplier/delivery/delivery-calendar.tsx\" /tmp/_deliv_cal.tsx)",
+      "Bash(mv /tmp/_cal_bak \"app/\\(supplier\\)/supplier/consegne/calendario\")",
+      "Bash(mv /tmp/_deliv_cal.tsx \"components/supplier/delivery/delivery-calendar.tsx\")",
+      "Read(//tmp/**)",
+      "Bash(grep -E \"\\(supplier/ddt|supplier\\\\\\\\\\\\\\\\ddt|ddt-book|ddt-preview\\)\")",
+      "Bash(grep -rn \"Suppliers\\\\|anon\" D:/Manum/GastroBridge/.env*)"
     ]
   }
 }

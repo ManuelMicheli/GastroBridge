@@ -13,7 +13,7 @@ import {
   type ScoredOffer,
   type ExclusionReason,
 } from "@/lib/scoring";
-import { ScoreBadge } from "@/components/shared/scoring/score-badge";
+import { scoreColorClass } from "@/components/shared/scoring/score-badge";
 import { BreakdownTooltip } from "@/components/shared/scoring/breakdown-tooltip";
 import { ExclusionList, type ExcludedItem } from "@/components/shared/scoring/exclusion-list";
 import { ActiveFiltersBar } from "@/components/shared/scoring/active-filters-bar";
@@ -247,9 +247,8 @@ export function SearchPageClient({ suppliers, items, preferences }: Props) {
                   </h3>
                   {top && (
                     <span className="text-sm text-text-secondary flex items-center gap-2">
-                      <ScoreBadge score={top.scored.score} size="sm" title="Punteggio migliore" />
                       <span>
-                        <span className="text-accent-green font-medium">€ {top.price.toFixed(2)}</span>
+                        <span className={`font-medium ${scoreColorClass(top.scored.score)}`}>€ {top.price.toFixed(2)}</span>
                         {" "}da {top.supplier.supplier_name}
                       </span>
                       {savings > 0 && (
@@ -266,7 +265,6 @@ export function SearchPageClient({ suppliers, items, preferences }: Props) {
                     return (
                       <li key={o.itemId} className="flex items-center justify-between py-1.5 text-sm gap-3">
                         <div className="flex items-center gap-2 min-w-0">
-                          <ScoreBadge score={o.scored.score} size="sm" />
                           <Link
                             href={`/cataloghi/${o.supplier.id}`}
                             className={`hover:underline truncate ${isBest ? "text-accent-green" : "text-text-secondary"}`}
@@ -283,7 +281,7 @@ export function SearchPageClient({ suppliers, items, preferences }: Props) {
                           </details>
                         </div>
                         <span
-                          className={`tabular-nums shrink-0 ${isBest ? "text-accent-green font-medium" : "text-text-primary"}`}
+                          className={`tabular-nums shrink-0 font-medium ${scoreColorClass(o.scored.score)}`}
                         >
                           € {o.price.toFixed(2)}
                         </span>

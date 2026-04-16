@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getPreferences } from "@/lib/restaurants/preferences";
 import { bundleToScoringPrefs } from "@/lib/scoring";
 import type { Preferences } from "@/lib/scoring";
+import { loadConnectedSupplierCatalogs } from "@/lib/catalogs/connected-suppliers";
 import { SearchPageClient, type SupplierLite, type CatalogItemLite } from "./search-client";
 
 export const metadata: Metadata = { title: "Cerca Prodotti" };
@@ -14,6 +15,7 @@ export default async function SearchPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const userId = user?.id ?? "";
 
   let preferences: Preferences | null = null;
   if (user) {
@@ -31,26 +33,30 @@ export default async function SearchPage() {
     }
   }
 
+  // --- Cataloghi manuali del ristoratore
   const { data: catalogs } = await supabase
     .from("restaurant_catalogs")
     .select("id, supplier_name, delivery_days, min_order_amount")
     .order("supplier_name", { ascending: true });
 
-  const suppliers: SupplierLite[] = (catalogs ?? []).map((c: any) => ({
+  const manualSuppliers: SupplierLite[] = (catalogs ?? []).map((c: any) => ({
     id:               c.id,
     supplier_name:    c.supplier_name,
     delivery_days:    c.delivery_days ?? null,
-    min_order_amount: c.min_order_amount !== null && c.min_order_amount !== undefined ? Number(c.min_order_amount) : null,
+    min_order_amount:
+      c.min_order_amount !== null && c.min_order_amount !== undefined
+        ? Number(c.min_order_amount)
+        : null,
   }));
 
-  let items: CatalogItemLite[] = [];
-  if (suppliers.length > 0) {
-    const ids = suppliers.map((s) => s.id);
+  let manualItems: CatalogItemLite[] = [];
+  if (manualSuppliers.length > 0) {
+    const ids = manualSuppliers.map((s) => s.id);
     const { data } = await supabase
       .from("restaurant_catalog_items")
       .select("id, catalog_id, product_name, product_name_normalized, unit, price, notes")
       .in("catalog_id", ids as any);
-    items = (data ?? []).map((r: any) => ({
+    manualItems = (data ?? []).map((r: any) => ({
       id:                       r.id,
       catalog_id:               r.catalog_id,
       product_name:             r.product_name,
@@ -60,6 +66,23 @@ export default async function SearchPage() {
       notes:                    r.notes,
     }));
   }
+
+  // --- Fornitori reali collegati (status=active)
+  const { suppliers: connectedSuppliers, items: connectedItemsRaw } =
+    await loadConnectedSupplierCatalogs(userId);
+
+  const connectedItems: CatalogItemLite[] = connectedItemsRaw.map((r) => ({
+    id:                      r.id,
+    catalog_id:              r.catalog_id,
+    product_name:            r.product_name,
+    product_name_normalized: r.product_name_normalized,
+    unit:                    r.unit,
+    price:                   r.price,
+    notes:                   r.notes,
+  }));
+
+  const suppliers: SupplierLite[] = [...connectedSuppliers, ...manualSuppliers];
+  const items: CatalogItemLite[] = [...connectedItems, ...manualItems];
 
   return (
     <SearchPageClient
