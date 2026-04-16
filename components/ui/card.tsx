@@ -2,10 +2,14 @@ import { type HTMLAttributes, forwardRef } from "react";
 import { cn } from "@/lib/utils/formatters";
 
 const Card = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
+  ({ className, style, ...props }, ref) => (
     <div
       ref={ref}
-      className={cn("bg-white rounded-2xl p-6 shadow-card", className)}
+      className={cn(
+        "bg-white rounded-xl p-5 border border-[color:var(--color-border-subtle)]",
+        className
+      )}
+      style={{ boxShadow: "var(--elevation-card-active)", ...style }}
       {...props}
     />
   )
