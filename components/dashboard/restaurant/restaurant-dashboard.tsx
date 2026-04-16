@@ -3,7 +3,7 @@
 import { motion } from "motion/react";
 import {
   ClipboardList, ShoppingCart, TrendingDown, Store,
-  Search, Truck, HelpCircle,
+  Search, Truck, HelpCircle, ArrowUpRight, ArrowDownRight,
 } from "lucide-react";
 import { KPICard } from "../cards/kpi-card";
 import { DarkCard, DarkCardHeader, DarkCardTitle } from "../cards/dark-card";
@@ -13,6 +13,7 @@ import { StatusBadge } from "../tables/status-badge";
 import { DataTable, type Column } from "../tables/data-table";
 import { formatCurrency, formatDate } from "@/lib/utils/formatters";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 type OrderRow = {
   id: string;
@@ -20,6 +21,7 @@ type OrderRow = {
   total: number;
   created_at: string;
   supplier_name: string;
+  order_number: string;
 };
 
 type Props = {
@@ -66,27 +68,202 @@ const columns: Column<OrderRow>[] = [
     label: "Data",
     render: (row) => <span className="text-text-tertiary">{formatDate(row.created_at)}</span>,
   },
+  {
+    key: "order_number",
+    label: "Ordine",
+    render: (row) => <span className="font-mono text-text-tertiary text-xs">{row.order_number}</span>,
+  },
 ];
+
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 5) return "Buonanotte";
+  if (h < 12) return "Buongiorno";
+  if (h < 18) return "Buon pomeriggio";
+  return "Buonasera";
+}
+
+function formatDelta(current: number, previous: number): { sign: "+" | "-" | ""; pct: string; positive: boolean } {
+  if (previous === 0) {
+    if (current === 0) return { sign: "", pct: "—", positive: true };
+    return { sign: "+", pct: "100%", positive: true };
+  }
+  const delta = ((current - previous) / previous) * 100;
+  const positive = delta >= 0;
+  return {
+    sign: positive ? "+" : "",
+    pct: `${Math.abs(Math.round(delta))}%`,
+    positive,
+  };
+}
 
 export function RestaurantDashboard({ companyName, kpi, spendingSparkline, chartData, recentOrders }: Props) {
   const router = useRouter();
+  const [greeting, setGreeting] = useState("Ciao");
+
+  useEffect(() => {
+    setGreeting(getGreeting());
+  }, []);
+
+  const spendingDelta = formatDelta(kpi.spending, kpi.prevSpending);
+  const ordersDelta = formatDelta(kpi.ordersThisMonth, kpi.prevMonthOrders);
 
   return (
-    <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-6">
-      {/* Greeting */}
-      <div>
-        <h1 className="text-2xl font-bold text-text-primary">
-          Ciao, {companyName}
-        </h1>
-        <p className="text-text-secondary text-sm mt-0.5">
-          Ecco il riepilogo della tua attivita.
+    <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-8">
+      {/* Hero greeting */}
+      <header>
+        <p
+          className="uppercase mb-2"
+          style={{
+            fontSize: "var(--text-caption)",
+            lineHeight: "var(--text-caption--line-height)",
+            letterSpacing: "var(--text-caption--letter-spacing)",
+            fontWeight: "var(--text-caption--font-weight)",
+            color: "var(--caption-color, var(--color-brand-depth))",
+          }}
+        >
+          {greeting}
         </p>
-      </div>
+        <h1
+          className="font-display"
+          style={{
+            fontSize: "var(--text-display-lg)",
+            lineHeight: "var(--text-display-lg--line-height)",
+            letterSpacing: "var(--text-display-lg--letter-spacing)",
+            fontWeight: "var(--text-display-lg--font-weight)",
+            color: "var(--color-text-primary)",
+          }}
+        >
+          {companyName}
+        </h1>
+        <p
+          className="mt-1.5 text-text-secondary"
+          style={{
+            fontSize: "var(--text-body-sm)",
+            lineHeight: "var(--text-body-sm--line-height)",
+          }}
+        >
+          Ecco il riepilogo della tua attività di questo mese.
+        </p>
+      </header>
 
-      {/* KPI Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      {/* Hero KPI — single big number for spending */}
+      <DarkCard className="relative overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+          <div>
+            <p
+              className="uppercase mb-3"
+              style={{
+                fontSize: "var(--text-caption)",
+                letterSpacing: "var(--text-caption--letter-spacing)",
+                fontWeight: "var(--text-caption--font-weight)",
+                color: "var(--color-text-tertiary)",
+              }}
+            >
+              Spesa questo mese
+            </p>
+            <div className="flex items-baseline gap-3 flex-wrap">
+              <span
+                className="font-mono"
+                style={{
+                  fontSize: "var(--text-display-2xl)",
+                  lineHeight: "var(--text-display-2xl--line-height)",
+                  letterSpacing: "var(--text-display-2xl--letter-spacing)",
+                  fontWeight: "var(--text-display-2xl--font-weight)",
+                  color: "var(--color-text-primary)",
+                }}
+              >
+                {formatCurrency(kpi.spending)}
+              </span>
+              {spendingDelta.pct !== "—" && (
+                <span
+                  className="inline-flex items-center gap-0.5"
+                  style={{
+                    fontSize: "var(--text-body-sm)",
+                    fontWeight: 600,
+                    color: spendingDelta.positive
+                      ? "var(--color-text-warning)"
+                      : "var(--color-success)",
+                  }}
+                >
+                  {spendingDelta.positive ? (
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                  ) : (
+                    <ArrowDownRight className="h-3.5 w-3.5" />
+                  )}
+                  {spendingDelta.pct} vs mese scorso
+                </span>
+              )}
+            </div>
+            <div className="mt-6 flex items-center gap-6 flex-wrap">
+              <div>
+                <p
+                  className="uppercase mb-1"
+                  style={{
+                    fontSize: "11px",
+                    letterSpacing: "+0.04em",
+                    color: "var(--color-text-tertiary)",
+                  }}
+                >
+                  Ordini
+                </p>
+                <p className="font-mono text-text-primary" style={{ fontSize: "var(--text-title-lg)", fontWeight: 600 }}>
+                  {kpi.ordersThisMonth}{" "}
+                  <span className="text-xs font-normal" style={{ color: ordersDelta.positive ? "var(--color-success)" : "var(--color-text-warning)" }}>
+                    {ordersDelta.sign}{ordersDelta.pct}
+                  </span>
+                </p>
+              </div>
+              <div className="h-10 w-px bg-[color:var(--color-border-subtle)]" aria-hidden />
+              <div>
+                <p
+                  className="uppercase mb-1"
+                  style={{
+                    fontSize: "11px",
+                    letterSpacing: "+0.04em",
+                    color: "var(--color-text-tertiary)",
+                  }}
+                >
+                  Risparmio stimato
+                </p>
+                <p className="font-mono text-text-primary" style={{ fontSize: "var(--text-title-lg)", fontWeight: 600 }}>
+                  {formatCurrency(kpi.savings)}
+                </p>
+              </div>
+              <div className="h-10 w-px bg-[color:var(--color-border-subtle)]" aria-hidden />
+              <div>
+                <p
+                  className="uppercase mb-1"
+                  style={{
+                    fontSize: "11px",
+                    letterSpacing: "+0.04em",
+                    color: "var(--color-text-tertiary)",
+                  }}
+                >
+                  Fornitori attivi
+                </p>
+                <p className="font-mono text-text-primary" style={{ fontSize: "var(--text-title-lg)", fontWeight: 600 }}>
+                  {kpi.activeSuppliers}
+                </p>
+              </div>
+            </div>
+          </div>
+          {/* Inline mini-trend on right */}
+          <div className="hidden md:flex items-end justify-end h-32">
+            <div className="w-full max-w-xs">
+              <AreaChart
+                data={chartData.slice(-14).map((d, i) => ({ label: `${i}`, value: d.value }))}
+                height={120}
+              />
+            </div>
+          </div>
+        </div>
+      </DarkCard>
+
+      {/* Secondary KPI strip — small, inline */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <KPICard
-          label="Ordini questo mese"
+          label="Ordini totali"
           value={kpi.ordersThisMonth.toString()}
           numericValue={kpi.ordersThisMonth}
           previousValue={kpi.prevMonthOrders}
@@ -94,23 +271,27 @@ export function RestaurantDashboard({ companyName, kpi, spendingSparkline, chart
           sparklineData={spendingSparkline.map(() => Math.floor(Math.random() * 5) + 1)}
         />
         <KPICard
-          label="Spesa totale"
-          value={`€${kpi.spending.toLocaleString("it-IT")}`}
-          numericValue={kpi.spending}
-          previousValue={kpi.prevSpending}
+          label="Spesa media ordine"
+          value={
+            kpi.ordersThisMonth > 0
+              ? formatCurrency(Math.round(kpi.spending / kpi.ordersThisMonth))
+              : "€0"
+          }
+          numericValue={
+            kpi.ordersThisMonth > 0 ? Math.round(kpi.spending / kpi.ordersThisMonth) : 0
+          }
           icon={ShoppingCart}
           accentColor="var(--color-accent-orange)"
-          sparklineData={spendingSparkline}
         />
         <KPICard
-          label="Risparmio stimato"
-          value={`€${kpi.savings.toLocaleString("it-IT")}`}
+          label="Risparmio"
+          value={formatCurrency(kpi.savings)}
           numericValue={kpi.savings}
           icon={TrendingDown}
           accentColor="var(--color-accent-green)"
         />
         <KPICard
-          label="Fornitori attivi"
+          label="Fornitori"
           value={kpi.activeSuppliers.toString()}
           numericValue={kpi.activeSuppliers}
           icon={Store}
@@ -122,11 +303,30 @@ export function RestaurantDashboard({ companyName, kpi, spendingSparkline, chart
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Spending Chart */}
         <DarkCard className="lg:col-span-2" noPadding>
-          <div className="p-5 pb-0">
-            <DarkCardHeader>
-              <DarkCardTitle>Andamento Spesa</DarkCardTitle>
-              <span className="text-xs text-text-tertiary">Ultimi 30 giorni</span>
-            </DarkCardHeader>
+          <div className="p-5 pb-0 flex items-center justify-between">
+            <div>
+              <p
+                className="uppercase mb-1"
+                style={{
+                  fontSize: "var(--text-caption)",
+                  letterSpacing: "var(--text-caption--letter-spacing)",
+                  fontWeight: "var(--text-caption--font-weight)",
+                  color: "var(--color-text-tertiary)",
+                }}
+              >
+                30 giorni
+              </p>
+              <h2
+                style={{
+                  fontSize: "var(--text-title-md)",
+                  lineHeight: "var(--text-title-md--line-height)",
+                  fontWeight: 600,
+                  color: "var(--color-text-primary)",
+                }}
+              >
+                Andamento spesa
+              </h2>
+            </div>
           </div>
           <div className="px-2 pb-3">
             <AreaChart data={chartData} height={220} />
@@ -156,7 +356,11 @@ export function RestaurantDashboard({ companyName, kpi, spendingSparkline, chart
               <DarkCardTitle>Ordini recenti</DarkCardTitle>
               <button
                 onClick={() => router.push("/ordini")}
-                className="text-xs text-text-link hover:text-accent-green transition-colors"
+                className="text-xs text-text-link hover:text-accent-green transition-colors uppercase"
+                style={{
+                  letterSpacing: "var(--text-caption--letter-spacing)",
+                  fontWeight: "var(--text-caption--font-weight)",
+                }}
               >
                 Vedi tutti →
               </button>
@@ -174,11 +378,11 @@ export function RestaurantDashboard({ companyName, kpi, spendingSparkline, chart
         {/* Savings / Alerts */}
         <DarkCard>
           <DarkCardHeader>
-            <DarkCardTitle>Alert Risparmio</DarkCardTitle>
+            <DarkCardTitle>Alert risparmio</DarkCardTitle>
           </DarkCardHeader>
           {kpi.savings > 0 ? (
             <div className="space-y-3">
-              <div className="flex items-start gap-3 p-3 rounded-xl bg-accent-green-muted">
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-accent-green-muted">
                 <TrendingDown className="h-5 w-5 text-accent-green shrink-0 mt-0.5" />
                 <div>
                   <p className="text-sm font-medium text-text-primary">
