@@ -65,7 +65,7 @@ export default async function SupplierDdtDetailPage({
     );
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   const admin = createAdminClient() as unknown as {
     from: (t: string) => any;
     storage: {
@@ -77,6 +77,7 @@ export default async function SupplierDdtDetailPage({
       };
     };
   };
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 
   const { data: ddt } = (await admin
     .from("ddt_documents")

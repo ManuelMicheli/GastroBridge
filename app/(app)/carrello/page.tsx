@@ -93,7 +93,6 @@ export default function CartPage() {
         const catalogGroups = supplierGroups.filter((g) =>
           g.items.some((it) => isCatalogItem(it.productId))
         );
-        const catalogIds = catalogGroups.map((g) => g.supplierId);
         const catalogTotal = catalogItems.reduce(
           (s, it) => s + it.unitPrice * it.quantity, 0);
 
@@ -102,7 +101,6 @@ export default function CartPage() {
           supplierCount: catalogGroups.length,
           itemCount:     catalogItems.length,
           summary:       summaryLines.join("\n"),
-          catalogIds,
         });
         if (!res.ok) {
           toast(`Errore ordine catalogo: ${res.error}`);

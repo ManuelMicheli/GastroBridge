@@ -279,7 +279,7 @@ function PickingRow({
               </p>
               {line.quantityPicked > 0 && (
                 <p className="text-xs text-sage mt-0.5">
-                  Gia' prelevato: {formatNum(line.quantityPicked)}
+                  Già prelevato: {formatNum(line.quantityPicked)}
                 </p>
               )}
               {line.proposalShortage > 0 && (
@@ -377,7 +377,7 @@ function PickingRow({
                       </select>
                     </label>
                     <label className="flex flex-col text-xs text-sage">
-                      Quantita' base
+                      Quantità base
                       <Input
                         type="number"
                         step="0.001"

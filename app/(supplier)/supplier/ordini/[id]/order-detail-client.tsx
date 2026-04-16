@@ -692,7 +692,7 @@ export function OrderDetailClient({
 
             {!hasPending && (
               <p className="mt-4 text-sm text-sage">
-                Tutte le righe sono gia' state elaborate. Stato ordine:{" "}
+                Tutte le righe sono già state elaborate. Stato ordine:{" "}
                 <strong className="text-charcoal">
                   {WORKFLOW_LABELS[workflowState] ?? workflowState}
                 </strong>

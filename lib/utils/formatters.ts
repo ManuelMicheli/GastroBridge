@@ -62,12 +62,18 @@ export function formatUnitShort(unit: UnitType): string {
     kg: "kg",
     g: "g",
     lt: "L",
+    l: "L",
     ml: "ml",
     pz: "pz",
+    piece: "pz",
     cartone: "ct",
+    box: "ct",
     bottiglia: "bt",
     latta: "lt",
     confezione: "cf",
+    bundle: "mz",
+    pallet: "pl",
+    other: "—",
   };
   return map[unit];
 }
@@ -78,12 +84,18 @@ export function formatUnitFull(unit: UnitType): string {
     kg: "Chilogrammo",
     g: "Grammo",
     lt: "Litro",
+    l: "Litro",
     ml: "Millilitro",
     pz: "Pezzo",
+    piece: "Pezzo",
     cartone: "Cartone",
+    box: "Scatola",
     bottiglia: "Bottiglia",
     latta: "Latta",
     confezione: "Confezione",
+    bundle: "Mazzo",
+    pallet: "Pallet",
+    other: "Altro",
   };
   return map[unit];
 }

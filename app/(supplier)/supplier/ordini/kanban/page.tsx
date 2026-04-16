@@ -52,7 +52,7 @@ export default async function SupplierOrdersKanbanPage() {
   const splitIds = splits.map((s) => s.id);
 
   // Count righe per split (e somma quantita' per badge).
-  let itemsBySplit = new Map<string, { lineCount: number; qtyTotal: number }>();
+  const itemsBySplit = new Map<string, { lineCount: number; qtyTotal: number }>();
   if (splitIds.length > 0) {
     const { data: items } = await supabase
       .from("order_split_items")
