@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import Link from "next/link";
-import { User, MapPin, Users, CreditCard, ChevronRight, SlidersHorizontal } from "lucide-react";
+import { User, MapPin, Users, CreditCard, ChevronRight, SlidersHorizontal, Target } from "lucide-react";
 
 export const metadata: Metadata = { title: "Impostazioni" };
 
@@ -10,6 +10,7 @@ const SETTINGS_SECTIONS = [
   { href: "/impostazioni", label: "Profilo", description: "Dati azienda, P.IVA, contatti", icon: User },
   { href: "/impostazioni/sedi", label: "Sedi", description: "Gestisci i tuoi ristoranti", icon: MapPin },
   { href: "/impostazioni/esigenze-fornitura", label: "Esigenze di fornitura", description: "Vincoli, priorità e profilo di acquisto", icon: SlidersHorizontal },
+  { href: "/impostazioni/budget", label: "Budget mensile", description: "Tetto di spesa per tracking analytics", icon: Target },
   { href: "/impostazioni/team", label: "Team", description: "Membri del team", icon: Users },
   { href: "/impostazioni/abbonamento", label: "Abbonamento", description: "Piano e fatturazione", icon: CreditCard },
 ];

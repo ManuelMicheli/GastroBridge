@@ -1,12 +1,18 @@
 "use client";
 
-import { motion } from "motion/react";
 import Link from "next/link";
-import { BarChart3, ShoppingCart, Wallet, Users } from "lucide-react";
+import { BarChart3, ShoppingCart, Wallet, Receipt } from "lucide-react";
 import { KPICard } from "@/components/dashboard/cards/kpi-card";
-import { AreaChart } from "@/components/dashboard/charts/area-chart";
 import { formatCurrency } from "@/lib/utils/formatters";
 import type { RestaurantAnalytics } from "@/lib/analytics/restaurant";
+import { PeriodSelector } from "./_components/period-selector";
+import { BudgetTracker } from "./_components/budget-tracker";
+import { VarianceCard } from "./_components/variance-card";
+import { CategoryDonut } from "./_components/category-donut";
+import { ProductInsightsTable } from "./_components/product-insights-table";
+import { YoyTrendChart } from "./_components/yoy-trend-chart";
+import { WeekdayHeatmap } from "./_components/weekday-heatmap";
+import { ExportCsvButton } from "./_components/export-csv-button";
 
 type Props = {
   data: RestaurantAnalytics;
@@ -32,165 +38,123 @@ const STATUS_CLASSES: Record<string, string> = {
   cancelled: "bg-accent-red/10 text-accent-red",
 };
 
-const STATUS_COLORS: Record<string, string> = {
-  draft: "var(--color-text-tertiary)",
-  submitted: "var(--color-accent-blue, #3b82f6)",
-  confirmed: "var(--color-accent-green)",
-  preparing: "var(--color-accent-orange)",
-  shipping: "var(--color-accent-purple, #a855f7)",
-  delivered: "var(--color-accent-green)",
-  cancelled: "var(--color-accent-red, #ef4444)",
-};
-
 export function AnalyticsContent({ data }: Props) {
-  const maxSupplierSpending = data.supplierBreakdown.reduce((m, s) => Math.max(m, s.spending), 0) || 1;
-  const totalStatusCount = data.statusDistribution.reduce((s, d) => s + d.count, 0) || 1;
+  const maxSupplier = data.supplierBreakdown.reduce((m, s) => Math.max(m, s.spending), 0) || 1;
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-text-primary">Analytics Spesa</h1>
-        <p className="text-sm text-text-tertiary mt-1">
-          Riepilogo acquisti, fornitori e trend di spesa
-        </p>
-      </div>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary">Analytics Spesa</h1>
+          <p className="text-sm text-text-tertiary mt-1">
+            Strumento completo di gestione spesa: budget, varianza mese su mese, prezzi prodotti.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <PeriodSelector current={data.period.key} />
+          <ExportCsvButton period={data.period.key} />
+        </div>
+      </header>
+
+      <BudgetTracker budget={data.budget} />
+
+      <VarianceCard
+        delta={data.variance.delta}
+        deltaPct={data.variance.deltaPct}
+        topByCategory={data.variance.topByCategory}
+        topBySupplier={data.variance.topBySupplier}
+        topByProduct={data.variance.topByProduct}
+        periodLabel={data.period.label}
+      />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
-          label="Spesa mese"
-          value={formatCurrency(data.currentMonthSpending)}
-          numericValue={data.currentMonthSpending}
-          previousValue={data.prevMonthSpending}
+          label="Spesa periodo"
+          value={formatCurrency(data.currentSpending)}
+          numericValue={data.currentSpending}
+          previousValue={data.previousSpending}
           icon={Wallet}
           sparklineData={data.spendingSparkline}
         />
         <KPICard
-          label="Ordini mese"
+          label="Ordini"
           value={data.currentOrderCount.toString()}
           numericValue={data.currentOrderCount}
-          previousValue={data.prevOrderCount}
+          previousValue={data.previousOrderCount}
           icon={ShoppingCart}
         />
         <KPICard
           label="Ticket medio"
           value={formatCurrency(data.avgTicket)}
           numericValue={data.avgTicket}
-          icon={BarChart3}
+          icon={Receipt}
         />
         <KPICard
           label="Fornitori attivi"
           value={data.supplierBreakdown.length.toString()}
           numericValue={data.supplierBreakdown.length}
-          icon={Users}
+          icon={BarChart3}
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-surface-card border border-border-subtle rounded-2xl p-5 shadow-card-dark">
-          <h3 className="font-semibold text-text-primary mb-1">Spesa mensile</h3>
-          <p className="text-xs text-text-tertiary mb-4">Ultimi 12 mesi</p>
-          {data.monthlyTrend.every((m) => m.value === 0) ? (
-            <div className="h-52 flex items-center justify-center text-sm text-text-tertiary">
-              Nessun ordine negli ultimi 12 mesi
-            </div>
-          ) : (
-            <AreaChart data={data.monthlyTrend} height={220} />
-          )}
-        </div>
+        <CategoryDonut data={data.categoryBreakdown} />
+        <YoyTrendChart data={data.yearOverYear} />
+      </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <ProductInsightsTable rows={data.productInsights} />
+        </div>
         <div className="bg-surface-card border border-border-subtle rounded-2xl p-5 shadow-card-dark">
-          <h3 className="font-semibold text-text-primary mb-1">Spesa per fornitore</h3>
-          <p className="text-xs text-text-tertiary mb-4">Mese corrente</p>
+          <h3 className="font-semibold text-text-primary mb-1">Fornitori</h3>
+          <p className="text-xs text-text-tertiary mb-4">Classifica per spesa nel periodo</p>
           {data.supplierBreakdown.length === 0 ? (
-            <div className="h-52 flex items-center justify-center text-sm text-text-tertiary">
-              Nessun fornitore nel mese corrente
+            <div className="h-32 flex items-center justify-center text-sm text-text-tertiary">
+              Nessun fornitore
             </div>
           ) : (
-            <div className="space-y-3">
-              {data.supplierBreakdown.slice(0, 8).map((s, i) => (
-                <motion.div
-                  key={s.name}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.05 }}
-                >
+            <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+              {data.supplierBreakdown.map((s) => (
+                <div key={s.name}>
                   <div className="flex items-baseline justify-between mb-1">
                     <span className="text-sm font-medium text-text-primary truncate mr-2">{s.name}</span>
                     <span className="text-sm font-mono font-bold text-text-primary shrink-0">
                       {formatCurrency(s.spending)}
                     </span>
                   </div>
-                  <div className="h-2 bg-surface-elevated rounded-full overflow-hidden">
-                    <motion.div
-                      className="h-full bg-accent-green rounded-full"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${(s.spending / maxSupplierSpending) * 100}%` }}
-                      transition={{ duration: 0.8, ease: "easeOut", delay: i * 0.05 }}
+                  <div className="h-1.5 bg-surface-elevated rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-accent-green rounded-full transition-all duration-700"
+                      style={{ width: `${(s.spending / maxSupplier) * 100}%` }}
                     />
                   </div>
-                  <p className="text-xs text-text-tertiary mt-0.5">
+                  <p className="text-[10px] text-text-tertiary mt-0.5">
                     {s.orderCount} ordin{s.orderCount === 1 ? "e" : "i"}
                   </p>
-                </motion.div>
+                </div>
               ))}
-            </div>
-          )}
-        </div>
-
-        <div className="bg-surface-card border border-border-subtle rounded-2xl p-5 shadow-card-dark lg:col-span-2">
-          <h3 className="font-semibold text-text-primary mb-1">Distribuzione stato ordini</h3>
-          <p className="text-xs text-text-tertiary mb-4">Mese corrente</p>
-          {data.statusDistribution.length === 0 ? (
-            <div className="h-24 flex items-center justify-center text-sm text-text-tertiary">
-              Nessun ordine nel mese corrente
-            </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              <div className="flex h-3 rounded-full overflow-hidden bg-surface-elevated">
-                {data.statusDistribution.map((d) => (
-                  <motion.div
-                    key={d.status}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${(d.count / totalStatusCount) * 100}%` }}
-                    transition={{ duration: 0.8, ease: "easeOut" }}
-                    style={{ backgroundColor: STATUS_COLORS[d.status] ?? "var(--color-accent-green)" }}
-                    title={`${STATUS_LABELS[d.status] ?? d.status}: ${d.count}`}
-                  />
-                ))}
-              </div>
-              <div className="flex flex-wrap gap-4">
-                {data.statusDistribution.map((d) => (
-                  <div key={d.status} className="flex items-center gap-2">
-                    <span
-                      className="h-2.5 w-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: STATUS_COLORS[d.status] ?? "var(--color-accent-green)" }}
-                    />
-                    <span className="text-xs text-text-secondary">
-                      {STATUS_LABELS[d.status] ?? d.status}
-                    </span>
-                    <span className="text-xs font-mono font-bold text-text-primary">{d.count}</span>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
         </div>
       </div>
 
+      <WeekdayHeatmap cells={data.weekdayPattern} />
+
       <div className="bg-surface-card border border-border-subtle rounded-2xl shadow-card-dark overflow-hidden">
         <div className="px-5 py-4 border-b border-border-subtle">
           <h3 className="font-semibold text-text-primary">Ordini recenti</h3>
-          <p className="text-xs text-text-tertiary mt-0.5">Ultimi 8 ordini</p>
+          <p className="text-xs text-text-tertiary mt-0.5">Ultimi 8 del periodo selezionato</p>
         </div>
         {data.recentOrders.length === 0 ? (
-          <div className="p-10 text-center text-sm text-text-tertiary">Nessun ordine ancora</div>
+          <div className="p-10 text-center text-sm text-text-tertiary">Nessun ordine</div>
         ) : (
           <div className="divide-y divide-border-subtle">
             {data.recentOrders.map((o) => (
               <Link
                 key={o.id}
                 href={`/ordini/${o.id}`}
-                className="flex items-center justify-between px-5 py-3 hover:bg-surface-elevated transition-colors"
+                className="flex items-center justify-between px-5 py-3 hover:bg-surface-hover transition-colors"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">

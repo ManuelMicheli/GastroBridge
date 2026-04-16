@@ -2,6 +2,7 @@
 
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
+import { normalizePrice } from "./normalize";
 
 export type ParsedRow = Record<string, string>;
 export type ParsedSheet = {
@@ -56,14 +57,89 @@ export async function parseXlsx(file: File, hasHeader = true): Promise<ParsedShe
   return { headers, rows, hasHeader };
 }
 
-/** Suggest best header matches for each target field. */
-export function suggestMapping(headers: string[]): { name?: string; unit?: string; price?: string } {
-  const lc = (s: string) => s.toLowerCase();
-  const nameCandidates  = ["nome", "descrizione", "articolo", "prodotto", "descr"];
-  const unitCandidates  = ["unita", "unità", "um", "u.m.", "u.m", "confezione"];
-  const priceCandidates = ["prezzo", "costo", "€", "eur", "importo"];
+// Known unit strings for content-based detection
+const KNOWN_UNITS = new Set([
+  "kg", "kg.", "g", "gr", "g.", "gr.", "hg",
+  "l", "l.", "lt", "lt.", "ml", "cl",
+  "pz", "pz.", "cad", "n", "n.", "nr", "nr.",
+  "cf", "conf", "conf.", "cassa",
+  "cartone", "ct", "bottiglia", "btg", "latta", "confezione",
+  "chilogrammo", "chilogrammi", "chilo", "chili", "kilo",
+  "grammo", "grammi", "litro", "litri", "millilitro", "millilitri",
+  "pezzo", "pezzi", "cadauno", "confezioni", "cartoni", "bottiglie",
+]);
 
-  const find = (cands: string[]) => headers.find((h) => cands.some((c) => lc(h).includes(c)));
+function lc(s: string) {
+  return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
 
-  return { name: find(nameCandidates), unit: find(unitCandidates), price: find(priceCandidates) };
+function scoreColumn(
+  header: string,
+  values: string[],
+): { name: number; unit: number; price: number } {
+  const h = lc(header);
+
+  // Header keyword scores
+  const nameKeywords  = ["nome", "descrizione", "articolo", "prodotto", "descr", "item", "product", "denominazione", "desc", "artikel"];
+  const unitKeywords  = ["unita", "unità", "um", "u.m", "confezione", "conf", "unit", "uom", "misura", "udm", "imballo", "packaging"];
+  const priceKeywords = ["prezzo", "costo", "€", "eur", "importo", "price", "cost", "listino", "tariffa", "valore", "pvp", "netto"];
+
+  const nameH  = nameKeywords.some((k)  => h.includes(lc(k))) ? 10 : 0;
+  const unitH  = unitKeywords.some((k)  => h.includes(lc(k))) ? 10 : 0;
+  const priceH = priceKeywords.some((k) => h.includes(lc(k))) ? 10 : 0;
+
+  if (!values.length) return { name: nameH, unit: unitH, price: priceH };
+
+  // Content scores
+  const priceHits = values.filter((v) => {
+    const n = normalizePrice(v);
+    return n !== null && n > 0;
+  }).length;
+  const unitHits = values.filter((v) => KNOWN_UNITS.has(lc(v))).length;
+  const nameHits = values.filter((v) => v.length > 2 && normalizePrice(v) === null && !KNOWN_UNITS.has(lc(v))).length;
+
+  const ratio = (hits: number) => Math.round((hits / values.length) * 8);
+
+  return {
+    name:  nameH  + ratio(nameHits),
+    unit:  unitH  + ratio(unitHits),
+    price: priceH + ratio(priceHits),
+  };
+}
+
+/**
+ * Suggest best header matches for each target field.
+ * When rows are provided, also scores columns by cell content.
+ * Returns undefined for a field only when no header has any signal.
+ */
+export function suggestMapping(
+  headers: string[],
+  rows: ParsedRow[] = [],
+): { name?: string; unit?: string; price?: string } {
+  const sample = rows.slice(0, 30);
+
+  const scores = headers.map((h) => {
+    const values = sample.map((r) => (r[h] ?? "").trim()).filter(Boolean);
+    return { h, ...scoreColumn(h, values) };
+  });
+
+  const assigned = new Set<string>();
+
+  const pick = (field: "name" | "unit" | "price"): string | undefined => {
+    const best = scores
+      .filter((s) => !assigned.has(s.h))
+      .sort((a, b) => b[field] - a[field])[0];
+    if (best && best[field] > 0) {
+      assigned.add(best.h);
+      return best.h;
+    }
+    return undefined;
+  };
+
+  // Pick price first (most distinctive), then unit, then name
+  const price = pick("price");
+  const unit  = pick("unit");
+  const name  = pick("name");
+
+  return { name, unit, price };
 }

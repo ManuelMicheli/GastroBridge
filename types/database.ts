@@ -240,6 +240,7 @@ export interface Database {
           website: string | null;
           opening_hours: Record<string, unknown> | null;
           is_primary: boolean;
+          monthly_budget_eur: number | null;
           created_at: string;
           updated_at: string;
         };
@@ -260,6 +261,7 @@ export interface Database {
           website?: string | null;
           opening_hours?: Record<string, unknown> | null;
           is_primary?: boolean;
+          monthly_budget_eur?: number | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -280,6 +282,7 @@ export interface Database {
           website?: string | null;
           opening_hours?: Record<string, unknown> | null;
           is_primary?: boolean;
+          monthly_budget_eur?: number | null;
           created_at?: string;
           updated_at?: string;
         };

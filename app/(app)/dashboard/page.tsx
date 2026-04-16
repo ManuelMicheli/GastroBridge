@@ -140,6 +140,7 @@ export default async function DashboardPage() {
     total: o.total,
     created_at: o.created_at,
     supplier_name: "—",
+    order_number: `#${o.id.slice(0, 8)}`,
   }));
 
   return (
