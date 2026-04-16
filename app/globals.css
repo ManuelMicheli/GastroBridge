@@ -1,7 +1,12 @@
 @import "tailwindcss";
 
+/* =========================================
+   Tailwind 4 @theme — Base tokens (light-first)
+   These are the defaults. Area-scoped overrides
+   come later via [data-area="restaurant"].
+   ========================================= */
 @theme {
-  /* Colors - GastroBridge Brand */
+  /* Legacy GastroBridge Brand (forest green — still used by the supplier area) */
   --color-forest: #1B6B4A;
   --color-forest-dark: #145238;
   --color-forest-light: #E8F5EE;
@@ -11,6 +16,29 @@
   --color-terracotta-light: #FFF3E0;
   --color-sage: #94A89A;
   --color-sage-muted: #D4DDD7;
+
+  /* NEW: Area-agnostic brand tokens.
+     Shared components (button, badge, sidebar active state, wordmark,
+     focus rings) read from these. Each area scope rewrites them. */
+  --color-brand-primary: #1B6B4A;        /* default = forest, supplier area inherits */
+  --color-brand-primary-hover: #145238;
+  --color-brand-primary-active: #0F3F2B;
+  --color-brand-primary-subtle: #E8F5EE;
+  --color-brand-primary-border: rgba(27, 107, 74, 0.30);
+  --color-brand-depth: #145238;          /* deep variant for eyebrow/metrics */
+  --color-brand-depth-subtle: #F0F7F3;
+  --color-brand-on-primary: #FFFFFF;     /* text on solid brand bg */
+
+  /* Brand highlight tokens — celebratory/attention accents.
+     Default values mirror the warning amber so any page that renders
+     outside a [data-area] scope still gets a sensible gold. Each area
+     scope rewrites these. Used for: "NEW" badges, positive delta text,
+     achievement icons, single hero accent. Must never be used on large
+     surfaces in operational pages (see 5% dosage rule). */
+  --color-brand-highlight: #E8B547;
+  --color-brand-highlight-subtle: #FBF3DE;
+  --color-brand-highlight-strong: #D4A017;
+  --color-brand-highlight-on: #1A1A1A;   /* text color that sits ON a highlight bg (WCAG AA) */
 
   /* Dark Theme — Surfaces */
   --color-surface-base: #09090F;
@@ -35,7 +63,10 @@
   --color-text-danger: #EF4444;
   --color-text-link: #5BCEA6;
 
-  /* Accent — Brighter for dark bg */
+  /* Accent — Brighter for dark bg.
+     NOTE: these are remapped per-area below to keep shared
+     components (KPI cards, sidebar active state, charts) brand-correct
+     without touching every consumer. */
   --color-accent-green: #2DD47A;
   --color-accent-green-muted: rgba(45, 212, 122, 0.12);
   --color-accent-orange: #E8773A;
@@ -49,10 +80,125 @@
   --color-accent-yellow: #FACC15;
   --color-accent-yellow-muted: rgba(250, 204, 21, 0.12);
 
+  /* Semantic states — independent of brand, NEVER use carmine here */
+  --color-success: #22C55E;
+  --color-success-subtle: #DCFCE7;
+  --color-warning: #F59E0B;
+  --color-warning-subtle: #FEF3C7;
+  --color-error: #EF4444;
+  --color-error-subtle: #FEE2E2;
+  --color-info: #3B82F6;
+  --color-info-subtle: #DBEAFE;
+
   /* Fonts */
   --font-display: "DM Serif Display", Georgia, serif;
   --font-body: "Satoshi", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
+
+  /* =========================================
+     Typography Scale (Linear-grade) — Phase A foundations
+     - text-display-* hero numbers + page H1
+     - text-title-*   section headers
+     - text-body / text-body-sm content
+     - text-caption   eyebrow labels (uppercase, tracked)
+     - text-mono      numbers/IDs/codes
+     ========================================= */
+  --text-display-2xl: 48px;
+  --text-display-2xl--line-height: 52px;
+  --text-display-2xl--letter-spacing: -0.011em;
+  --text-display-2xl--font-weight: 600;
+
+  --text-display-xl: 36px;
+  --text-display-xl--line-height: 40px;
+  --text-display-xl--letter-spacing: -0.011em;
+  --text-display-xl--font-weight: 600;
+
+  --text-display-lg: 28px;
+  --text-display-lg--line-height: 32px;
+  --text-display-lg--letter-spacing: -0.011em;
+  --text-display-lg--font-weight: 600;
+
+  --text-title-lg: 20px;
+  --text-title-lg--line-height: 28px;
+  --text-title-lg--letter-spacing: -0.006em;
+  --text-title-lg--font-weight: 600;
+
+  --text-title-md: 16px;
+  --text-title-md--line-height: 24px;
+  --text-title-md--letter-spacing: -0.006em;
+  --text-title-md--font-weight: 600;
+
+  --text-title-sm: 14px;
+  --text-title-sm--line-height: 20px;
+  --text-title-sm--letter-spacing: -0.006em;
+  --text-title-sm--font-weight: 600;
+
+  --text-body: 14px;
+  --text-body--line-height: 20px;
+
+  --text-body-sm: 13px;
+  --text-body-sm--line-height: 18px;
+
+  --text-caption: 12px;
+  --text-caption--line-height: 16px;
+  --text-caption--letter-spacing: 0.04em;
+  --text-caption--font-weight: 500;
+
+  --text-mono: 13px;
+  --text-mono--line-height: 18px;
+  --text-mono--font-weight: 500;
+
+  /* =========================================
+     Spacing Scale — Linear-comfortable density
+     Page gutter: 24 mobile / 32 tablet / 48 desktop
+     Section vertical rhythm: 32 / 48 / 72
+     ========================================= */
+  --spacing-0\.5: 2px;
+  --spacing-1: 4px;
+  --spacing-1\.5: 6px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+  --spacing-14: 56px;
+  --spacing-18: 72px;
+  --spacing-24: 96px;
+
+  /* =========================================
+     Radii — md default, lg cards
+     ========================================= */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-pill: 9999px;
+
+  /* =========================================
+     Elevation — hairline + soft shadows.
+     Linear rule: borders never bolder than 1px.
+     Light vs dark elevations co-exist; restaurant scope picks
+     the right one via --elevation-card-active alias.
+     ========================================= */
+  --elevation-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 0 rgba(0, 0, 0, 0.06);
+  --elevation-card-hover: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --elevation-modal: 0 24px 48px rgba(0, 0, 0, 0.12);
+
+  --elevation-card-dark: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 8px 32px rgba(0, 0, 0, 0.4);
+  --elevation-card-hover-dark: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 12px 40px rgba(0, 0, 0, 0.5);
+  --elevation-modal-dark: 0 32px 64px rgba(0, 0, 0, 0.6);
+
+  /* =========================================
+     Motion Primitives — 5 named transitions
+     prefers-reduced-motion zeroes durations below.
+     ========================================= */
+  --duration-page: 240ms;
+  --duration-spring: 280ms;
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --motion-stagger: 40ms;
 
   /* Shadows — Light */
   --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.05);
@@ -67,6 +213,9 @@
   --glow-forest-strong: 0 0 40px rgba(45, 212, 122, 0.20);
   --glow-terracotta: 0 0 20px rgba(232, 119, 58, 0.12);
   --glow-accent: 0 0 24px rgba(45, 212, 122, 0.15);
+  --glow-brand: 0 0 20px rgba(45, 212, 122, 0.12);
+  --glow-brand-strong: 0 0 40px rgba(45, 212, 122, 0.20);
+  --glow-highlight: 0 0 20px rgba(232, 181, 71, 0.25);
 
   /* Animation */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
@@ -84,9 +233,321 @@ body {
 }
 
 /* =========================================
+   Motion utility classes — Phase A foundations
+   Composed transitions for hover/lift/fade.
+   Used directly via className in components.
+   ========================================= */
+.motion-fade {
+  transition: opacity 200ms var(--ease-out-expo);
+}
+
+.motion-lift {
+  transition: transform 200ms var(--ease-out-expo);
+}
+
+.motion-lift:hover {
+  transform: translateY(-1px);
+}
+
+.motion-spring {
+  transition-duration: var(--duration-spring);
+  transition-timing-function: var(--ease-spring);
+}
+
+/* Stagger helper — applied to children of a list using
+   --stagger-index inline style (set in JSX). */
+.motion-stagger > * {
+  animation-delay: calc(var(--stagger-index, 0) * var(--motion-stagger));
+}
+
+/* Reduced motion: zero out everything. */
+@media (prefers-reduced-motion: reduce) {
+  .motion-fade,
+  .motion-lift,
+  .motion-spring,
+  .motion-stagger > * {
+    transition: none !important;
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+/* =========================================
+   Area: Supplier — Light mode
+   Scope: any descendant of [data-area="supplier"]
+   New identity: ocra #A87535 on avorio #FBF8F1, with giallo-oro highlight.
+   Legacy-token family (forest/terracotta/accent-green/accent-orange/sage/
+   cream/charcoal/glow-forest/glow-terracotta) is auto-remapped inside the
+   supplier scope so 54+ supplier route files don't need per-file edits.
+   Hard rule: giallo-oro (brand-highlight) is RARE — appears only on small
+   badges, delta text, single hero accents. Any legacy `terracotta` or
+   `accent-orange` wide-surface usage remaps to OCRA, not yellow.
+   ========================================= */
+[data-area="supplier"] {
+  /* Canonical brand tokens (light) — ocra + bordeaux-marrone depth */
+  --color-brand-primary: #A87535;
+  --color-brand-primary-hover: #8F5F2A;
+  --color-brand-primary-active: #755025;
+  --color-brand-primary-subtle: #F5EBD5;
+  --color-brand-primary-border: #E8DCC0;
+  --color-brand-depth: #5C3F18;
+  --color-brand-depth-subtle: #F2ECDB;
+  --color-brand-on-primary: #FFFFFF;
+
+  /* Brand highlight (giallo oro) — attention/celebration accent, ≤5% dosage */
+  --color-brand-highlight: #E8B547;
+  --color-brand-highlight-subtle: #FBF3DE;
+  --color-brand-highlight-strong: #D4A017;
+  /* Text that sits ON a giallo-oro background — must contrast.
+     Yellow on avorio fails WCAG; always use dark-on-yellow. */
+  --color-brand-highlight-on: #5C3F18;
+
+  /* Page surfaces for supplier light — warm avorio, editoriale */
+  --surface-page: #FBF8F1;
+  --surface-muted: #F5F0E4;
+  --text-primary-light: #1A1A1A;
+  --text-muted-light: #6B5F4A;
+
+  /* Legacy forest* tokens → ocra family (supplier scope only) */
+  --color-forest: #A87535;
+  --color-forest-dark: #8F5F2A;
+  --color-forest-light: #F5EBD5;
+  --color-cream: #FBF8F1;
+  --color-charcoal: #1A1A1A;
+  /* Terracotta → ocra (NOT yellow — 5% rule: terracotta was used on
+     wide surfaces like pending-requests banners, must stay muted). */
+  --color-terracotta: #A87535;
+  --color-terracotta-light: #F5EBD5;
+  --color-sage: #6B5F4A;
+  --color-sage-muted: #E8DCC0;
+
+  /* Accent-green family (KPIs, sidebar active, quick-action, link color)
+     → remapped to ocra so shared dashboard components pick it up
+     without needing per-component edits. */
+  --color-accent-green: #A87535;
+  --color-accent-green-muted: #F5EBD5;
+  --color-text-accent: #A87535;
+  --color-text-link: #A87535;
+
+  /* Accent-orange (used by KPI secondary series, loaded-order status, etc.)
+     → ocra as well. Rule #3: large-surface terracotta/orange ≠ giallo. */
+  --color-accent-orange: #A87535;
+  --color-accent-orange-muted: #F5EBD5;
+
+  /* Border accents tinted ocra */
+  --color-border-accent: rgba(168, 117, 53, 0.28);
+  --color-border-glow: rgba(168, 117, 53, 0.22);
+
+  /* Glow effects — tinted ocra / gold */
+  --glow-forest: 0 0 20px rgba(168, 117, 53, 0.14);
+  --glow-forest-strong: 0 0 36px rgba(168, 117, 53, 0.24);
+  --glow-terracotta: 0 0 20px rgba(168, 117, 53, 0.14);
+  --glow-accent: 0 0 24px rgba(168, 117, 53, 0.18);
+  --glow-brand: 0 0 20px rgba(168, 117, 53, 0.14);
+  --glow-brand-strong: 0 0 36px rgba(168, 117, 53, 0.24);
+  --glow-highlight: 0 0 18px rgba(232, 181, 71, 0.22);
+}
+
+/* =========================================
+   Area: Supplier — Dark mode
+   Ocra brightato al miele caldo (saturazione bassa di base sparisce su
+   nero). Marrone depth rialzato. Giallo oro leggermente più saturo.
+   ========================================= */
+.dark[data-area="supplier"],
+[data-area="supplier"].dark,
+[data-area="supplier"] .dark {
+  /* Canonical brand tokens (dark — ocra miele) */
+  --color-brand-primary: #E8A355;
+  --color-brand-primary-hover: #F0B26E;
+  --color-brand-primary-active: #D48F42;
+  --color-brand-primary-subtle: rgba(232, 163, 85, 0.12);
+  --color-brand-primary-border: rgba(232, 163, 85, 0.28);
+  --color-brand-depth: #C89968;
+  --color-brand-depth-subtle: rgba(200, 153, 104, 0.08);
+  --color-brand-on-primary: #09090F;
+
+  /* Brand highlight (giallo oro dark — safe on #09090F) */
+  --color-brand-highlight: #F5C45A;
+  --color-brand-highlight-subtle: rgba(245, 196, 90, 0.12);
+  --color-brand-highlight-strong: #EBB830;
+  --color-brand-highlight-on: #09090F;
+
+  /* Page surfaces for dark */
+  --surface-page: #09090F;
+  --surface-muted: #12121A;
+
+  /* Legacy forest* family → ocra bright for dark */
+  --color-forest: #E8A355;
+  --color-forest-dark: #D48F42;
+  --color-forest-light: rgba(232, 163, 85, 0.12);
+  --color-terracotta: #E8A355;
+  --color-terracotta-light: rgba(232, 163, 85, 0.12);
+
+  /* Accent-green family → ocra-bright */
+  --color-accent-green: #E8A355;
+  --color-accent-green-muted: rgba(232, 163, 85, 0.12);
+  --color-text-accent: #E8A355;
+  --color-text-link: #F0B26E;
+
+  /* Accent-orange family → ocra-bright (same rule — large surfaces stay ocra) */
+  --color-accent-orange: #E8A355;
+  --color-accent-orange-muted: rgba(232, 163, 85, 0.12);
+
+  /* Border accents */
+  --color-border-accent: rgba(232, 163, 85, 0.28);
+  --color-border-glow: rgba(232, 163, 85, 0.22);
+
+  /* Glow effects — ocra miele + gold highlight */
+  --glow-forest: 0 0 24px rgba(232, 163, 85, 0.25);
+  --glow-forest-strong: 0 0 40px rgba(232, 163, 85, 0.40);
+  --glow-terracotta: 0 0 24px rgba(232, 163, 85, 0.25);
+  --glow-accent: 0 0 28px rgba(232, 163, 85, 0.28);
+  --glow-brand: 0 0 24px rgba(232, 163, 85, 0.25);
+  --glow-brand-strong: 0 0 40px rgba(232, 163, 85, 0.40);
+  --glow-highlight: 0 0 20px rgba(245, 196, 90, 0.30);
+}
+
+/* =========================================
+   Area: Restaurant — Light mode
+   Scope: any descendant of [data-area="restaurant"]
+   These overrides rewrite ALL brand-adjacent tokens so
+   existing Tailwind classes (bg-forest, text-accent-green,
+   bg-accent-green-muted, border-forest, hover:bg-forest-dark,
+   box-shadow: var(--glow-forest), etc.) automatically render
+   with the carmine/bordeaux palette inside the restaurant shell.
+   ========================================= */
+[data-area="restaurant"] {
+  /* Canonical brand tokens (light) */
+  --color-brand-primary: #B91C3C;
+  --color-brand-primary-hover: #9A1833;
+  --color-brand-primary-active: #7B1F2E;
+  --color-brand-primary-subtle: #FDF2F5;
+  --color-brand-primary-border: #F9C6D0;
+  --color-brand-depth: #7B1F2E;
+  --color-brand-depth-subtle: #FAF3F4;
+  --color-brand-on-primary: #FFFFFF;
+
+  /* Page surfaces for light mode — pure white + very light muted */
+  --surface-page: #FFFFFF;
+  --surface-muted: #FAFAFA;
+  --text-primary-light: #1A1A1A;
+  --text-muted-light: #6B6B6B;
+
+  /* Legacy forest* tokens → carmine family (restaurant scope only) */
+  --color-forest: #B91C3C;
+  --color-forest-dark: #9A1833;
+  --color-forest-light: #FDF2F5;
+  --color-cream: #FFFFFF;
+  --color-charcoal: #1A1A1A;
+  --color-terracotta: #C4520A;
+  --color-terracotta-light: #FDF2F5;
+  --color-sage: #6B6B6B;
+  --color-sage-muted: #EDEDED;
+
+  /* Accent-green family (used by KPIs/sidebar active/quick-action/etc.)
+     → remapped to carmine so shared dashboard components pick it up
+     without needing per-component edits. */
+  --color-accent-green: #B91C3C;
+  --color-accent-green-muted: #FDF2F5;
+  --color-text-accent: #B91C3C;
+  --color-text-link: #B91C3C;
+
+  /* Border accents tinted carmine */
+  --color-border-accent: rgba(185, 28, 60, 0.28);
+  --color-border-glow: rgba(185, 28, 60, 0.22);
+
+  /* Glow effects — tinted carmine */
+  --glow-forest: 0 0 20px rgba(185, 28, 60, 0.14);
+  --glow-forest-strong: 0 0 36px rgba(185, 28, 60, 0.24);
+  --glow-accent: 0 0 24px rgba(185, 28, 60, 0.18);
+  --glow-brand: 0 0 20px rgba(185, 28, 60, 0.14);
+  --glow-brand-strong: 0 0 36px rgba(185, 28, 60, 0.24);
+}
+
+/* =========================================
+   Area: Restaurant — Dark mode
+   Triggers:
+     - `.dark[data-area="restaurant"]`  (DashboardShell root carries both)
+     - `[data-area="restaurant"].dark`  (order-insensitive)
+     - `[data-area="restaurant"] .dark` (descendant safety net)
+   ========================================= */
+.dark[data-area="restaurant"],
+[data-area="restaurant"].dark,
+[data-area="restaurant"] .dark {
+  /* Canonical brand tokens (dark — brightened carmine / lifted bordeaux) */
+  --color-brand-primary: #E84560;
+  --color-brand-primary-hover: #F25A74;
+  --color-brand-primary-active: #D43552;
+  --color-brand-primary-subtle: rgba(232, 69, 96, 0.12);
+  --color-brand-primary-border: rgba(232, 69, 96, 0.28);
+  --color-brand-depth: #C9606E;
+  --color-brand-depth-subtle: rgba(201, 96, 110, 0.08);
+  --color-brand-on-primary: #FFFFFF;
+
+  /* Page surfaces for dark */
+  --surface-page: #09090F;
+  --surface-muted: #12121A;
+
+  /* Legacy forest* family → carmine bright for dark */
+  --color-forest: #E84560;
+  --color-forest-dark: #D43552;
+  --color-forest-light: rgba(232, 69, 96, 0.12);
+
+  /* Accent-green family → carmine-bright so shared dashboard surfaces
+     (KPI accent, sidebar active indicator, quick-action icons, link
+     colors, focus rings) render in carmine-bright on dark. */
+  --color-accent-green: #E84560;
+  --color-accent-green-muted: rgba(232, 69, 96, 0.12);
+  --color-text-accent: #E84560;
+  --color-text-link: #F25A74;
+
+  /* Border accents */
+  --color-border-accent: rgba(232, 69, 96, 0.28);
+  --color-border-glow: rgba(232, 69, 96, 0.22);
+
+  /* Glow */
+  --glow-forest: 0 0 24px rgba(232, 69, 96, 0.25);
+  --glow-forest-strong: 0 0 40px rgba(232, 69, 96, 0.40);
+  --glow-accent: 0 0 28px rgba(232, 69, 96, 0.28);
+  --glow-brand: 0 0 24px rgba(232, 69, 96, 0.25);
+  --glow-brand-strong: 0 0 40px rgba(232, 69, 96, 0.40);
+}
+
+/* =========================================
+   Dashboard — Light mode (inside [data-area])
+   When the DashboardShell is NOT .dark, we want:
+     - white page
+     - light surfaces for cards
+     - dark text
+   These rules target `[data-area]:not(.dark)` so we apply
+   them to both the restaurant and the (future) supplier area
+   when the user opts into light mode.
+   ========================================= */
+[data-area]:not(.dark) {
+  --color-surface-base: var(--surface-page, #FFFFFF);
+  --color-surface-card: #FFFFFF;
+  --color-surface-elevated: #FFFFFF;
+  --color-surface-hover: #F5F5F5;
+  --color-surface-sidebar: #FAFAFA;
+  --color-surface-overlay: rgba(0, 0, 0, 0.40);
+
+  --color-border-subtle: rgba(0, 0, 0, 0.06);
+  --color-border-default: rgba(0, 0, 0, 0.10);
+
+  --color-text-primary: var(--text-primary-light, #1A1A1A);
+  --color-text-secondary: #4A4A4A;
+  --color-text-tertiary: var(--text-muted-light, #6B6B6B);
+
+  /* Shadows softer on white */
+  --shadow-card-dark: 0 2px 12px rgba(0, 0, 0, 0.05);
+  --shadow-elevated-dark: 0 6px 28px rgba(0, 0, 0, 0.08);
+}
+
+/* =========================================
    Dark Dashboard — Override light tokens
-   All existing pages using bg-white, text-charcoal,
-   text-sage etc. automatically adapt inside .dashboard-dark
+   The .dashboard-dark class remains on the shell root when
+   next-themes resolves to "dark". Everything inside switches
+   to dark surfaces automatically.
    ========================================= */
 .dashboard-dark {
   /* Remap brand colors to dark equivalents */
@@ -102,7 +563,7 @@ body {
   --shadow-elevated: var(--shadow-elevated-dark);
 }
 
-/* bg-white → dark card surface */
+/* bg-white → dark card surface (only in dark) */
 .dashboard-dark .bg-white {
   background-color: var(--color-surface-card) !important;
   border: 1px solid var(--color-border-subtle);
@@ -276,6 +737,16 @@ body {
   animation-play-state: paused;
 }
 
+/* =========================================
+   Theme toggle — icon swap animation
+   Used by components/ui/theme-toggle.tsx
+   ========================================= */
+.theme-toggle-icon {
+  transition:
+    transform var(--duration-normal, 250ms) var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)),
+    opacity var(--duration-normal, 250ms) var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1));
+}
+
 /* Reduced motion: show everything, disable animations */
 @media (prefers-reduced-motion: reduce) {
   .gsap-reveal {
@@ -287,5 +758,8 @@ body {
   }
   .marquee-track {
     animation: none;
+  }
+  .theme-toggle-icon {
+    transition: none;
   }
 }
