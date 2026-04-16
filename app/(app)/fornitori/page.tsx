@@ -3,7 +3,11 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Star, Shield, MapPin, Search, Plus } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
+import { EmptySuppliersIllustration } from "@/components/illustrations";
+import { Button } from "@/components/ui/button";
+import { Star, Shield, MapPin, Plus } from "lucide-react";
 import Link from "next/link";
 import { RelationshipStatusBadge } from "@/components/shared/relationship-status-badge";
 import type { RelationshipStatus } from "@/lib/relationships/types";
@@ -64,36 +68,50 @@ export default async function SuppliersPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
-        <h1 className="text-2xl font-bold text-charcoal">I tuoi fornitori</h1>
-        <Link href="/fornitori/cerca">
-          <span className="inline-flex items-center gap-1.5 rounded-xl bg-forest text-white px-4 py-2 text-sm font-semibold hover:bg-forest-dark">
-            <Plus className="h-4 w-4" /> Aggiungi fornitore
-          </span>
-        </Link>
-      </div>
+      <PageHeader
+        title="Fornitori"
+        subtitle="I partner con cui hai una relazione attiva o in corso di attivazione."
+        meta={
+          visible.length > 0 ? (
+            <Badge variant="default">{visible.length} attivi</Badge>
+          ) : undefined
+        }
+        actions={
+          <Link href="/fornitori/cerca">
+            <Button variant="primary" size="sm">
+              <Plus className="h-4 w-4" /> Aggiungi fornitore
+            </Button>
+          </Link>
+        }
+      />
 
       {!restaurant ? (
-        <Card className="text-center py-16">
-          <p className="text-sage">Nessun ristorante collegato al profilo.</p>
-        </Card>
+        <EmptyState
+          title="Nessun ristorante collegato"
+          description="Configura prima un ristorante per vedere i tuoi fornitori."
+          context="page"
+        />
       ) : visible.length === 0 ? (
-        <Card className="text-center py-16">
-          <Search className="h-12 w-12 text-sage-muted mx-auto mb-4" />
-          <p className="text-sage mb-4">Nessun fornitore collegato. Trova e invita i fornitori con cui vuoi lavorare.</p>
-          <Link href="/fornitori/cerca">
-            <span className="inline-flex items-center gap-1.5 rounded-xl bg-forest text-white px-4 py-2 text-sm font-semibold hover:bg-forest-dark">
-              <Search className="h-4 w-4" /> Cerca fornitori
-            </span>
-          </Link>
-        </Card>
+        <EmptyState
+          title="Nessun fornitore collegato"
+          description="Trova e invita i fornitori con cui vuoi lavorare. Inizia esplorando il marketplace."
+          illustration={<EmptySuppliersIllustration />}
+          action={
+            <Link href="/fornitori/cerca">
+              <Button variant="primary" size="sm">
+                <Plus className="h-4 w-4" /> Cerca fornitori
+              </Button>
+            </Link>
+          }
+          context="page"
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {visible.map((rel) => {
             const s = rel.supplier!;
             return (
               <Link key={rel.id} href={`/fornitori/${s.id}`}>
-                <Card className="hover:shadow-elevated transition-shadow h-full">
+                <Card className="motion-lift hover:shadow-elevated transition-shadow h-full">
                   <div className="flex items-start gap-4">
                     <div className="w-14 h-14 bg-sage-muted/30 rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
                       {s.logo_url ? (

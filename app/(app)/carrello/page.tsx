@@ -6,8 +6,11 @@ import { useCart } from "@/lib/hooks/useCart";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
+import { EmptyCartIllustration } from "@/components/illustrations";
 import { formatCurrency, formatUnitShort } from "@/lib/utils/formatters";
-import { Trash2, Plus, Minus, ShoppingCart, AlertTriangle } from "lucide-react";
+import { Trash2, Plus, Minus, AlertTriangle } from "lucide-react";
 import type { UnitType } from "@/types/database";
 import { createCatalogOrder } from "@/lib/orders/actions";
 import { submitOrder } from "@/lib/orders/submit";
@@ -127,22 +130,27 @@ export default function CartPage() {
 
   if (items.length === 0) {
     return (
-      <div className="text-center py-20">
-        <ShoppingCart className="h-16 w-16 text-sage-muted mx-auto mb-4" />
-        <h2 className="text-xl font-bold text-charcoal mb-2">Il carrello e vuoto</h2>
-        <p className="text-sage">Cerca prodotti e aggiungi al carrello per iniziare.</p>
-      </div>
+      <EmptyState
+        title="Il carrello è vuoto"
+        description="Cerca prodotti e aggiungili al carrello per iniziare un ordine multi-fornitore."
+        illustration={<EmptyCartIllustration />}
+        context="page"
+      />
     );
   }
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-charcoal">Carrello</h1>
-        <Button variant="ghost" size="sm" onClick={clearCart}>
-          <Trash2 className="h-4 w-4" /> Svuota
-        </Button>
-      </div>
+      <PageHeader
+        title="Carrello"
+        subtitle={`${items.length} prodotti da ${supplierGroups.length} fornitori.`}
+        actions={
+          <Button variant="ghost" size="sm" onClick={clearCart}>
+            <Trash2 className="h-4 w-4" /> Svuota
+          </Button>
+        }
+      />
+
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Items by supplier */}
