@@ -4,8 +4,14 @@ import { forwardRef, type ButtonHTMLAttributes } from "react";
 import { cn } from "@/lib/utils/formatters";
 import { Loader2 } from "lucide-react";
 
-type ButtonVariant = "primary" | "secondary" | "destructive" | "ghost" | "link";
-type ButtonSize = "sm" | "md" | "lg";
+type ButtonVariant =
+  | "primary"
+  | "secondary"
+  | "destructive"
+  | "ghost"
+  | "link"
+  | "celebration";
+type ButtonSize = "sm" | "md" | "lg" | "icon";
 type ButtonDensity = "comfortable" | "compact";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -28,6 +34,8 @@ const variantStyles: Record<ButtonVariant, string> = {
     "bg-error text-white hover:bg-error/90 active:bg-error/80 shadow-sm",
   ghost: "text-charcoal hover:bg-sage-muted/50",
   link: "text-brand-primary underline-offset-4 hover:underline p-0 h-auto",
+  celebration:
+    "bg-brand-highlight text-brand-highlight-on hover:bg-brand-highlight-strong active:bg-brand-highlight-strong shadow-sm",
 };
 
 // Comfortable = legacy sizes (used by supplier + existing restaurant code).
@@ -36,12 +44,14 @@ const sizeStyles: Record<ButtonSize, string> = {
   sm: "py-2 px-4 text-sm",
   md: "py-3.5 px-6 text-base",
   lg: "py-4 px-8 text-lg",
+  icon: "h-10 w-10 p-0",
 };
 
 const compactSizeStyles: Record<ButtonSize, string> = {
   sm: "h-7 px-2.5 text-xs",
   md: "h-8 px-3 text-sm",
   lg: "h-10 px-4 text-sm",
+  icon: "h-8 w-8 p-0",
 };
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
