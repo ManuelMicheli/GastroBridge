@@ -145,7 +145,7 @@ export default function CartPage() {
         title="Carrello"
         subtitle={`${items.length} prodotti da ${supplierGroups.length} fornitori.`}
         actions={
-          <Button variant="ghost" size="sm" onClick={clearCart}>
+          <Button variant="ghost" size="md" density="compact" onClick={clearCart}>
             <Trash2 className="h-4 w-4" /> Svuota
           </Button>
         }
