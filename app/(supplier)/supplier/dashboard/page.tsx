@@ -278,7 +278,7 @@ export default async function SupplierDashboardPage() {
           </div>
         </Link>
       )}
-      <div className="mx-6 mt-6">
+      <div className="mx-6 mt-2 mb-6">
         <StockAlertsWidget
           lowStockCount={stockAlerts.lowStockCount}
           expiringCount={stockAlerts.expiringCount}
