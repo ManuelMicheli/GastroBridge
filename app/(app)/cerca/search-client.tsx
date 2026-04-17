@@ -315,6 +315,7 @@ export function SearchPageClient({
               count={filtered.length}
               total={groups.length}
               isDeferring={isDeferring}
+              listboxId="search-results-listbox"
             />
 
             {/* Mobile filter trigger */}

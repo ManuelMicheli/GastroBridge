@@ -19,7 +19,13 @@ export function MobileDrawer({
 }) {
   if (!open) return null;
   return (
-    <div className="fixed inset-0 z-40 lg:hidden" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-40 lg:hidden"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+    >
       <div className="absolute inset-0 bg-black/40" />
       <aside
         onClick={(e) => e.stopPropagation()}

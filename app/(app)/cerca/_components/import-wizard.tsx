@@ -2,7 +2,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowLeft, Check, Download, Upload, UploadCloud } from "lucide-react";
+import { ArrowLeft, Check, Download, UploadCloud } from "lucide-react";
 import { parseCsv, parseXlsx, suggestMapping, type ParsedSheet } from "@/lib/catalogs/parse-file";
 import { normalizeName, normalizeUnit } from "@/lib/catalogs/normalize";
 import type { Group, OrderLine } from "../_lib/types";
@@ -148,7 +148,13 @@ export function ImportWizard({
     step === "upload" ? "1 / 3 UPLOAD" : step === "map" ? "2 / 3 MAP" : "3 / 3 PREVIEW";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={closeAll}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      onClick={closeAll}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Importa ordine tipico"
+    >
       <div
         className="w-full max-w-3xl space-y-5 overflow-y-auto rounded-xl border border-border-subtle bg-surface-card p-6 max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
@@ -331,5 +337,3 @@ export function ImportWizard({
     </div>
   );
 }
-
-export { Upload }; // re-export for button icon in parent

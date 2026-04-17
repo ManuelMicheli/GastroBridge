@@ -84,6 +84,7 @@ export function ResultsList({
       </div>
       <div
         ref={parentRef}
+        id="search-results-listbox"
         className={`min-h-0 flex-1 overflow-y-auto transition-opacity duration-150 ${
           isSearching ? "opacity-60" : "opacity-100"
         }`}

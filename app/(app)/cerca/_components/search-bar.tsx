@@ -11,10 +11,11 @@ type Props = {
   count: number;
   total: number;
   isDeferring: boolean;
+  listboxId?: string;
 };
 
 export const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar(
-  { value, onChange, count, total, isDeferring },
+  { value, onChange, count, total, isDeferring, listboxId },
   ref,
 ) {
   return (
@@ -32,8 +33,9 @@ export const SearchBar = forwardRef<HTMLInputElement, Props>(function SearchBar(
             autoComplete="off"
             spellCheck={false}
             role="combobox"
-            aria-expanded={value.length > 0}
+            aria-expanded={true}
             aria-autocomplete="list"
+            aria-controls={listboxId}
           />
           <div className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-2">
             {value && (
