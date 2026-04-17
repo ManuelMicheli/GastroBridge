@@ -147,9 +147,15 @@ export function RestaurantDashboard({ companyName, kpi, spendPoints, transaction
         </p>
       </header>
 
-      {/* Row 1: Quick Actions — full-width horizontal strip */}
+      {/* Row 1: Quick Actions — auto-fit grid driven by container width */}
       <DarkCard>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div
+          className="cq-card grid gap-3"
+          style={{
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(min(180px, 100%), 1fr))",
+          }}
+        >
           <QuickAction href="/cerca" label="Cerca prodotti" description="Confronta prezzi" icon={Search} index={0} />
           <QuickAction href="/fornitori" label="Scopri fornitori" description="Nuovi partner" icon={Store} index={1} />
           <QuickAction href="/ordini" label="I tuoi ordini" description="Storico completo" icon={Truck} index={2} />
@@ -158,8 +164,8 @@ export function RestaurantDashboard({ companyName, kpi, spendPoints, transaction
       </DarkCard>
 
       {/* Hero KPI — single big number for spending + savings alert */}
-      <DarkCard className="relative overflow-hidden">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+      <DarkCard className="relative overflow-hidden cq-card">
+        <div className="grid grid-cols-1 @[680px]:grid-cols-2 gap-6 items-start">
           <div>
             <p
               className="uppercase mb-3"
@@ -179,7 +185,7 @@ export function RestaurantDashboard({ companyName, kpi, spendPoints, transaction
                   fontSize: "var(--text-display-2xl)",
                   lineHeight: "var(--text-display-2xl--line-height)",
                   letterSpacing: "var(--text-display-2xl--letter-spacing)",
-                  fontWeight: "var(--text-display-2xl--font-weight)",
+                  fontWeight: 400,
                   color: "var(--color-text-primary)",
                 }}
               >
@@ -205,7 +211,7 @@ export function RestaurantDashboard({ companyName, kpi, spendPoints, transaction
                 </span>
               )}
             </div>
-            <div className="mt-6 flex items-center gap-6 flex-wrap">
+            <div className="mt-6 flex items-center gap-6 overflow-x-auto snap-x snap-mandatory -mx-1 px-1 pb-1 @[560px]:flex-wrap @[560px]:overflow-visible @[560px]:snap-none [&>div]:shrink-0 [&>div]:snap-start @[560px]:[&>div]:shrink">
               <div>
                 <p
                   className="uppercase mb-1"
