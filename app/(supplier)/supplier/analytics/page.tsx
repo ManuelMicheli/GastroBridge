@@ -9,7 +9,9 @@ export default function SupplierAnalyticsPage() {
   return (
     <div>
       <div className="flex items-center gap-3 mb-6">
-        <h1 className="text-2xl font-bold text-charcoal">Analytics</h1>
+        <h1 className="font-display text-3xl text-text-primary">
+          Analytics<span className="text-brand-primary">.</span>
+        </h1>
         <Badge variant="success">Growth+</Badge>
       </div>
 

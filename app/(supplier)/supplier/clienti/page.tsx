@@ -20,7 +20,9 @@ export default async function ClientsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-charcoal mb-6">I tuoi Clienti</h1>
+      <h1 className="font-display text-3xl text-text-primary mb-6">
+        Clienti<span className="text-brand-primary">.</span>
+      </h1>
 
       <section className="mb-8">
         <div className="flex items-center gap-2 mb-3">

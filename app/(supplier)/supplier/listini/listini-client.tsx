@@ -107,8 +107,8 @@ export function ListiniClient({ initialLists }: Props) {
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-text-primary">
-            Listini prezzi
+          <h1 className="font-display text-3xl text-text-primary">
+            Listini<span className="text-brand-primary">.</span>
           </h1>
           <p className="text-sm text-text-secondary mt-1">
             Gestisci i listini assegnabili a clienti specifici. Esattamente un

@@ -28,8 +28,8 @@ export default async function ListiniPage() {
   if (!supplier?.id) {
     return (
       <div>
-        <h1 className="text-2xl font-bold text-text-primary mb-6">
-          Listini prezzi
+        <h1 className="font-display text-3xl text-text-primary mb-6">
+          Listini<span className="text-brand-primary">.</span>
         </h1>
         <Card className="text-center py-16">
           <p className="text-text-secondary">
