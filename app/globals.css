@@ -432,6 +432,27 @@ body {
   --glow-brand: 0 0 20px rgba(168, 117, 53, 0.14);
   --glow-brand-strong: 0 0 36px rgba(168, 117, 53, 0.24);
   --glow-highlight: 0 0 18px rgba(232, 181, 71, 0.22);
+
+  /* =========================================
+     Fluid typography + spacing (mobile-first responsive)
+     Same formulas as restaurant scope.
+     ========================================= */
+  --text-display-2xl: clamp(32px, 4.5vw + 16px, 64px);
+  --text-display-2xl--line-height: 1.08;
+  --text-display-xl: clamp(28px, 3vw + 16px, 44px);
+  --text-display-xl--line-height: 1.12;
+  --text-display-lg: clamp(22px, 2vw + 14px, 32px);
+  --text-display-lg--line-height: 1.18;
+  --text-title-lg: clamp(18px, 1vw + 14px, 22px);
+  --text-title-md: clamp(15px, 0.5vw + 13px, 17px);
+
+  --page-gutter: clamp(16px, 4vw, 48px);
+  --section-gap: clamp(24px, 5vw, 72px);
+  --card-pad: clamp(16px, 2.5vw, 24px);
+  --page-max-width: min(1440px, 100%);
+
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
 }
 
 /* =========================================
@@ -491,6 +512,36 @@ body {
   --glow-brand: 0 0 24px rgba(232, 163, 85, 0.25);
   --glow-brand-strong: 0 0 40px rgba(232, 163, 85, 0.40);
   --glow-highlight: 0 0 20px rgba(245, 196, 90, 0.30);
+
+  /* Fluid tokens for dark mode (same as light — clamp works regardless) */
+  --text-display-2xl: clamp(32px, 4.5vw + 16px, 64px);
+  --text-display-2xl--line-height: 1.08;
+  --text-display-xl: clamp(28px, 3vw + 16px, 44px);
+  --text-display-xl--line-height: 1.12;
+  --text-display-lg: clamp(22px, 2vw + 14px, 32px);
+  --text-display-lg--line-height: 1.18;
+  --text-title-lg: clamp(18px, 1vw + 14px, 22px);
+  --text-title-md: clamp(15px, 0.5vw + 13px, 17px);
+}
+
+/* Density adaptive for supplier (mirror restaurant pattern) */
+[data-area="supplier"] {
+  --row-active: var(--row-cozy);
+  --cell-pad-active: var(--cell-pad-cozy);
+}
+
+@container card (min-width: 521px) {
+  [data-area="supplier"] {
+    --row-active: var(--row-compact);
+    --cell-pad-active: var(--cell-pad-compact);
+  }
+}
+
+@container section (min-width: 521px) {
+  [data-area="supplier"] {
+    --row-active: var(--row-compact);
+    --cell-pad-active: var(--cell-pad-compact);
+  }
 }
 
 /* =========================================
