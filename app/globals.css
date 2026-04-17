@@ -301,6 +301,47 @@ body {
 }
 
 /* =========================================
+   Container Query Utilities (Wave 1 — responsive foundation)
+   Apply to wrapper elements that should drive child layout.
+   Use cq-* responsive classes inside via @container queries.
+   ========================================= */
+.cq-shell {
+  container-type: inline-size;
+  container-name: shell;
+}
+
+.cq-section {
+  container-type: inline-size;
+  container-name: section;
+}
+
+.cq-card {
+  container-type: inline-size;
+  container-name: card;
+}
+
+/* Density adaptive — row height + cell padding switch via container query.
+   Default = cozy (44px touch). Compact (36px) only on wider containers. */
+[data-area="restaurant"] {
+  --row-active: var(--row-cozy);
+  --cell-pad-active: var(--cell-pad-cozy);
+}
+
+@container card (min-width: 521px) {
+  [data-area="restaurant"] {
+    --row-active: var(--row-compact);
+    --cell-pad-active: var(--cell-pad-compact);
+  }
+}
+
+@container section (min-width: 521px) {
+  [data-area="restaurant"] {
+    --row-active: var(--row-compact);
+    --cell-pad-active: var(--cell-pad-compact);
+  }
+}
+
+/* =========================================
    Area: Supplier — Light mode
    Scope: any descendant of [data-area="supplier"]
    New identity: ocra #A87535 on avorio #FBF8F1, with giallo-oro highlight.
