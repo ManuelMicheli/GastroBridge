@@ -16,6 +16,9 @@ type Props = {
   valuePrefix?: string;
 };
 
+const Y_AXIS_W = 44; // px reserved for value labels on the left
+const X_AXIS_H = 22; // px reserved for date labels at the bottom
+
 export function AreaChart({
   data,
   height = 200,
@@ -36,11 +39,13 @@ export function AreaChart({
     );
   }
 
-  const width = 100; // SVG viewBox percentage-based
-  const paddingTop = 10;
-  const paddingBottom = 24;
-  const paddingX = 4;
-  const chartH = height - paddingTop - paddingBottom;
+  // Plot area dimensions in viewBox units (SVG is stretched horizontally
+  // via preserveAspectRatio="none"; we keep paddings minimal).
+  const width = 100;
+  const plotHeight = height - X_AXIS_H;
+  const paddingTop = 6;
+  const paddingX = 2;
+  const chartH = plotHeight - paddingTop - 2;
 
   const values = data.map((d) => d.value);
   const min = Math.min(...values) * 0.9;
@@ -52,157 +57,185 @@ export function AreaChart({
     y: paddingTop + (1 - (d.value - min) / range) * chartH,
   }));
 
-  const linePath = points.map((p, i) => (i === 0 ? `M ${p.x},${p.y}` : `L ${p.x},${p.y}`)).join(" ");
+  const linePath = points
+    .map((p, i) => (i === 0 ? `M ${p.x},${p.y}` : `L ${p.x},${p.y}`))
+    .join(" ");
   const lastPt = points[points.length - 1]!;
   const firstPt = points[0]!;
   const areaPath = `${linePath} L ${lastPt.x},${paddingTop + chartH} L ${firstPt.x},${paddingTop + chartH} Z`;
 
-  // Grid lines (3 lines)
   const gridLines = [0, 0.5, 1].map((ratio) => ({
     y: paddingTop + (1 - ratio) * chartH,
+    yPct: ((paddingTop + (1 - ratio) * chartH) / plotHeight) * 100,
     value: min + ratio * range,
   }));
 
-  // Show ~5 X-axis labels evenly
   const xLabelStep = Math.max(1, Math.floor(data.length / 5));
 
   return (
     <div className="relative w-full" style={{ height }}>
-      <svg
-        viewBox={`0 0 ${width} ${height}`}
-        preserveAspectRatio="none"
-        className="w-full h-full"
-        onMouseLeave={() => setHoverIdx(null)}
+      {/* Y-axis labels column (left of plot) */}
+      <div
+        className="absolute left-0 top-0 pointer-events-none"
+        style={{ width: Y_AXIS_W, height: plotHeight }}
       >
-        <defs>
-          <linearGradient id={`${id}-fill`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={color} stopOpacity="0.15" />
-            <stop offset="100%" stopColor={color} stopOpacity="0" />
-          </linearGradient>
-        </defs>
-
-        {/* Grid lines (text labels rendered as HTML overlay below) */}
         {gridLines.map((g, i) => (
-          <line
-            key={i}
-            x1={paddingX}
-            y1={g.y}
-            x2={width - paddingX}
-            y2={g.y}
-            stroke="var(--color-border-subtle)"
-            strokeWidth={0.3}
-          />
-        ))}
-
-        {/* Area fill */}
-        <path d={areaPath} fill={`url(#${id}-fill)`} />
-
-        {/* Line */}
-        <motion.path
-          d={linePath}
-          fill="none"
-          stroke={color}
-          strokeWidth={0.6}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 1.2, ease: "easeOut" }}
-        />
-
-        {/* X-axis labels are rendered as HTML overlay below to avoid
-            SVG `preserveAspectRatio="none"` distortion that stretches
-            text horizontally and makes it unreadable. */}
-
-        {/* Hover zones */}
-        {points.map((p, i) => (
-          <rect
-            key={i}
-            x={p.x - (width / data.length) / 2}
-            y={paddingTop}
-            width={width / data.length}
-            height={chartH}
-            fill="transparent"
-            onMouseEnter={() => setHoverIdx(i)}
-            className="cursor-crosshair"
-          />
-        ))}
-
-        {/* Hover indicator */}
-        {hoverIdx !== null && points[hoverIdx] && (
-          <>
-            <line
-              x1={points[hoverIdx].x}
-              y1={paddingTop}
-              x2={points[hoverIdx].x}
-              y2={paddingTop + chartH}
-              stroke="var(--color-border-default)"
-              strokeWidth={0.3}
-              strokeDasharray="1 1"
-            />
-            <circle
-              cx={points[hoverIdx].x}
-              cy={points[hoverIdx].y}
-              r={1.5}
-              fill={color}
-              stroke="var(--color-surface-card)"
-              strokeWidth={0.5}
-              style={{ filter: `drop-shadow(0 0 3px ${color})` }}
-            />
-          </>
-        )}
-      </svg>
-
-      {/* Tooltip */}
-      {hoverIdx !== null && data[hoverIdx] && points[hoverIdx] && (
-        <div
-          className="absolute pointer-events-none bg-surface-elevated border border-border-default rounded-lg px-2.5 py-1.5 shadow-elevated-dark z-10"
-          style={{
-            left: `${(points[hoverIdx]!.x / width) * 100}%`,
-            top: `${(points[hoverIdx]!.y / height) * 100 - 12}%`,
-            transform: "translateX(-50%)",
-          }}
-        >
-          <p className="text-[10px] text-text-tertiary">{data[hoverIdx]!.label}</p>
-          <p className="text-xs font-mono font-bold text-text-primary">
-            {formatCurrency(data[hoverIdx]!.value)}
-          </p>
-        </div>
-      )}
-
-      {/* Y-axis grid value labels (HTML overlay) */}
-      {gridLines.map((g, i) => (
-        <span
-          key={`y-${i}`}
-          className="font-mono text-[10px] text-text-tertiary pointer-events-none whitespace-nowrap"
-          style={{
-            position: "absolute",
-            left: 4,
-            top: `${(g.y / height) * 100}%`,
-            transform: "translateY(-100%)",
-          }}
-        >
-          {valuePrefix}{Math.round(g.value).toLocaleString("it-IT")}
-        </span>
-      ))}
-
-      {/* X-axis labels (HTML overlay, browser-rendered — sharp + readable) */}
-      {data.map((d, i) =>
-        i % xLabelStep === 0 ? (
           <span
-            key={`x-${i}`}
-            className="font-mono text-[10px] text-text-tertiary pointer-events-none whitespace-nowrap"
+            key={`y-${i}`}
+            className="absolute right-2 font-mono text-[10px] text-text-tertiary whitespace-nowrap leading-none"
             style={{
-              position: "absolute",
-              left: `${(i / (data.length - 1)) * 100}%`,
-              bottom: 4,
+              top: `${g.yPct}%`,
+              transform: "translateY(-50%)",
+            }}
+          >
+            {valuePrefix}
+            {Math.round(g.value).toLocaleString("it-IT")}
+          </span>
+        ))}
+      </div>
+
+      {/* Plot area (SVG) — offset right by Y_AXIS_W */}
+      <div
+        className="absolute top-0"
+        style={{
+          left: Y_AXIS_W,
+          right: 0,
+          height: plotHeight,
+        }}
+      >
+        <svg
+          viewBox={`0 0 ${width} ${plotHeight}`}
+          preserveAspectRatio="none"
+          className="w-full h-full"
+          onMouseLeave={() => setHoverIdx(null)}
+        >
+          <defs>
+            <linearGradient id={`${id}-fill`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity="0.15" />
+              <stop offset="100%" stopColor={color} stopOpacity="0" />
+            </linearGradient>
+          </defs>
+
+          {/* Grid lines */}
+          {gridLines.map((g, i) => (
+            <line
+              key={i}
+              x1={0}
+              y1={g.y}
+              x2={width}
+              y2={g.y}
+              stroke="var(--color-border-subtle)"
+              strokeWidth={0.3}
+            />
+          ))}
+
+          {/* Area fill */}
+          <path d={areaPath} fill={`url(#${id}-fill)`} />
+
+          {/* Line */}
+          <motion.path
+            d={linePath}
+            fill="none"
+            stroke={color}
+            strokeWidth={0.6}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            initial={{ pathLength: 0 }}
+            animate={{ pathLength: 1 }}
+            transition={{ duration: 1.2, ease: "easeOut" }}
+          />
+
+          {/* Hover zones */}
+          {points.map((p, i) => (
+            <rect
+              key={i}
+              x={p.x - width / data.length / 2}
+              y={paddingTop}
+              width={width / data.length}
+              height={chartH}
+              fill="transparent"
+              onMouseEnter={() => setHoverIdx(i)}
+              className="cursor-crosshair"
+            />
+          ))}
+
+          {/* Hover indicator */}
+          {hoverIdx !== null && points[hoverIdx] && (
+            <>
+              <line
+                x1={points[hoverIdx].x}
+                y1={paddingTop}
+                x2={points[hoverIdx].x}
+                y2={paddingTop + chartH}
+                stroke="var(--color-border-default)"
+                strokeWidth={0.3}
+                strokeDasharray="1 1"
+              />
+              <circle
+                cx={points[hoverIdx].x}
+                cy={points[hoverIdx].y}
+                r={1.5}
+                fill={color}
+                stroke="var(--color-surface-card)"
+                strokeWidth={0.5}
+                style={{ filter: `drop-shadow(0 0 3px ${color})` }}
+              />
+            </>
+          )}
+        </svg>
+
+        {/* Tooltip — positioned within plot area */}
+        {hoverIdx !== null && data[hoverIdx] && points[hoverIdx] && (
+          <div
+            className="absolute pointer-events-none bg-surface-elevated border border-border-default rounded-lg px-2.5 py-1.5 shadow-elevated-dark z-10"
+            style={{
+              left: `${(points[hoverIdx]!.x / width) * 100}%`,
+              top: `${(points[hoverIdx]!.y / plotHeight) * 100 - 12}%`,
               transform: "translateX(-50%)",
             }}
           >
-            {d.label}
-          </span>
-        ) : null
-      )}
+            <p className="text-[10px] text-text-tertiary">{data[hoverIdx]!.label}</p>
+            <p className="text-xs font-mono font-bold text-text-primary">
+              {formatCurrency(data[hoverIdx]!.value)}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* X-axis labels row — below plot, anchored under the plot column */}
+      <div
+        className="absolute bottom-0"
+        style={{
+          left: Y_AXIS_W,
+          right: 0,
+          height: X_AXIS_H,
+        }}
+      >
+        {data.map((d, i) => {
+          if (i % xLabelStep !== 0) return null;
+          const isFirst = i === 0;
+          const isLast = i === data.length - 1;
+          const leftPct = (i / (data.length - 1)) * 100;
+          const transform = isFirst
+            ? "translateX(0)"
+            : isLast
+              ? "translateX(-100%)"
+              : "translateX(-50%)";
+          return (
+            <span
+              key={`x-${i}`}
+              className="absolute font-mono text-[10px] text-text-tertiary pointer-events-none whitespace-nowrap"
+              style={{
+                left: `${leftPct}%`,
+                top: 4,
+                transform,
+              }}
+            >
+              {d.label}
+            </span>
+          );
+        })}
+      </div>
     </div>
   );
 }
