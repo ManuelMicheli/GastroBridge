@@ -81,27 +81,17 @@ export function AreaChart({
           </linearGradient>
         </defs>
 
-        {/* Grid lines */}
+        {/* Grid lines (text labels rendered as HTML overlay below) */}
         {gridLines.map((g, i) => (
-          <g key={i}>
-            <line
-              x1={paddingX}
-              y1={g.y}
-              x2={width - paddingX}
-              y2={g.y}
-              stroke="var(--color-border-subtle)"
-              strokeWidth={0.3}
-            />
-            <text
-              x={paddingX}
-              y={g.y - 2}
-              fill="var(--color-text-tertiary)"
-              fontSize={3.2}
-              fontFamily="var(--font-mono)"
-            >
-              {valuePrefix}{Math.round(g.value).toLocaleString("it-IT")}
-            </text>
-          </g>
+          <line
+            key={i}
+            x1={paddingX}
+            y1={g.y}
+            x2={width - paddingX}
+            y2={g.y}
+            stroke="var(--color-border-subtle)"
+            strokeWidth={0.3}
+          />
         ))}
 
         {/* Area fill */}
@@ -120,22 +110,9 @@ export function AreaChart({
           transition={{ duration: 1.2, ease: "easeOut" }}
         />
 
-        {/* X-axis labels */}
-        {data.map((d, i) =>
-          i % xLabelStep === 0 && points[i] ? (
-            <text
-              key={i}
-              x={points[i]!.x}
-              y={height - 4}
-              textAnchor="middle"
-              fill="var(--color-text-tertiary)"
-              fontSize={3}
-              fontFamily="var(--font-mono)"
-            >
-              {d.label}
-            </text>
-          ) : null
-        )}
+        {/* X-axis labels are rendered as HTML overlay below to avoid
+            SVG `preserveAspectRatio="none"` distortion that stretches
+            text horizontally and makes it unreadable. */}
 
         {/* Hover zones */}
         {points.map((p, i) => (
@@ -191,6 +168,40 @@ export function AreaChart({
             {formatCurrency(data[hoverIdx]!.value)}
           </p>
         </div>
+      )}
+
+      {/* Y-axis grid value labels (HTML overlay) */}
+      {gridLines.map((g, i) => (
+        <span
+          key={`y-${i}`}
+          className="font-mono text-[10px] text-text-tertiary pointer-events-none whitespace-nowrap"
+          style={{
+            position: "absolute",
+            left: 4,
+            top: `${(g.y / height) * 100}%`,
+            transform: "translateY(-100%)",
+          }}
+        >
+          {valuePrefix}{Math.round(g.value).toLocaleString("it-IT")}
+        </span>
+      ))}
+
+      {/* X-axis labels (HTML overlay, browser-rendered — sharp + readable) */}
+      {data.map((d, i) =>
+        i % xLabelStep === 0 ? (
+          <span
+            key={`x-${i}`}
+            className="font-mono text-[10px] text-text-tertiary pointer-events-none whitespace-nowrap"
+            style={{
+              position: "absolute",
+              left: `${(i / (data.length - 1)) * 100}%`,
+              bottom: 4,
+              transform: "translateX(-50%)",
+            }}
+          >
+            {d.label}
+          </span>
+        ) : null
       )}
     </div>
   );
