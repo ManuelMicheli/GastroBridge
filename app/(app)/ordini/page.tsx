@@ -1,19 +1,28 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { PageHeader } from "@/components/ui/page-header";
-import { EmptyState } from "@/components/ui/empty-state";
-import { EmptyOrdersIllustration } from "@/components/illustrations";
-import { formatCurrency, formatDate } from "@/lib/utils/formatters";
-import { ORDER_STATUS_LABELS } from "@/lib/utils/constants";
-import Link from "next/link";
+import { OrdersClient } from "./orders-client";
+import type { OrderFeedRow, OrderStats } from "./_lib/types";
 
 export const metadata: Metadata = { title: "Ordini" };
 
+type OrderRow = {
+  id: string;
+  total: number;
+  status: string;
+  notes: string | null;
+  created_at: string;
+};
+
+type SplitSupplierRow = {
+  order_id: string;
+  suppliers: { company_name: string } | null;
+};
+
 export default async function OrdersPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   const { data: restaurants } = await supabase
     .from("restaurants")
@@ -28,56 +37,66 @@ export default async function OrdersPage() {
     .select("id, total, status, notes, created_at")
     .in("restaurant_id", restaurantIds.length > 0 ? restaurantIds : ["none"])
     .order("created_at", { ascending: false })
-    .returns<Array<{ id: string; total: number; status: string; notes: string | null; created_at: string }>>();
+    .returns<OrderRow[]>();
 
   const orderList = orders ?? [];
+  const orderIds = orderList.map((o) => o.id);
 
-  return (
-    <div>
-      <PageHeader
-        title="Ordini"
-        subtitle="Gestione ordini e ricezione merce dai tuoi fornitori."
-        meta={
-          orderList.length > 0 ? (
-            <Badge variant="default">{orderList.length} totali</Badge>
-          ) : undefined
-        }
-      />
-      {orderList.length > 0 ? (
-        <div className="space-y-2">
-          {orderList.map((order) => (
-            <Link
-              key={order.id}
-              href={`/ordini/${order.id}`}
-              className="block focus-ring rounded-2xl"
-            >
-              <Card className="motion-lift hover:shadow-elevated transition-shadow min-h-[72px]">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-mono text-sm text-sage">#{order.id.slice(0, 8)}</p>
-                    <p className="text-sm text-sage">{formatDate(order.created_at)}</p>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <p className="font-mono font-bold text-lg text-charcoal">
-                      {formatCurrency(order.total)}
-                    </p>
-                    <Badge variant={order.status === "delivered" ? "success" : "info"}>
-                      {ORDER_STATUS_LABELS[order.status] ?? order.status}
-                    </Badge>
-                  </div>
-                </div>
-              </Card>
-            </Link>
-          ))}
-        </div>
-      ) : (
-        <EmptyState
-          title="Nessun ordine ancora"
-          description="Quando crei il primo ordine, comparirà qui con stato e timeline."
-          illustration={<EmptyOrdersIllustration />}
-          context="page"
-        />
-      )}
-    </div>
-  );
+  // orders has no direct supplier_id. Supplier display name comes from the
+  // first split's supplier; supplierCount surfaces multi-supplier orders.
+  const splitsByOrder = new Map<string, { name: string | null; count: number }>();
+  if (orderIds.length > 0) {
+    const { data: splits } = await supabase
+      .from("order_splits")
+      .select("order_id, suppliers(company_name)")
+      .in("order_id", orderIds)
+      .returns<SplitSupplierRow[]>();
+
+    for (const s of splits ?? []) {
+      const existing = splitsByOrder.get(s.order_id);
+      const name = s.suppliers?.company_name ?? null;
+      if (!existing) {
+        splitsByOrder.set(s.order_id, { name, count: 1 });
+      } else {
+        splitsByOrder.set(s.order_id, {
+          name: existing.name ?? name,
+          count: existing.count + 1,
+        });
+      }
+    }
+  }
+
+  const rows: OrderFeedRow[] = orderList.map((o) => {
+    const split = splitsByOrder.get(o.id);
+    return {
+      id: o.id,
+      total: Number(o.total) || 0,
+      status: o.status,
+      notes: o.notes,
+      createdAt: o.created_at,
+      supplierName: split?.name ?? null,
+      supplierCount: split?.count ?? 0,
+    };
+  });
+
+  // Stats
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  let monthTotal = 0;
+  const statusCounts: Record<string, number> = {};
+  for (const r of rows) {
+    const d = new Date(r.createdAt);
+    if (!Number.isNaN(d.getTime()) && d >= monthStart) {
+      monthTotal += r.total;
+    }
+    statusCounts[r.status] = (statusCounts[r.status] ?? 0) + 1;
+  }
+
+  const stats: OrderStats = {
+    totalCount: rows.length,
+    monthTotal,
+    statusCounts,
+  };
+
+  return <OrdersClient orders={rows} stats={stats} />;
 }
