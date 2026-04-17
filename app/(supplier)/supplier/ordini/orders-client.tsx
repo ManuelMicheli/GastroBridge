@@ -201,13 +201,13 @@ export function SupplierOrdersClient({ orders, filters, total }: Props) {
 
       {/* Filtri */}
       <div className="rounded-xl border border-border-subtle bg-surface-card p-4">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-5">
+        <div className="cq-section grid grid-cols-1 @[520px]:grid-cols-2 @[900px]:grid-cols-5 gap-3">
           <label className="text-sm">
             <span className="mb-1 block text-xs text-text-secondary">Stato</span>
             <select
               value={localState}
               onChange={(e) => setLocalState(e.target.value)}
-              className="w-full rounded-md border border-border-subtle bg-surface-base px-3 py-2 text-sm text-text-primary focus:border-accent-green focus:outline-none focus:ring-1 focus:ring-accent-green"
+              className="w-full rounded-md border border-border-subtle bg-surface-base px-3 py-3 @[900px]:py-2 text-base @[900px]:text-sm text-text-primary min-h-[44px] @[900px]:min-h-0 focus:border-accent-green focus:outline-none focus:ring-1 focus:ring-accent-green"
             >
               {STATE_OPTIONS.map((o) => (
                 <option key={o.value || "__all__"} value={o.value}>
@@ -217,7 +217,7 @@ export function SupplierOrdersClient({ orders, filters, total }: Props) {
             </select>
           </label>
 
-          <label className="text-sm md:col-span-2">
+          <label className="text-sm @[520px]:col-span-2 @[900px]:col-span-2">
             <span className="mb-1 block text-xs text-text-secondary">
               Ristorante
             </span>
@@ -231,7 +231,7 @@ export function SupplierOrdersClient({ orders, filters, total }: Props) {
                 value={localRestaurant}
                 onChange={(e) => setLocalRestaurant(e.target.value)}
                 placeholder="Cerca per nome…"
-                className="w-full rounded-md border border-border-subtle bg-surface-base pl-9 pr-3 py-2 text-sm text-text-primary placeholder:text-text-secondary focus:border-accent-green focus:outline-none focus:ring-1 focus:ring-accent-green"
+                className="w-full rounded-md border border-border-subtle bg-surface-base pl-9 pr-3 py-3 @[900px]:py-2 text-base @[900px]:text-sm text-text-primary min-h-[44px] @[900px]:min-h-0 placeholder:text-text-secondary focus:border-accent-green focus:outline-none focus:ring-1 focus:ring-accent-green"
               />
             </div>
           </label>
@@ -242,7 +242,7 @@ export function SupplierOrdersClient({ orders, filters, total }: Props) {
               type="date"
               value={localFrom}
               onChange={(e) => setLocalFrom(e.target.value)}
-              className="w-full rounded-md border border-border-subtle bg-surface-base px-3 py-2 text-sm text-text-primary focus:border-accent-green focus:outline-none focus:ring-1 focus:ring-accent-green"
+              className="w-full rounded-md border border-border-subtle bg-surface-base px-3 py-3 @[900px]:py-2 text-base @[900px]:text-sm text-text-primary min-h-[44px] @[900px]:min-h-0 focus:border-accent-green focus:outline-none focus:ring-1 focus:ring-accent-green"
             />
           </label>
 
@@ -252,7 +252,7 @@ export function SupplierOrdersClient({ orders, filters, total }: Props) {
               type="date"
               value={localTo}
               onChange={(e) => setLocalTo(e.target.value)}
-              className="w-full rounded-md border border-border-subtle bg-surface-base px-3 py-2 text-sm text-text-primary focus:border-accent-green focus:outline-none focus:ring-1 focus:ring-accent-green"
+              className="w-full rounded-md border border-border-subtle bg-surface-base px-3 py-3 @[900px]:py-2 text-base @[900px]:text-sm text-text-primary min-h-[44px] @[900px]:min-h-0 focus:border-accent-green focus:outline-none focus:ring-1 focus:ring-accent-green"
             />
           </label>
         </div>
