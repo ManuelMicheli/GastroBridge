@@ -3,10 +3,11 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { useCommandPalette } from "./command-palette-provider";
 import { useFuzzySearch } from "./use-fuzzy-search";
 import { CommandItem } from "./command-item";
+import { cn } from "@/lib/utils/formatters";
 
 export function CommandPalette() {
   const { isOpen, close, searchItems } = useCommandPalette();
@@ -89,10 +90,16 @@ export function CommandPalette() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: -10 }}
             transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed left-1/2 top-[20%] -translate-x-1/2 w-[90vw] max-w-lg bg-surface-elevated border border-border-default rounded-2xl shadow-elevated-dark z-50 overflow-hidden"
+            className={cn(
+              "fixed z-50 bg-surface-elevated border border-border-default shadow-elevated-dark overflow-hidden",
+              // Mobile: full-screen flex column
+              "inset-0 flex flex-col md:inset-auto md:block",
+              // Desktop: centered panel
+              "md:left-1/2 md:top-[20%] md:-translate-x-1/2 md:w-[90vw] md:max-w-lg md:rounded-2xl"
+            )}
           >
             {/* Search input */}
-            <div className="flex items-center gap-3 px-4 py-3 border-b border-border-subtle">
+            <div className="flex items-center gap-3 px-4 py-4 md:py-3 border-b border-border-subtle">
               <Search className="h-5 w-5 text-text-tertiary shrink-0" />
               <input
                 ref={inputRef}
@@ -101,15 +108,22 @@ export function CommandPalette() {
                 onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Cerca pagine, azioni..."
-                className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-tertiary outline-none"
+                className="flex-1 bg-transparent text-base md:text-sm text-text-primary placeholder:text-text-tertiary outline-none"
               />
-              <kbd className="px-1.5 py-0.5 rounded bg-surface-base text-[10px] font-mono text-text-tertiary border border-border-subtle">
+              <kbd className="hidden md:inline-block px-1.5 py-0.5 rounded bg-surface-base text-[10px] font-mono text-text-tertiary border border-border-subtle">
                 ESC
               </kbd>
+              <button
+                onClick={close}
+                className="md:hidden p-1 rounded-md text-text-tertiary hover:text-text-primary hover:bg-surface-hover focus-ring"
+                aria-label="Chiudi ricerca"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
 
             {/* Results */}
-            <div className="max-h-72 overflow-y-auto py-2">
+            <div className="flex-1 md:flex-none md:max-h-72 overflow-y-auto py-2">
               {Object.entries(grouped).map(([section, items]) => (
                 <div key={section}>
                   <p className="px-4 py-1.5 text-[10px] uppercase tracking-widest font-bold text-text-tertiary">
@@ -136,8 +150,8 @@ export function CommandPalette() {
               )}
             </div>
 
-            {/* Footer hint */}
-            <div className="flex items-center gap-4 px-4 py-2 border-t border-border-subtle text-[10px] text-text-tertiary">
+            {/* Footer hint — desktop only (no physical kbd on mobile) */}
+            <div className="hidden md:flex items-center gap-4 px-4 py-2 border-t border-border-subtle text-[10px] text-text-tertiary">
               <span>↑↓ naviga</span>
               <span>↵ seleziona</span>
               <span>esc chiudi</span>
