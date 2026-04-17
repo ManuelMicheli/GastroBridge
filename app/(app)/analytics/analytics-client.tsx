@@ -44,13 +44,22 @@ export function AnalyticsContent({ data }: Props) {
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary">Analytics Spesa</h1>
+        <div className="min-w-0">
+          <h1
+            className="font-bold text-text-primary"
+            style={{
+              fontSize: "var(--text-display-lg, 24px)",
+              lineHeight: "var(--text-display-lg--line-height, 1.2)",
+              letterSpacing: "var(--text-display-lg--letter-spacing, -0.01em)",
+            }}
+          >
+            Analytics Spesa
+          </h1>
           <p className="text-sm text-text-tertiary mt-1">
             Strumento completo di gestione spesa: budget, varianza mese su mese, prezzi prodotti.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <PeriodSelector current={data.period.key} />
           <ExportCsvButton period={data.period.key} />
         </div>
@@ -67,7 +76,13 @@ export function AnalyticsContent({ data }: Props) {
         periodLabel={data.period.label}
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div
+        className="cq-section grid gap-4"
+        style={{
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(min(220px, 100%), 1fr))",
+        }}
+      >
         <KPICard
           label="Spesa periodo"
           value={formatCurrency(data.currentSpending)}
@@ -97,13 +112,19 @@ export function AnalyticsContent({ data }: Props) {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div
+        className="cq-section grid gap-6"
+        style={{
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(min(320px, 100%), 1fr))",
+        }}
+      >
         <CategoryDonut data={data.categoryBreakdown} />
         <YoyTrendChart data={data.yearOverYear} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
+      <div className="cq-section grid grid-cols-1 @[960px]:grid-cols-3 gap-6">
+        <div className="@[960px]:col-span-2">
           <ProductInsightsTable rows={data.productInsights} />
         </div>
         <div className="bg-surface-card border border-border-subtle rounded-2xl p-5 shadow-card-dark">
