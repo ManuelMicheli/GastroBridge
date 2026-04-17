@@ -98,7 +98,7 @@ export function FacetPanel({
 
         <FacetGroup label="Prezzo" activeCount={facets.priceRange ? 1 : 0}>
           <PriceRange
-            min={counts.priceBounds[0]}
+            min={0}
             max={counts.priceBounds[1]}
             value={facets.priceRange}
             onChange={(next) => onChange({ ...facets, priceRange: next })}
