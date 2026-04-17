@@ -342,6 +342,23 @@ body {
 }
 
 /* =========================================
+   Safe-area utilities (iOS notch/home indicator)
+   Used by fixed bottom chrome (mobile nav, sticky action bars).
+   ========================================= */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-area-pt {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.safe-area-px {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+/* =========================================
    Area: Supplier — Light mode
    Scope: any descendant of [data-area="supplier"]
    New identity: ocra #A87535 on avorio #FBF8F1, with giallo-oro highlight.
