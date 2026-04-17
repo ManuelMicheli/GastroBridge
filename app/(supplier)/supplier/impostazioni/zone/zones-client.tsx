@@ -116,7 +116,13 @@ export function ZonesClient({ supplierId, initialZones, warehouses }: Props) {
           </Button>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div
+          className="cq-section grid gap-4"
+          style={{
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(min(320px, 100%), 1fr))",
+          }}
+        >
           {initialZones.map((z) => {
             const wh = warehouses.find((w) => w.id === z.warehouse_id);
             const slotCount = countSlots(z.delivery_slots);

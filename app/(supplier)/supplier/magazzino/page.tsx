@@ -183,7 +183,13 @@ export default async function MagazzinoPage({
         </Card>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div
+            className="cq-section grid gap-3"
+            style={{
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(min(220px, 100%), 1fr))",
+            }}
+          >
             <KpiCard
               label="Prodotti in giacenza"
               value={String(productsWithStock)}

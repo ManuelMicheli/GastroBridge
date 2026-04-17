@@ -214,7 +214,13 @@ export default async function SupplierConsegnePage({
         </form>
       )}
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div
+        className="cq-section grid gap-3"
+        style={{
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(min(160px, 100%), 1fr))",
+        }}
+      >
         <SummaryTile label="Pianificate" value={totalPlanned} />
         <SummaryTile label="In transito" value={inTransit} />
         <SummaryTile label="Consegnate" value={completed} />
@@ -231,7 +237,13 @@ export default async function SupplierConsegnePage({
           <p className="text-sage">Nessuna consegna per questa data.</p>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div
+          className="cq-section grid gap-4"
+          style={{
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(min(320px, 100%), 1fr))",
+          }}
+        >
           {deliveries.map((d) => (
             <DeliveryCard key={d.id} delivery={d} />
           ))}

@@ -66,7 +66,13 @@ export function TemplatesListClient({ supplierId, initialTemplates }: Props) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div
+      className="cq-section grid gap-4"
+      style={{
+        gridTemplateColumns:
+          "repeat(auto-fit, minmax(min(320px, 100%), 1fr))",
+      }}
+    >
       {initialTemplates.map((t) => (
         <Card key={t.id} className="flex flex-col gap-3">
           <div className="flex items-start justify-between gap-2">

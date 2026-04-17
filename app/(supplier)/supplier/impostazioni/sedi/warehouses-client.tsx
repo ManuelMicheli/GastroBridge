@@ -113,7 +113,13 @@ export function WarehousesClient({ supplierId, initialWarehouses }: Props) {
           </Button>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div
+          className="cq-section grid gap-4"
+          style={{
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(min(320px, 100%), 1fr))",
+          }}
+        >
           {initialWarehouses.map((w) => (
             <Card key={w.id} className="flex flex-col">
               <div className="flex items-start justify-between gap-3 mb-3">

@@ -18,7 +18,13 @@ export default function SupplierSubscriptionPage() {
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div
+        className="cq-section grid gap-6"
+        style={{
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
+        }}
+      >
         {SUPPLIER_PLANS.map((plan) => (
           <Card key={plan.id} className={plan.highlighted ? "ring-2 ring-forest" : ""}>
             {plan.highlighted && <Badge variant="success" className="mb-3">Consigliato</Badge>}
