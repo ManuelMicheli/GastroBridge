@@ -78,7 +78,7 @@ export default async function SuppliersPage() {
         }
         actions={
           <Link href="/fornitori/cerca">
-            <Button variant="primary" size="sm">
+            <Button variant="primary" size="md" density="compact">
               <Plus className="h-4 w-4" /> Aggiungi fornitore
             </Button>
           </Link>
@@ -98,7 +98,7 @@ export default async function SuppliersPage() {
           illustration={<EmptySuppliersIllustration />}
           action={
             <Link href="/fornitori/cerca">
-              <Button variant="primary" size="sm">
+              <Button variant="primary" size="md" density="compact">
                 <Plus className="h-4 w-4" /> Cerca fornitori
               </Button>
             </Link>
