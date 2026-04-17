@@ -1,19 +1,28 @@
+// components/dashboard/restaurant/restaurant-dashboard.tsx
+//
+// Restaurant "Operator Console" — awwwards-grade premium terminal-dense
+// redesign. Orchestrates six blocks:
+//   1. HeroStrip            — greeting · date · time + live pulse
+//   2. QuickActionBar       — compact pill bar (replaces 4-tile grid)
+//   3. KpiGrid + Savings    — big € number + 4 sub-KPIs + alert strip
+//   4. SectionFrame + chart — terminal-framed SpendTrendChart
+//   5. RecentOrdersLog      — dense 40px rows, /ordini-style
+//
+// Props shape is preserved: server fetch in app/(app)/dashboard/page.tsx is
+// untouched. Motion/react stagger is dropped in favour of CSS fade-in-up.
+
 "use client";
 
-import { motion } from "motion/react";
-import {
-  TrendingDown, Store,
-  Search, Truck, HelpCircle, ArrowUpRight, ArrowDownRight,
-} from "lucide-react";
-import { DarkCard, DarkCardHeader, DarkCardTitle } from "../cards/dark-card";
-import { QuickAction } from "../cards/quick-action";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { SpendTrendChart } from "./spend-trend-chart/SpendTrendChart";
 import type { SpendTrendPoint } from "./spend-trend-chart/types";
-import { StatusBadge } from "../tables/status-badge";
-import { DataTable, type Column } from "../tables/data-table";
-import { formatCurrency, formatDate } from "@/lib/utils/formatters";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { HeroStrip } from "./_awwwards/hero-strip";
+import { QuickActionBar } from "./_awwwards/quick-action-bar";
+import { KpiGrid, type Delta } from "./_awwwards/kpi-grid";
+import { SavingsAlert } from "./_awwwards/savings-alert";
+import { SectionFrame } from "./_awwwards/section-frame";
+import { RecentOrdersLog } from "./_awwwards/recent-orders-log";
 
 type OrderRow = {
   id: string;
@@ -39,51 +48,7 @@ type Props = {
   recentOrders: OrderRow[];
 };
 
-const stagger = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.06 } },
-};
-
-const columns: Column<OrderRow>[] = [
-  {
-    key: "supplier",
-    label: "Fornitore",
-    render: (row) => <span className="text-text-primary font-medium">{row.supplier_name}</span>,
-  },
-  {
-    key: "status",
-    label: "Stato",
-    render: (row) => (
-      <StatusBadge status={row.status as "draft" | "submitted" | "confirmed" | "preparing" | "shipping" | "delivered" | "cancelled"} />
-    ),
-  },
-  {
-    key: "total",
-    label: "Totale",
-    sortable: true,
-    render: (row) => <span className="font-mono text-text-primary">{formatCurrency(row.total)}</span>,
-  },
-  {
-    key: "date",
-    label: "Data",
-    render: (row) => <span className="text-text-tertiary">{formatDate(row.created_at)}</span>,
-  },
-  {
-    key: "order_number",
-    label: "Ordine",
-    render: (row) => <span className="font-mono text-text-tertiary text-xs">{row.order_number}</span>,
-  },
-];
-
-function getGreeting(): string {
-  const h = new Date().getHours();
-  if (h < 5) return "Buonanotte";
-  if (h < 12) return "Buongiorno";
-  if (h < 18) return "Buon pomeriggio";
-  return "Buonasera";
-}
-
-function formatDelta(current: number, previous: number): { sign: "+" | "-" | ""; pct: string; positive: boolean } {
+function formatDelta(current: number, previous: number): Delta {
   if (previous === 0) {
     if (current === 0) return { sign: "", pct: "—", positive: true };
     return { sign: "+", pct: "100%", positive: true };
@@ -97,253 +62,125 @@ function formatDelta(current: number, previous: number): { sign: "+" | "-" | "";
   };
 }
 
-export function RestaurantDashboard({ companyName, kpi, spendPoints, transactionsByDate, recentOrders }: Props) {
-  const router = useRouter();
-  const [greeting, setGreeting] = useState("Ciao");
+function formatClock(d: Date): string {
+  return new Intl.DateTimeFormat("it-IT", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(d);
+}
 
-  useEffect(() => {
-    setGreeting(getGreeting());
-  }, []);
-
+export function RestaurantDashboard({
+  companyName,
+  kpi,
+  spendPoints,
+  transactionsByDate,
+  recentOrders,
+}: Props) {
   const spendingDelta = formatDelta(kpi.spending, kpi.prevSpending);
   const ordersDelta = formatDelta(kpi.ordersThisMonth, kpi.prevMonthOrders);
 
+  const avgOrder =
+    kpi.ordersThisMonth > 0
+      ? Math.round(kpi.spending / kpi.ordersThisMonth)
+      : 0;
+  const prevAvgOrder =
+    kpi.prevMonthOrders > 0
+      ? Math.round(kpi.prevSpending / kpi.prevMonthOrders)
+      : 0;
+
+  // Live clock for the "AS OF HH:mm" caption in the KPI hero.
+  const [asOf, setAsOf] = useState<string>("——");
+  useEffect(() => {
+    const tick = () => setAsOf(formatClock(new Date()));
+    tick();
+    const id = window.setInterval(tick, 30_000);
+    return () => window.clearInterval(id);
+  }, []);
+
   return (
-    <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-8">
-      {/* Hero greeting */}
-      <header>
-        <p
-          className="uppercase mb-2"
-          style={{
-            fontSize: "var(--text-caption)",
-            lineHeight: "var(--text-caption--line-height)",
-            letterSpacing: "var(--text-caption--letter-spacing)",
-            fontWeight: "var(--text-caption--font-weight)",
-            color: "var(--caption-color, var(--color-brand-depth))",
-          }}
-        >
-          {greeting}
-        </p>
-        <h1
-          className="font-display"
-          style={{
-            fontSize: "var(--text-display-lg)",
-            lineHeight: "var(--text-display-lg--line-height)",
-            letterSpacing: "var(--text-display-lg--letter-spacing)",
-            fontWeight: "var(--text-display-lg--font-weight)",
-            color: "var(--color-text-primary)",
-          }}
-        >
-          {companyName}
-        </h1>
-        <p
-          className="mt-1.5 text-text-secondary"
-          style={{
-            fontSize: "var(--text-body-sm)",
-            lineHeight: "var(--text-body-sm--line-height)",
-          }}
-        >
-          Ecco il riepilogo della tua attività di questo mese.
-        </p>
-      </header>
+    <div className="space-y-6">
+      {/* Block 1 — Hero identity strip */}
+      <HeroStrip
+        companyName={companyName}
+        subtitle="Ecco il riepilogo della tua attività di questo mese."
+      />
 
-      {/* Row 1: Quick Actions — auto-fit grid driven by container width */}
-      <DarkCard>
-        <div
-          className="cq-card grid gap-3"
-          style={{
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(min(180px, 100%), 1fr))",
-          }}
-        >
-          <QuickAction href="/cerca" label="Cerca prodotti" description="Confronta prezzi" icon={Search} index={0} />
-          <QuickAction href="/fornitori" label="Scopri fornitori" description="Nuovi partner" icon={Store} index={1} />
-          <QuickAction href="/ordini" label="I tuoi ordini" description="Storico completo" icon={Truck} index={2} />
-          <QuickAction href="/impostazioni" label="Impostazioni" description="Gestisci account" icon={HelpCircle} index={3} />
+      {/* Block 2 — Quick action pills */}
+      <div className="animate-[fadeInUp_240ms_ease-out_both] [animation-delay:60ms]">
+        <QuickActionBar />
+      </div>
+
+      {/* Block 3 — KPI hero + savings alert (same frame) */}
+      <section className="animate-[fadeInUp_260ms_ease-out_both] [animation-delay:120ms] rounded-xl border border-border-subtle bg-surface-card">
+        <header className="flex items-center gap-3 px-4 pt-3 pb-2">
+          <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+            Spesa · Questo mese
+          </span>
+          <span aria-hidden className="h-px flex-1 bg-border-subtle" />
+        </header>
+        <div className="px-4 pt-3 pb-4">
+          <KpiGrid
+            spending={kpi.spending}
+            spendingDelta={spendingDelta}
+            ordersThisMonth={kpi.ordersThisMonth}
+            ordersDelta={ordersDelta}
+            avgOrder={avgOrder}
+            prevAvgOrder={prevAvgOrder}
+            savings={kpi.savings}
+            activeSuppliers={kpi.activeSuppliers}
+            asOf={asOf}
+          />
         </div>
-      </DarkCard>
+        <div className="border-t border-border-subtle px-4 py-3">
+          <SavingsAlert savings={kpi.savings} />
+        </div>
+      </section>
 
-      {/* Hero KPI — single big number for spending + savings alert */}
-      <DarkCard className="relative overflow-hidden cq-card">
-        <div className="grid grid-cols-1 @[680px]:grid-cols-2 gap-6 items-start">
-          <div>
-            <p
-              className="uppercase mb-3"
-              style={{
-                fontSize: "var(--text-caption)",
-                letterSpacing: "var(--text-caption--letter-spacing)",
-                fontWeight: "var(--text-caption--font-weight)",
-                color: "var(--color-text-tertiary)",
-              }}
+      {/* Block 4 — Spend trend chart in terminal frame */}
+      <div className="animate-[fadeInUp_280ms_ease-out_both] [animation-delay:180ms]">
+        <SectionFrame label="Spend Trend · 730 days" padded={false}>
+          <SpendTrendChart
+            points={spendPoints}
+            transactionsByDate={transactionsByDate}
+            bare
+          />
+        </SectionFrame>
+      </div>
+
+      {/* Block 5 — Recent orders log */}
+      <div className="animate-[fadeInUp_300ms_ease-out_both] [animation-delay:240ms]">
+        <SectionFrame
+          label="Ordini recenti"
+          trailing={
+            <Link
+              href="/ordini"
+              className="text-accent-green hover:text-text-primary transition-colors"
             >
-              Spesa di questo mese
-            </p>
-            <div className="flex items-baseline gap-3 flex-wrap">
-              <span
-                className="font-mono"
-                style={{
-                  fontSize: "var(--text-display-2xl)",
-                  lineHeight: "var(--text-display-2xl--line-height)",
-                  letterSpacing: "var(--text-display-2xl--letter-spacing)",
-                  fontWeight: 400,
-                  color: "var(--color-text-primary)",
-                }}
-              >
-                {formatCurrency(kpi.spending)}
-              </span>
-              {spendingDelta.pct !== "—" && (
-                <span
-                  className="inline-flex items-center gap-0.5"
-                  style={{
-                    fontSize: "var(--text-body-sm)",
-                    fontWeight: 600,
-                    color: spendingDelta.positive
-                      ? "var(--color-text-warning)"
-                      : "var(--color-success)",
-                  }}
-                >
-                  {spendingDelta.positive ? (
-                    <ArrowUpRight className="h-3.5 w-3.5" />
-                  ) : (
-                    <ArrowDownRight className="h-3.5 w-3.5" />
-                  )}
-                  {spendingDelta.pct} vs mese scorso
-                </span>
-              )}
-            </div>
-            <div className="mt-6 flex items-center gap-6 overflow-x-auto snap-x snap-mandatory -mx-1 px-1 pb-1 @[560px]:flex-wrap @[560px]:overflow-visible @[560px]:snap-none [&>div]:shrink-0 [&>div]:snap-start @[560px]:[&>div]:shrink">
-              <div>
-                <p
-                  className="uppercase mb-1"
-                  style={{
-                    fontSize: "11px",
-                    letterSpacing: "+0.04em",
-                    color: "var(--color-text-tertiary)",
-                  }}
-                >
-                  Ordini
-                </p>
-                <p className="font-mono text-text-primary" style={{ fontSize: "var(--text-title-lg)", fontWeight: 600 }}>
-                  {kpi.ordersThisMonth}{" "}
-                  <span className="text-xs font-normal" style={{ color: ordersDelta.positive ? "var(--color-success)" : "var(--color-text-warning)" }}>
-                    {ordersDelta.sign}{ordersDelta.pct}
-                  </span>
-                </p>
-              </div>
-              <div className="h-10 w-px bg-[color:var(--color-border-subtle)]" aria-hidden />
-              <div>
-                <p
-                  className="uppercase mb-1"
-                  style={{
-                    fontSize: "11px",
-                    letterSpacing: "+0.04em",
-                    color: "var(--color-text-tertiary)",
-                  }}
-                >
-                  Spesa media ordine
-                </p>
-                <p className="font-mono text-text-primary" style={{ fontSize: "var(--text-title-lg)", fontWeight: 600 }}>
-                  {kpi.ordersThisMonth > 0
-                    ? formatCurrency(Math.round(kpi.spending / kpi.ordersThisMonth))
-                    : "€0"}
-                </p>
-              </div>
-              <div className="h-10 w-px bg-[color:var(--color-border-subtle)]" aria-hidden />
-              <div>
-                <p
-                  className="uppercase mb-1"
-                  style={{
-                    fontSize: "11px",
-                    letterSpacing: "+0.04em",
-                    color: "var(--color-text-tertiary)",
-                  }}
-                >
-                  Risparmio stimato
-                </p>
-                <p className="font-mono text-text-primary" style={{ fontSize: "var(--text-title-lg)", fontWeight: 600 }}>
-                  {formatCurrency(kpi.savings)}
-                </p>
-              </div>
-              <div className="h-10 w-px bg-[color:var(--color-border-subtle)]" aria-hidden />
-              <div>
-                <p
-                  className="uppercase mb-1"
-                  style={{
-                    fontSize: "11px",
-                    letterSpacing: "+0.04em",
-                    color: "var(--color-text-tertiary)",
-                  }}
-                >
-                  Fornitori attivi
-                </p>
-                <p className="font-mono text-text-primary" style={{ fontSize: "var(--text-title-lg)", fontWeight: 600 }}>
-                  {kpi.activeSuppliers}
-                </p>
-              </div>
-            </div>
+              vedi tutti →
+            </Link>
+          }
+          padded={false}
+        >
+          <div className="py-2">
+            <RecentOrdersLog rows={recentOrders} />
           </div>
-          {/* Savings alert on right */}
-          <div className="flex flex-col justify-center">
-            <p
-              className="uppercase mb-3"
-              style={{
-                fontSize: "var(--text-caption)",
-                letterSpacing: "var(--text-caption--letter-spacing)",
-                fontWeight: "var(--text-caption--font-weight)",
-                color: "var(--color-text-tertiary)",
-              }}
-            >
-              Alert risparmio
-            </p>
-            {kpi.savings > 0 ? (
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-accent-green-muted">
-                <TrendingDown className="h-5 w-5 text-accent-green shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-text-primary">
-                    Potresti risparmiare ~{formatCurrency(kpi.savings)}
-                  </p>
-                  <p className="text-xs text-text-tertiary mt-0.5">
-                    Basato sul confronto prezzi dei tuoi fornitori attuali
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-text-tertiary py-3">
-                Gli alert saranno disponibili dopo i primi ordini.
-              </p>
-            )}
-          </div>
-        </div>
-      </DarkCard>
+        </SectionFrame>
+      </div>
 
-      {/* Row 3: Spending trend — full width */}
-      <SpendTrendChart points={spendPoints} transactionsByDate={transactionsByDate} />
-
-      {/* Row 4: Recent Orders — full width */}
-      <DarkCard noPadding>
-        <div className="p-5 pb-0">
-          <DarkCardHeader>
-            <DarkCardTitle>Ordini recenti</DarkCardTitle>
-            <button
-              onClick={() => router.push("/ordini")}
-              className="text-xs text-text-link hover:text-accent-green transition-colors uppercase"
-              style={{
-                letterSpacing: "var(--text-caption--letter-spacing)",
-                fontWeight: "var(--text-caption--font-weight)",
-              }}
-            >
-              Vedi tutti →
-            </button>
-          </DarkCardHeader>
-        </div>
-        <DataTable
-          columns={columns}
-          data={recentOrders}
-          getRowKey={(row) => row.id}
-          onRowClick={(row) => router.push(`/ordini/${row.id}`)}
-          emptyMessage="Nessun ordine ancora. Inizia a cercare prodotti!"
-        />
-      </DarkCard>
-    </motion.div>
+      {/* Shared keyframes for stagger reveal (scoped via styled-jsx). */}
+      <style jsx>{`
+        @keyframes fadeInUp {
+          from {
+            opacity: 0;
+            transform: translate3d(0, 6px, 0);
+          }
+          to {
+            opacity: 1;
+            transform: translate3d(0, 0, 0);
+          }
+        }
+      `}</style>
+    </div>
   );
 }

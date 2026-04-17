@@ -63,7 +63,6 @@ export function RecentOrdersLog({
         const label = ORDER_STATUS_LABELS[row.status] ?? row.status;
         const dot = statusColorClass(row.status);
         const ts = formatTime(row.created_at);
-        const shortId = row.id.slice(0, 8).toUpperCase();
         const supplier = row.supplier_name && row.supplier_name !== "—"
           ? row.supplier_name
           : "Fornitore";
