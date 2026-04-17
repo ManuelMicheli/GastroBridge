@@ -1,11 +1,29 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Check, Clock, Package, Truck } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/page-header";
+import { SectionHeader } from "@/components/ui/section-header";
 import { formatCurrency, formatDate } from "@/lib/utils/formatters";
 import { ORDER_STATUS_LABELS } from "@/lib/utils/constants";
+
+const TIMELINE_STEPS = [
+  { key: "submitted", label: "Inviato", icon: Check },
+  { key: "confirmed", label: "Confermato", icon: Check },
+  { key: "preparing", label: "In preparazione", icon: Package },
+  { key: "shipping", label: "In consegna", icon: Truck },
+  { key: "delivered", label: "Consegnato", icon: Check },
+] as const;
+
+function getTimelinePosition(status: string): number {
+  const idx = TIMELINE_STEPS.findIndex((s) => s.key === status);
+  if (idx >= 0) return idx;
+  if (status === "draft") return -1;
+  if (status === "cancelled") return -2;
+  return 0;
+}
 
 type SupplierBlock = {
   supplierName: string;
@@ -88,26 +106,114 @@ export default async function OrderDetailPage({
     ? parseCatalogOrderNotes(order.notes)
     : null;
 
+  const currentStep = getTimelinePosition(order.status);
+  const isCancelled = order.status === "cancelled";
+  const isDraft = order.status === "draft";
+
   return (
     <div>
       <div className="mb-4">
-        <Link href="/ordini" className="inline-flex items-center gap-1 text-sm text-sage hover:text-charcoal">
+        <Link
+          href="/ordini"
+          className="inline-flex items-center gap-1 text-sm text-text-secondary hover:text-text-primary transition-colors"
+        >
           <ArrowLeft className="h-4 w-4" /> Torna agli ordini
         </Link>
       </div>
 
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-charcoal">Ordine #{id.slice(0, 8)}</h1>
-          <p className="text-sm text-sage">{formatDate(order.created_at)}</p>
-        </div>
-        <Badge variant={order.status === "delivered" ? "success" : "info"} className="text-sm px-3 py-1">
-          {ORDER_STATUS_LABELS[order.status] ?? order.status}
-        </Badge>
-      </div>
+      <PageHeader
+        title={`Ordine #${id.slice(0, 8)}`}
+        subtitle={formatDate(order.created_at)}
+        meta={
+          <Badge variant={order.status === "delivered" ? "success" : "info"}>
+            {ORDER_STATUS_LABELS[order.status] ?? order.status}
+          </Badge>
+        }
+      />
+
+      {/* Timeline scrubber — only for non-draft, non-cancelled */}
+      {!isDraft && !isCancelled && (
+        <Card className="mb-6">
+          <ol className="flex items-center justify-between gap-2 relative">
+            {TIMELINE_STEPS.map((step, i) => {
+              const Icon = step.icon;
+              const isDone = i <= currentStep;
+              const isActive = i === currentStep;
+              const isFinal = i === TIMELINE_STEPS.length - 1;
+              return (
+                <li key={step.key} className="flex-1 flex flex-col items-center relative">
+                  {!isFinal && (
+                    <div
+                      className="absolute top-4 left-1/2 right-0 h-px"
+                      style={{
+                        background:
+                          i < currentStep
+                            ? "var(--color-brand-primary)"
+                            : "var(--color-border-subtle)",
+                        zIndex: 0,
+                      }}
+                      aria-hidden
+                    />
+                  )}
+                  <div
+                    className="relative z-10 flex items-center justify-center w-8 h-8 rounded-full transition-colors"
+                    style={{
+                      background: isDone
+                        ? "var(--color-brand-primary)"
+                        : "var(--color-surface-card)",
+                      border: `1px solid ${
+                        isDone
+                          ? "var(--color-brand-primary)"
+                          : "var(--color-border-subtle)"
+                      }`,
+                      color: isDone
+                        ? "var(--color-brand-on-primary)"
+                        : "var(--color-text-tertiary)",
+                      boxShadow: isActive ? "var(--glow-brand)" : undefined,
+                    }}
+                  >
+                    {isDone ? (
+                      <Check className="h-4 w-4" strokeWidth={2.5} />
+                    ) : (
+                      <Icon className="h-4 w-4" strokeWidth={1.5} />
+                    )}
+                  </div>
+                  <p
+                    className="mt-2 text-center"
+                    style={{
+                      fontSize: "11px",
+                      letterSpacing: "+0.04em",
+                      fontWeight: isActive ? 600 : 500,
+                      textTransform: "uppercase",
+                      color: isActive
+                        ? "var(--color-text-primary)"
+                        : "var(--color-text-tertiary)",
+                    }}
+                  >
+                    {step.label}
+                  </p>
+                </li>
+              );
+            })}
+          </ol>
+        </Card>
+      )}
+
+      {(isDraft || isCancelled) && (
+        <Card className="mb-6">
+          <div className="flex items-center gap-3">
+            <Clock className="h-5 w-5 text-text-tertiary" />
+            <p className="text-sm text-text-secondary">
+              {isDraft
+                ? "Ordine in bozza — non ancora inviato ai fornitori."
+                : "Ordine annullato."}
+            </p>
+          </div>
+        </Card>
+      )}
 
       {catalogDetail?.header && (
-        <p className="text-sm text-sage mb-4">{catalogDetail.header}</p>
+        <SectionHeader title={catalogDetail.header} />
       )}
 
       {/* Marketplace splits (existing flow) */}
