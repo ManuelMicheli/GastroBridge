@@ -25,7 +25,7 @@ export function BestOfferCard({
           € {best.price.toFixed(2)}
         </span>
         <span className={`font-mono text-[12px] tabular-nums ${scoreCls}`}>
-          score {best.scored.score}
+          score {best.scored.score.toFixed(1)}
         </span>
       </div>
       <p className="text-[13px] text-text-secondary">
