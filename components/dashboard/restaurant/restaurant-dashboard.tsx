@@ -2,10 +2,9 @@
 
 import { motion } from "motion/react";
 import {
-  ClipboardList, ShoppingCart, TrendingDown, Store,
+  TrendingDown, Store,
   Search, Truck, HelpCircle, ArrowUpRight, ArrowDownRight,
 } from "lucide-react";
-import { KPICard } from "../cards/kpi-card";
 import { DarkCard, DarkCardHeader, DarkCardTitle } from "../cards/dark-card";
 import { QuickAction } from "../cards/quick-action";
 import { AreaChart } from "../charts/area-chart";
@@ -224,6 +223,24 @@ export function RestaurantDashboard({ companyName, kpi, spendingSparkline, chart
                     color: "var(--color-text-tertiary)",
                   }}
                 >
+                  Spesa media ordine
+                </p>
+                <p className="font-mono text-text-primary" style={{ fontSize: "var(--text-title-lg)", fontWeight: 600 }}>
+                  {kpi.ordersThisMonth > 0
+                    ? formatCurrency(Math.round(kpi.spending / kpi.ordersThisMonth))
+                    : "€0"}
+                </p>
+              </div>
+              <div className="h-10 w-px bg-[color:var(--color-border-subtle)]" aria-hidden />
+              <div>
+                <p
+                  className="uppercase mb-1"
+                  style={{
+                    fontSize: "11px",
+                    letterSpacing: "+0.04em",
+                    color: "var(--color-text-tertiary)",
+                  }}
+                >
                   Risparmio stimato
                 </p>
                 <p className="font-mono text-text-primary" style={{ fontSize: "var(--text-title-lg)", fontWeight: 600 }}>
@@ -259,45 +276,6 @@ export function RestaurantDashboard({ companyName, kpi, spendingSparkline, chart
           </div>
         </div>
       </DarkCard>
-
-      {/* Secondary KPI strip — small, inline */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <KPICard
-          label="Ordini totali"
-          value={kpi.ordersThisMonth.toString()}
-          numericValue={kpi.ordersThisMonth}
-          previousValue={kpi.prevMonthOrders}
-          icon={ClipboardList}
-          sparklineData={spendingSparkline.map(() => Math.floor(Math.random() * 5) + 1)}
-        />
-        <KPICard
-          label="Spesa media ordine"
-          value={
-            kpi.ordersThisMonth > 0
-              ? formatCurrency(Math.round(kpi.spending / kpi.ordersThisMonth))
-              : "€0"
-          }
-          numericValue={
-            kpi.ordersThisMonth > 0 ? Math.round(kpi.spending / kpi.ordersThisMonth) : 0
-          }
-          icon={ShoppingCart}
-          accentColor="var(--color-accent-orange)"
-        />
-        <KPICard
-          label="Risparmio"
-          value={formatCurrency(kpi.savings)}
-          numericValue={kpi.savings}
-          icon={TrendingDown}
-          accentColor="var(--color-accent-green)"
-        />
-        <KPICard
-          label="Fornitori"
-          value={kpi.activeSuppliers.toString()}
-          numericValue={kpi.activeSuppliers}
-          icon={Store}
-          accentColor="var(--color-accent-blue)"
-        />
-      </div>
 
       {/* Row 2: Chart + Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
