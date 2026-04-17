@@ -115,7 +115,7 @@ export default async function OrderDetailPage({
       <div className="mb-4">
         <Link
           href="/ordini"
-          className="inline-flex items-center gap-1 text-sm text-text-secondary hover:text-text-primary transition-colors"
+          className="inline-flex items-center gap-1 text-sm text-text-secondary hover:text-text-primary transition-colors min-h-[44px] -my-2 py-2"
         >
           <ArrowLeft className="h-4 w-4" /> Torna agli ordini
         </Link>
@@ -133,8 +133,8 @@ export default async function OrderDetailPage({
 
       {/* Timeline scrubber — only for non-draft, non-cancelled */}
       {!isDraft && !isCancelled && (
-        <Card className="mb-6">
-          <ol className="flex items-center justify-between gap-2 relative">
+        <Card className="mb-6 cq-card">
+          <ol className="flex items-center justify-between gap-1 @[420px]:gap-2 relative">
             {TIMELINE_STEPS.map((step, i) => {
               const Icon = step.icon;
               const isDone = i <= currentStep;
@@ -179,9 +179,9 @@ export default async function OrderDetailPage({
                     )}
                   </div>
                   <p
-                    className="mt-2 text-center"
+                    className="mt-2 text-center truncate w-full"
                     style={{
-                      fontSize: "11px",
+                      fontSize: "clamp(9px, 2.4vw, 11px)",
                       letterSpacing: "+0.04em",
                       fontWeight: isActive ? 600 : 500,
                       textTransform: "uppercase",

@@ -46,14 +46,18 @@ export default async function OrdersPage() {
       {orderList.length > 0 ? (
         <div className="space-y-2">
           {orderList.map((order) => (
-            <Link key={order.id} href={`/ordini/${order.id}`}>
-              <Card className="motion-lift hover:shadow-elevated transition-shadow">
-                <div className="flex items-center justify-between">
-                  <div>
+            <Link
+              key={order.id}
+              href={`/ordini/${order.id}`}
+              className="block focus-ring rounded-2xl"
+            >
+              <Card className="motion-lift hover:shadow-elevated transition-shadow min-h-[72px]">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
                     <p className="font-mono text-sm text-sage">#{order.id.slice(0, 8)}</p>
                     <p className="text-sm text-sage">{formatDate(order.created_at)}</p>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right shrink-0">
                     <p className="font-mono font-bold text-lg text-charcoal">
                       {formatCurrency(order.total)}
                     </p>
