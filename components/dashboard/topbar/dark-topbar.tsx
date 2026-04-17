@@ -6,6 +6,7 @@ import { Breadcrumbs } from "./breadcrumbs";
 import { SearchTrigger } from "./search-trigger";
 import { NotificationBell } from "./notification-bell";
 import { KeyboardHelpModal } from "./keyboard-help-modal";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { LiveStatus } from "@/components/supplier/signature";
 
 type Props = {
@@ -66,6 +67,7 @@ export function DarkTopbar({ onMenuToggle, liveStatus }: Props) {
             </div>
           ) : null}
           <SearchTrigger />
+          <ThemeToggle />
           <NotificationBell />
         </div>
       </div>

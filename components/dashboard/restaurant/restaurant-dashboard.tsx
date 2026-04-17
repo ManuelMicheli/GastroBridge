@@ -7,8 +7,8 @@ import {
 } from "lucide-react";
 import { DarkCard, DarkCardHeader, DarkCardTitle } from "../cards/dark-card";
 import { QuickAction } from "../cards/quick-action";
-import { AreaChart } from "../charts/area-chart";
-import { SpendingTrendCard } from "./spending-trend-card";
+import { SpendTrendChart } from "./spend-trend-chart/SpendTrendChart";
+import type { SpendTrendPoint } from "./spend-trend-chart/types";
 import { StatusBadge } from "../tables/status-badge";
 import { DataTable, type Column } from "../tables/data-table";
 import { formatCurrency, formatDate } from "@/lib/utils/formatters";
@@ -34,8 +34,8 @@ type Props = {
     savings: number;
     activeSuppliers: number;
   };
-  spendingSparkline: number[];
-  chartData: Array<{ label: string; value: number }>;
+  spendPoints: SpendTrendPoint[];
+  transactionsByDate: Record<string, number>;
   recentOrders: OrderRow[];
 };
 
@@ -97,7 +97,7 @@ function formatDelta(current: number, previous: number): { sign: "+" | "-" | "";
   };
 }
 
-export function RestaurantDashboard({ companyName, kpi, spendingSparkline, chartData, recentOrders }: Props) {
+export function RestaurantDashboard({ companyName, kpi, spendPoints, transactionsByDate, recentOrders }: Props) {
   const router = useRouter();
   const [greeting, setGreeting] = useState("Ciao");
 
@@ -147,7 +147,17 @@ export function RestaurantDashboard({ companyName, kpi, spendingSparkline, chart
         </p>
       </header>
 
-      {/* Hero KPI — single big number for spending */}
+      {/* Row 1: Quick Actions — full-width horizontal strip */}
+      <DarkCard>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <QuickAction href="/cerca" label="Cerca prodotti" description="Confronta prezzi" icon={Search} index={0} />
+          <QuickAction href="/fornitori" label="Scopri fornitori" description="Nuovi partner" icon={Store} index={1} />
+          <QuickAction href="/ordini" label="I tuoi ordini" description="Storico completo" icon={Truck} index={2} />
+          <QuickAction href="/impostazioni" label="Impostazioni" description="Gestisci account" icon={HelpCircle} index={3} />
+        </div>
+      </DarkCard>
+
+      {/* Hero KPI — single big number for spending + savings alert */}
       <DarkCard className="relative overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
           <div>
@@ -160,7 +170,7 @@ export function RestaurantDashboard({ companyName, kpi, spendingSparkline, chart
                 color: "var(--color-text-tertiary)",
               }}
             >
-              Spesa questo mese
+              Spesa di questo mese
             </p>
             <div className="flex items-baseline gap-3 flex-wrap">
               <span
@@ -266,73 +276,20 @@ export function RestaurantDashboard({ companyName, kpi, spendingSparkline, chart
               </div>
             </div>
           </div>
-          {/* Inline mini-trend on right */}
-          <div className="hidden md:flex items-end justify-end h-32">
-            <div className="w-full max-w-xs">
-              <AreaChart
-                data={chartData.slice(-14).map((d, i) => ({ label: `${i}`, value: d.value }))}
-                height={120}
-              />
-            </div>
-          </div>
-        </div>
-      </DarkCard>
-
-      {/* Row 2: Spending trend (premium) + Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2">
-          <SpendingTrendCard data={chartData} />
-        </div>
-
-        {/* Quick Actions */}
-        <DarkCard>
-          <DarkCardHeader>
-            <DarkCardTitle>Azioni rapide</DarkCardTitle>
-          </DarkCardHeader>
-          <div className="space-y-2">
-            <QuickAction href="/cerca" label="Cerca prodotti" description="Confronta prezzi" icon={Search} index={0} />
-            <QuickAction href="/fornitori" label="Scopri fornitori" description="Nuovi partner" icon={Store} index={1} />
-            <QuickAction href="/ordini" label="I tuoi ordini" description="Storico completo" icon={Truck} index={2} />
-            <QuickAction href="/impostazioni" label="Impostazioni" description="Gestisci account" icon={HelpCircle} index={3} />
-          </div>
-        </DarkCard>
-      </div>
-
-      {/* Row 3: Recent Orders + Price Alerts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Recent Orders Table */}
-        <DarkCard className="lg:col-span-2" noPadding>
-          <div className="p-5 pb-0">
-            <DarkCardHeader>
-              <DarkCardTitle>Ordini recenti</DarkCardTitle>
-              <button
-                onClick={() => router.push("/ordini")}
-                className="text-xs text-text-link hover:text-accent-green transition-colors uppercase"
-                style={{
-                  letterSpacing: "var(--text-caption--letter-spacing)",
-                  fontWeight: "var(--text-caption--font-weight)",
-                }}
-              >
-                Vedi tutti →
-              </button>
-            </DarkCardHeader>
-          </div>
-          <DataTable
-            columns={columns}
-            data={recentOrders}
-            getRowKey={(row) => row.id}
-            onRowClick={(row) => router.push(`/ordini/${row.id}`)}
-            emptyMessage="Nessun ordine ancora. Inizia a cercare prodotti!"
-          />
-        </DarkCard>
-
-        {/* Savings / Alerts */}
-        <DarkCard>
-          <DarkCardHeader>
-            <DarkCardTitle>Alert risparmio</DarkCardTitle>
-          </DarkCardHeader>
-          {kpi.savings > 0 ? (
-            <div className="space-y-3">
+          {/* Savings alert on right */}
+          <div className="flex flex-col justify-center">
+            <p
+              className="uppercase mb-3"
+              style={{
+                fontSize: "var(--text-caption)",
+                letterSpacing: "var(--text-caption--letter-spacing)",
+                fontWeight: "var(--text-caption--font-weight)",
+                color: "var(--color-text-tertiary)",
+              }}
+            >
+              Alert risparmio
+            </p>
+            {kpi.savings > 0 ? (
               <div className="flex items-start gap-3 p-3 rounded-lg bg-accent-green-muted">
                 <TrendingDown className="h-5 w-5 text-accent-green shrink-0 mt-0.5" />
                 <div>
@@ -344,14 +301,43 @@ export function RestaurantDashboard({ companyName, kpi, spendingSparkline, chart
                   </p>
                 </div>
               </div>
-            </div>
-          ) : (
-            <p className="text-sm text-text-tertiary py-6 text-center">
-              Gli alert saranno disponibili dopo i primi ordini.
-            </p>
-          )}
-        </DarkCard>
-      </div>
+            ) : (
+              <p className="text-sm text-text-tertiary py-3">
+                Gli alert saranno disponibili dopo i primi ordini.
+              </p>
+            )}
+          </div>
+        </div>
+      </DarkCard>
+
+      {/* Row 3: Spending trend — full width */}
+      <SpendTrendChart points={spendPoints} transactionsByDate={transactionsByDate} />
+
+      {/* Row 4: Recent Orders — full width */}
+      <DarkCard noPadding>
+        <div className="p-5 pb-0">
+          <DarkCardHeader>
+            <DarkCardTitle>Ordini recenti</DarkCardTitle>
+            <button
+              onClick={() => router.push("/ordini")}
+              className="text-xs text-text-link hover:text-accent-green transition-colors uppercase"
+              style={{
+                letterSpacing: "var(--text-caption--letter-spacing)",
+                fontWeight: "var(--text-caption--font-weight)",
+              }}
+            >
+              Vedi tutti →
+            </button>
+          </DarkCardHeader>
+        </div>
+        <DataTable
+          columns={columns}
+          data={recentOrders}
+          getRowKey={(row) => row.id}
+          onRowClick={(row) => router.push(`/ordini/${row.id}`)}
+          emptyMessage="Nessun ordine ancora. Inizia a cercare prodotti!"
+        />
+      </DarkCard>
     </motion.div>
   );
 }
