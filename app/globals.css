@@ -449,7 +449,7 @@ body {
   --page-gutter: clamp(16px, 4vw, 48px);
   --section-gap: clamp(24px, 5vw, 72px);
   --card-pad: clamp(16px, 2.5vw, 24px);
-  --page-max-width: min(1440px, 100%);
+  --page-max-width: 100%;
 
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
@@ -626,7 +626,7 @@ body {
   --page-gutter: clamp(16px, 4vw, 48px);
   --section-gap: clamp(24px, 5vw, 72px);
   --card-pad: clamp(16px, 2.5vw, 24px);
-  --page-max-width: min(1440px, 100%);
+  --page-max-width: 100%;
 
   /* Safe-area insets (iOS notch / home indicator) */
   --safe-bottom: env(safe-area-inset-bottom, 0px);
