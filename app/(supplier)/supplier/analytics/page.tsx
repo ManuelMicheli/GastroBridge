@@ -8,14 +8,26 @@ export const metadata: Metadata = { title: "Analytics Fornitore" };
 export default function SupplierAnalyticsPage() {
   return (
     <div>
-      <div className="flex items-center gap-3 mb-6">
-        <h1 className="font-display text-3xl text-text-primary">
+      <div className="flex items-center gap-3 mb-6 flex-wrap">
+        <h1
+          className="font-display text-text-primary"
+          style={{
+            fontSize: "var(--text-display-lg, 28px)",
+            lineHeight: "var(--text-display-lg--line-height, 1.2)",
+          }}
+        >
           Analytics<span className="text-brand-primary">.</span>
         </h1>
         <Badge variant="success">Growth+</Badge>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div
+        className="cq-section grid gap-4 mb-8"
+        style={{
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(min(220px, 100%), 1fr))",
+        }}
+      >
         {[
           { label: "Fatturato mese", value: "€0", icon: TrendingUp },
           { label: "Prodotti venduti", value: "0", icon: Package },
@@ -36,7 +48,13 @@ export default function SupplierAnalyticsPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div
+        className="cq-section grid gap-6"
+        style={{
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(min(320px, 100%), 1fr))",
+        }}
+      >
         <Card>
           <h3 className="font-bold text-charcoal mb-4">Revenue per Mese</h3>
           <div className="h-64 flex items-center justify-center bg-sage-muted/10 rounded-xl">

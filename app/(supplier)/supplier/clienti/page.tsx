@@ -35,7 +35,13 @@ export default async function ClientsPage() {
             <p className="text-sage text-sm">Nessuna nuova richiesta.</p>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div
+            className="cq-section grid gap-4"
+            style={{
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(min(320px, 100%), 1fr))",
+            }}
+          >
             {pending.map((rel) => {
               const r = rel.restaurant!;
               return (
@@ -89,7 +95,13 @@ export default async function ClientsPage() {
             </p>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          <div
+            className="cq-section grid gap-4"
+            style={{
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(min(320px, 100%), 1fr))",
+            }}
+          >
             {ongoing.map((rel) => {
               const r = rel.restaurant!;
               return (
