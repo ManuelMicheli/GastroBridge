@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { useTheme } from "next-themes";
 import { CollapsibleSidebar } from "./sidebar/collapsible-sidebar";
 import { DarkTopbar } from "./topbar/dark-topbar";
 import { DarkMobileNav, type MobileNavItem } from "./mobile/dark-mobile-nav";
@@ -8,6 +9,7 @@ import { SidebarDrawer } from "./mobile/sidebar-drawer";
 import { CommandPaletteProvider } from "./command-palette/command-palette-provider";
 import { CommandPalette } from "./command-palette/command-palette";
 import type { NavItem } from "./sidebar/sidebar-item";
+import { cn } from "@/lib/utils/formatters";
 
 type Props = {
   children: ReactNode;
@@ -27,10 +29,24 @@ export function DashboardShell({
   userEmail,
 }: Props) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { resolvedTheme } = useTheme();
+
+  // Avoid hydration mismatch: theme is unknown on first render.
+  // Default to light before mount so restaurant area opens with the
+  // brand-correct white surface (carmine palette via [data-area]).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isDark = mounted && resolvedTheme === "dark";
 
   return (
     <CommandPaletteProvider navItems={navItems} role={role}>
-      <div className="dashboard-dark flex min-h-screen bg-surface-base text-text-primary">
+      <div
+        data-area={role}
+        className={cn(
+          "flex min-h-screen bg-surface-base text-text-primary",
+          isDark && "dark dashboard-dark"
+        )}
+      >
         {/* Desktop sidebar */}
         <CollapsibleSidebar
           navItems={navItems}
