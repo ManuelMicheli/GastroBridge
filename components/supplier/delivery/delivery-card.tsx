@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { MapPin, Clock, Truck, Phone, ExternalLink } from "lucide-react";
 import type { DeliveryRow } from "@/lib/supplier/delivery/queries";
 import type { DeliveryStatus } from "@/types/database";
+import { CelebrationCheck, PulseDot } from "@/components/supplier/signature";
 
 const STATUS_LABEL: Record<DeliveryStatus, string> = {
   planned: "Pianificata",
@@ -72,7 +73,16 @@ export function DeliveryCard({ delivery }: { delivery: DeliveryRow }) {
             <p className="mt-0.5 text-xs text-sage">Zona: {delivery.zone_name}</p>
           )}
         </div>
-        <Badge variant={STATUS_VARIANT[delivery.status]}>
+        <Badge
+          variant={STATUS_VARIANT[delivery.status]}
+          className="inline-flex items-center gap-1.5"
+        >
+          {delivery.status === "delivered" && (
+            <CelebrationCheck size={18} />
+          )}
+          {delivery.status === "in_transit" && (
+            <PulseDot variant="live" size={6} />
+          )}
           {STATUS_LABEL[delivery.status]}
         </Badge>
       </div>
