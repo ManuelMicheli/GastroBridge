@@ -6,7 +6,8 @@ interface SelectOption {
   label: string;
 }
 
-interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
+interface SelectProps
+  extends Omit<SelectHTMLAttributes<HTMLSelectElement>, "prefix"> {
   label?: string;
   error?: string;
   options: SelectOption[];
