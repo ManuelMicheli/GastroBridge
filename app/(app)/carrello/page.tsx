@@ -1,130 +1,85 @@
 "use client";
 
-import { useTransition } from "react";
+import { Fragment, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+
 import { useCart } from "@/lib/hooks/useCart";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/toast";
-import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EmptyCartIllustration } from "@/components/illustrations";
-import { formatCurrency, formatUnitShort } from "@/lib/utils/formatters";
-import { Trash2, Plus, Minus, AlertTriangle } from "lucide-react";
-import { StickyActionBar } from "@/components/ui/sticky-action-bar";
-import type { UnitType } from "@/types/database";
-import { createCatalogOrder } from "@/lib/orders/actions";
-import { submitOrder } from "@/lib/orders/submit";
-import { createClient } from "@/lib/supabase/client";
+
+import { ReceiptHeader } from "./_components/receipt-header";
+import { ReceiptItemRow } from "./_components/receipt-item-row";
+import { ReceiptSupplierBlock } from "./_components/receipt-supplier-block";
+import { ReceiptSummary } from "./_components/receipt-summary";
+import { ReceiptFooter } from "./_components/receipt-footer";
+import { runCheckout } from "./_lib/checkout";
+import {
+  fetchCurrentRestaurant,
+  fetchSupplierRequirements,
+  type SupplierRequirementsMap,
+} from "./_lib/supplier-requirements";
 
 export default function CartPage() {
   const router = useRouter();
-  const { items, removeItem, updateQuantity, clearCart, getCartBySupplier, totalAmount } = useCart();
+  const {
+    items,
+    removeItem,
+    updateQuantity,
+    clearCart,
+    getCartBySupplier,
+    totalAmount,
+  } = useCart();
   const [pending, startTransition] = useTransition();
 
+  const [restaurant, setRestaurant] = useState<{ id: string; name: string } | null>(null);
+  const [requirements, setRequirements] = useState<SupplierRequirementsMap>({});
+
   const supplierGroups = getCartBySupplier();
+  const supplierIdsKey = supplierGroups.map((g) => g.supplierId).join("|");
+  const supplierIds = useMemo(
+    () => supplierGroups.map((g) => g.supplierId),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [supplierIdsKey],
+  );
 
-  /**
-   * Il carrello può contenere due tipi di righe:
-   *  - real product: `productId` è un UUID di `products` → submitOrder (RPC
-   *    atomica con order_splits / order_split_items).
-   *  - catalog item: `productId` ha prefisso `catalog_<id>` (cataloghi importati
-   *    da PDF/Excel) → createCatalogOrder (header-only, senza FK su products).
-   *
-   * Se il carrello mischia i due tipi, inviamo prima l'ordine marketplace e
-   * poi l'ordine catalog come fallback.
-   */
-  function isCatalogItem(productId: string): boolean {
-    return productId.startsWith("catalog_");
-  }
+  useEffect(() => {
+    let cancelled = false;
+    fetchCurrentRestaurant().then((r) => {
+      if (!cancelled) setRestaurant(r);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
-  async function getCurrentRestaurantId(): Promise<string | null> {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return null;
-    const { data } = await supabase
-      .from("restaurants")
-      .select("id")
-      .eq("profile_id", user.id)
-      .limit(1)
-      .maybeSingle<{ id: string }>();
-    return data?.id ?? null;
-  }
+  useEffect(() => {
+    if (supplierIds.length === 0) {
+      setRequirements({});
+      return;
+    }
+    let cancelled = false;
+    fetchSupplierRequirements(supplierIds).then((map) => {
+      if (!cancelled) setRequirements(map);
+    });
+    return () => { cancelled = true; };
+  }, [supplierIds]);
+
+  const itemCount = items.length;
 
   function handleCheckout() {
     if (items.length === 0) return;
-
-    const realItems    = items.filter((it) => !isCatalogItem(it.productId));
-    const catalogItems = items.filter((it) => isCatalogItem(it.productId));
-
-    const summaryLines: string[] = [];
-    for (const g of supplierGroups) {
-      summaryLines.push(`--- ${g.supplierName} (${formatCurrency(g.subtotal)}) ---`);
-      for (const it of g.items) {
-        summaryLines.push(`  ${it.quantity}× ${it.name} @ ${formatCurrency(it.unitPrice)}`);
-      }
-    }
-
     startTransition(async () => {
-      let anyOk = false;
-
-      // 1. Marketplace items via submitOrder (RPC atomica).
-      if (realItems.length > 0) {
-        const restaurantId = await getCurrentRestaurantId();
-        if (!restaurantId) {
-          toast("Errore: Ristorante non trovato");
-          return;
-        }
-        const res = await submitOrder({
-          restaurantId,
-          items: realItems.map((it) => ({
-            productId:  it.productId,
-            supplierId: it.supplierId,
-            quantity:   it.quantity,
-            unitPrice:  it.unitPrice,
-          })),
-          notes: `Ordine da carrello (${realItems.length} righe)`,
-        });
-        if (!res.ok) {
-          toast(`Errore ordine: ${res.error}`);
-          return;
-        }
-        anyOk = true;
-      }
-
-      // 2. Catalog items via createCatalogOrder (legacy, header-only).
-      if (catalogItems.length > 0) {
-        const catalogGroups = supplierGroups.filter((g) =>
-          g.items.some((it) => isCatalogItem(it.productId))
-        );
-        const catalogTotal = catalogItems.reduce(
-          (s, it) => s + it.unitPrice * it.quantity, 0);
-
-        const res = await createCatalogOrder({
-          total:         catalogTotal,
-          supplierCount: catalogGroups.length,
-          itemCount:     catalogItems.length,
-          summary:       summaryLines.join("\n"),
-        });
-        if (!res.ok) {
-          toast(`Errore ordine catalogo: ${res.error}`);
-          return;
-        }
-        anyOk = true;
-      }
-
-      if (!anyOk) {
-        toast("Errore: nessun ordine inviato");
+      const res = await runCheckout({
+        items,
+        supplierGroups,
+        restaurantId: restaurant?.id ?? null,
+      });
+      if (!res.ok) {
+        toast(`Errore ${res.error}`);
         return;
       }
-
       toast("Ordine inviato con successo!");
       clearCart();
-      try {
-        localStorage.removeItem("gb.typical-order");
-      } catch {
-        /* ignore */
-      }
+      try { localStorage.removeItem("gb.typical-order"); } catch { /* ignore */ }
       router.push("/dashboard");
     });
   }
@@ -140,118 +95,98 @@ export default function CartPage() {
     );
   }
 
+  const ctaLabel =
+    supplierGroups.length === 1
+      ? "Invia ordine"
+      : `Invia ordini a ${supplierGroups.length} forn.`;
+
   return (
-    <div>
-      <PageHeader
-        title="Carrello"
-        subtitle={`${items.length} prodotti da ${supplierGroups.length} fornitori.`}
-        actions={
-          <Button variant="ghost" size="md" density="compact" onClick={clearCart}>
-            <Trash2 className="h-4 w-4" /> Svuota
-          </Button>
-        }
-      />
+    <div className="mx-auto max-w-[640px] px-4 py-8">
+      <article className="rounded-xl border border-border-subtle bg-surface-card">
+        <ReceiptHeader restaurantName={restaurant?.name ?? null} />
 
+        <div aria-hidden="true" className="border-t border-dashed border-border-subtle" />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-24 md:pb-0">
-        {/* Items by supplier */}
-        <div className="lg:col-span-2 space-y-6">
-          {supplierGroups.map((group) => (
-            <Card key={group.supplierId}>
-              <div className="flex items-center justify-between mb-4 gap-3">
-                <h3 className="font-bold text-charcoal min-w-0 truncate">{group.supplierName}</h3>
-                <span className="text-sm font-mono font-bold text-forest shrink-0">
-                  {formatCurrency(group.subtotal)}
-                </span>
-              </div>
-              {group.isBelowMinimum && (
-                <div className="flex items-center gap-2 bg-terracotta-light rounded-xl p-3 mb-4 text-sm text-terracotta">
-                  <AlertTriangle className="h-4 w-4 shrink-0" />
-                  Ordine minimo: {formatCurrency(group.minOrderAmount ?? 0)}
-                </div>
-              )}
-              <div className="space-y-3">
-                {group.items.map((item) => (
-                  <div key={item.productId} className="flex flex-wrap items-center gap-3 py-3 border-t border-sage-muted/20 first:border-0">
-                    <div className="flex-1 min-w-0 basis-full sm:basis-auto">
-                      <p className="font-semibold text-charcoal text-sm truncate">{item.name}</p>
-                      <p className="text-xs text-sage">
-                        {formatCurrency(item.unitPrice)}/{formatUnitShort(item.unit as UnitType)}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1 rounded-lg border border-sage-muted/40">
-                      <button
-                        onClick={() => updateQuantity(item.productId, Math.max(item.minQuantity, item.quantity - 1))}
-                        className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-l-lg hover:bg-sage-muted/30 focus-ring"
-                        aria-label="Diminuisci quantità"
-                      >
-                        <Minus className="h-4 w-4" />
-                      </button>
-                      <span className="w-10 text-center font-mono text-sm tabular-nums">{item.quantity}</span>
-                      <button
-                        onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                        className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-r-lg hover:bg-sage-muted/30 focus-ring"
-                        aria-label="Aumenta quantità"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </button>
-                    </div>
-                    <span className="font-mono font-bold text-sm min-w-[80px] text-right">
-                      {formatCurrency(item.unitPrice * item.quantity)}
-                    </span>
-                    <button
-                      onClick={() => removeItem(item.productId)}
-                      className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg hover:bg-red-50 text-sage hover:text-red-500 focus-ring"
-                      aria-label="Rimuovi prodotto"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          ))}
-        </div>
-
-        {/* Summary — desktop sticky side panel */}
-        <div className="hidden md:block">
-          <Card className="sticky top-20">
-            <h3 className="font-bold text-charcoal mb-4">Riepilogo Ordine</h3>
-            {supplierGroups.map((g) => (
-              <div key={g.supplierId} className="flex justify-between text-sm py-1 gap-2">
-                <span className="text-sage truncate">{g.supplierName}</span>
-                <span className="font-mono shrink-0">{formatCurrency(g.subtotal)}</span>
-              </div>
-            ))}
-            <div className="border-t border-sage-muted/30 mt-3 pt-3 flex justify-between gap-2">
-              <span className="font-bold text-charcoal">Totale</span>
-              <span className="font-mono font-bold text-xl text-forest">{formatCurrency(totalAmount)}</span>
-            </div>
-            <p className="text-xs text-sage mt-2 mb-4">
-              L&apos;ordine verra suddiviso in {supplierGroups.length} consegne separate.
+        {/* PRODOTTI */}
+        <section className="px-6 py-5">
+          <div className="flex items-center justify-between gap-2">
+            <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-text-tertiary">
+              Prodotti · {itemCount} {itemCount === 1 ? "articolo" : "articoli"}
             </p>
-            <Button className="w-full" size="lg" onClick={handleCheckout} disabled={pending}>
-              {pending ? "Invio in corso..." : "Conferma Ordine"}
-            </Button>
-          </Card>
-        </div>
-      </div>
-
-      {/* Mobile sticky checkout bar */}
-      <StickyActionBar
-        leading={
-          <div className="min-w-0">
-            <p className="text-xs text-sage">Totale ({supplierGroups.length} fornitori)</p>
-            <p className="font-mono font-bold text-lg text-forest truncate">
-              {formatCurrency(totalAmount)}
-            </p>
+            <button
+              type="button"
+              onClick={clearCart}
+              className="font-mono text-[11px] uppercase tracking-[0.08em] text-text-tertiary transition hover:text-accent-orange"
+            >
+              svuota
+            </button>
           </div>
-        }
-      >
-        <Button size="lg" onClick={handleCheckout} disabled={pending}>
-          {pending ? "Invio..." : "Conferma"}
-        </Button>
-      </StickyActionBar>
+
+          <div className="mt-3 divide-y divide-dashed divide-border-subtle">
+            {supplierGroups.map((group) =>
+              group.items.map((item) => (
+                <ReceiptItemRow
+                  key={item.productId}
+                  item={item}
+                  onInc={() => updateQuantity(item.productId, item.quantity + 1)}
+                  onDec={() =>
+                    updateQuantity(
+                      item.productId,
+                      Math.max(item.minQuantity, item.quantity - 1),
+                    )
+                  }
+                  onRemove={() => removeItem(item.productId)}
+                />
+              )),
+            )}
+          </div>
+        </section>
+
+        <div aria-hidden="true" className="border-t border-dashed border-border-subtle" />
+
+        {/* SPLIT FORNITORI */}
+        <section className="px-6 py-5">
+          <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-text-tertiary">
+            Split fornitori · {supplierGroups.length}
+          </p>
+
+          <div className="mt-3 space-y-4">
+            {supplierGroups.map((group, i) => {
+              const req = requirements[group.supplierId];
+              return (
+                <Fragment key={group.supplierId}>
+                  <ReceiptSupplierBlock
+                    supplierName={group.supplierName}
+                    itemCount={group.items.length}
+                    subtotal={group.subtotal}
+                    minOrderAmount={req?.minOrderAmount ?? null}
+                    leadTimeDays={req?.leadTimeDays ?? null}
+                  />
+                  {i < supplierGroups.length - 1 && (
+                    <div
+                      aria-hidden="true"
+                      className="border-t border-dashed border-border-subtle/60"
+                    />
+                  )}
+                </Fragment>
+              );
+            })}
+          </div>
+        </section>
+
+        <div aria-hidden="true" className="border-t border-dashed border-border-subtle" />
+
+        <ReceiptSummary
+          subtotal={totalAmount}
+          itemCount={itemCount}
+          supplierCount={supplierGroups.length}
+          pending={pending}
+          ctaLabel={ctaLabel}
+          onCheckout={handleCheckout}
+        />
+
+        <ReceiptFooter />
+      </article>
     </div>
   );
 }
