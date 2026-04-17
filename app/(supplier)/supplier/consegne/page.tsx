@@ -94,8 +94,8 @@ export default async function SupplierConsegnePage({
   if (!hasPermission(member.role, "delivery.execute")) {
     return (
       <div>
-        <h1 className="mb-6 text-2xl font-bold text-charcoal">
-          Consegne del giorno
+        <h1 className="mb-6 font-display text-3xl text-text-primary">
+          Consegne<span className="text-brand-primary">.</span>
         </h1>
         <Card className="py-16 text-center">
           <Truck className="mx-auto mb-4 h-12 w-12 text-sage-muted" />
@@ -149,8 +149,8 @@ export default async function SupplierConsegnePage({
 
       <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-charcoal">
-            Consegne del giorno
+          <h1 className="font-display text-3xl text-text-primary">
+            Consegne<span className="text-brand-primary">.</span>
           </h1>
           <p className="mt-1 text-sm text-sage capitalize">
             {formatItalianDate(date)}

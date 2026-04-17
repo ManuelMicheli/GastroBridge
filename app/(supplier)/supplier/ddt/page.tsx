@@ -92,7 +92,9 @@ export default async function SupplierDdtBookPage({
   if (!hasPermission(member.role, "ddt.generate")) {
     return (
       <div>
-        <h1 className="mb-6 text-2xl font-bold text-charcoal">Libro DDT</h1>
+        <h1 className="mb-6 font-display text-3xl text-text-primary">
+          DDT<span className="text-brand-primary">.</span>
+        </h1>
         <Card className="py-16 text-center">
           <FileText className="mx-auto mb-4 h-12 w-12 text-sage-muted" />
           <p className="text-sage">
@@ -112,7 +114,9 @@ export default async function SupplierDdtBookPage({
 
   const notEnabled = (
     <div>
-      <h1 className="mb-6 text-2xl font-bold text-charcoal">Libro DDT</h1>
+      <h1 className="mb-6 font-display text-3xl text-text-primary">
+        DDT<span className="text-brand-primary">.</span>
+      </h1>
       <Card className="py-16 text-center">
         <FileText className="mx-auto mb-4 h-12 w-12 text-sage-muted" />
         <p className="text-sage">Funzione non abilitata per questo account.</p>
@@ -199,7 +203,9 @@ export default async function SupplierDdtBookPage({
       <div className="space-y-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-charcoal">Libro DDT</h1>
+            <h1 className="font-display text-3xl text-text-primary">
+              DDT<span className="text-brand-primary">.</span>
+            </h1>
             <p className="mt-1 text-sm text-sage">
               Archivio dei Documenti di Trasporto emessi.
             </p>

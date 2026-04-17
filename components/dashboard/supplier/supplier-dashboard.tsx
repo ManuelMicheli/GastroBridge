@@ -18,6 +18,11 @@ import { AreaChart } from "../charts/area-chart";
 import { MiniBar } from "../charts/mini-bar";
 import { StatusBadge } from "../tables/status-badge";
 import { DataTable, type Column } from "../tables/data-table";
+import {
+  SerifGreeting,
+  PulseDot,
+  CelebrationCheck,
+} from "@/components/supplier/signature";
 import { formatCurrency, formatDate } from "@/lib/utils/formatters";
 import { useRouter } from "next/navigation";
 
@@ -237,15 +242,8 @@ export function SupplierDashboard({
 
   return (
     <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-6">
-      {/* Greeting */}
-      <div>
-        <h1 className="text-2xl font-bold text-text-primary">
-          Ciao, {companyName}
-        </h1>
-        <p className="text-text-secondary text-sm mt-0.5">
-          Ecco il riepilogo della tua attivita.
-        </p>
-      </div>
+      {/* Editorial hero */}
+      <SerifGreeting name={companyName} />
 
       {/* Alert banner (Task 11) */}
       {alertItems.length > 0 && (
@@ -617,13 +615,19 @@ export function SupplierDashboard({
           <ul className="divide-y divide-border-subtle/60">
             {recentDeliveriesList.map((d) => {
               const meta = DELIVERY_STATUS_META[d.status] ?? DELIVERY_STATUS_META.planned;
+              const isDelivered = d.status === "delivered";
+              const isInTransit = d.status === "in_transit";
               return (
                 <li
                   key={d.id}
                   className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"
                 >
                   <div className="h-8 w-8 rounded-lg bg-surface-hover flex items-center justify-center shrink-0">
-                    <Truck className="h-4 w-4 text-text-tertiary" />
+                    {isDelivered ? (
+                      <CelebrationCheck size={20} />
+                    ) : (
+                      <Truck className="h-4 w-4 text-text-tertiary" />
+                    )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-text-primary truncate">
@@ -636,7 +640,11 @@ export function SupplierDashboard({
                   <span
                     className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${meta.text} ${meta.bg}`}
                   >
-                    <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
+                    {isInTransit ? (
+                      <PulseDot variant="live" size={6} />
+                    ) : (
+                      <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
+                    )}
                     {meta.label}
                   </span>
                 </li>

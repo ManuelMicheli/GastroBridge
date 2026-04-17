@@ -61,7 +61,9 @@ export default async function SupplierStaffPage() {
 
   const disabledState = (
     <div>
-      <h1 className="text-2xl font-bold text-charcoal mb-6">Staff</h1>
+      <h1 className="font-display text-3xl text-text-primary mb-6">
+        Staff<span className="text-brand-primary">.</span>
+      </h1>
       <Card className="text-center py-16">
         <Users className="h-12 w-12 text-sage-muted mx-auto mb-4" />
         <p className="text-sage">
@@ -73,7 +75,9 @@ export default async function SupplierStaffPage() {
 
   const notAdminState = (
     <div>
-      <h1 className="text-2xl font-bold text-charcoal mb-6">Staff</h1>
+      <h1 className="font-display text-3xl text-text-primary mb-6">
+        Staff<span className="text-brand-primary">.</span>
+      </h1>
       <Card className="text-center py-16">
         <Users className="h-12 w-12 text-sage-muted mx-auto mb-4" />
         <p className="text-sage">
@@ -112,7 +116,9 @@ async function StaffPageInner({ supplierId }: { supplierId: string }) {
       <div>
         <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold text-charcoal">Staff</h1>
+            <h1 className="font-display text-3xl text-text-primary">
+              Staff<span className="text-brand-primary">.</span>
+            </h1>
             <p className="text-sm text-sage mt-1">
               Gestisci i membri del tuo team, i ruoli e gli inviti.
             </p>

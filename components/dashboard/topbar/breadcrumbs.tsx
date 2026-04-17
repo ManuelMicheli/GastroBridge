@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils/formatters";
 
 const LABEL_MAP: Record<string, string> = {
   dashboard: "Dashboard",
@@ -27,6 +28,7 @@ const LABEL_MAP: Record<string, string> = {
 export function Breadcrumbs() {
   const pathname = usePathname();
   const segments = pathname.split("/").filter(Boolean);
+  const isSupplier = pathname.startsWith("/supplier/") || pathname === "/supplier";
 
   // Don't show breadcrumbs on the dashboard home
   if (segments.length <= 1 || (segments.length === 2 && segments[0] === "supplier" && segments[1] === "dashboard")) {
@@ -47,13 +49,31 @@ export function Breadcrumbs() {
     <nav className="flex items-center gap-1 text-sm" aria-label="Breadcrumb">
       {crumbs.map((crumb, i) => (
         <span key={crumb.href} className="flex items-center gap-1">
-          {i > 0 && <ChevronRight className="h-3.5 w-3.5 text-text-tertiary" />}
+          {i > 0 && (
+            isSupplier ? (
+              <span className="text-brand-primary text-xs" aria-hidden="true">/</span>
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5 text-text-tertiary" />
+            )
+          )}
           {crumb.isLast ? (
-            <span className="text-text-primary font-medium">{crumb.label}</span>
+            <span
+              className={cn(
+                isSupplier
+                  ? "font-display text-sm text-text-primary"
+                  : "text-text-primary font-medium",
+              )}
+            >
+              {crumb.label}
+            </span>
           ) : (
             <Link
               href={crumb.href}
-              className="text-text-tertiary hover:text-text-secondary transition-colors"
+              className={cn(
+                isSupplier
+                  ? "font-mono text-[11px] text-text-tertiary hover:text-brand-primary hover:underline underline-offset-4 transition-colors"
+                  : "text-text-tertiary hover:text-text-secondary transition-colors",
+              )}
             >
               {crumb.label}
             </Link>

@@ -99,7 +99,9 @@ export default async function CatalogPage({
     <div>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-charcoal">Catalogo</h1>
+          <h1 className="font-display text-3xl text-text-primary">
+            Catalogo<span className="text-brand-primary">.</span>
+          </h1>
           <p className="text-sm text-sage mt-1">
             {summary.total.toLocaleString("it-IT")} prodotti ·{" "}
             {summary.available.toLocaleString("it-IT")} disponibili ·{" "}

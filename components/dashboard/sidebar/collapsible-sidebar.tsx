@@ -37,11 +37,19 @@ export function CollapsibleSidebar({ navItems, role, companyName, userEmail }: P
       <div className="flex items-center justify-between p-4 h-16 border-b border-border-subtle">
         <Link href={homeHref} className="flex items-center gap-1 overflow-hidden">
           {isCollapsed ? (
-            <span className="text-lg font-bold text-accent-green tracking-tight">GB</span>
+            <>
+              <span className="text-lg font-bold text-accent-green tracking-tight">GB</span>
+              {role === "supplier" && (
+                <span className="font-display text-lg text-brand-primary">.</span>
+              )}
+            </>
           ) : (
             <>
               <span className="text-lg font-display text-text-primary">Gastro</span>
               <span className="text-lg font-bold text-accent-green">Bridge</span>
+              {role === "supplier" && (
+                <span className="font-display text-lg text-brand-primary">.</span>
+              )}
             </>
           )}
         </Link>
@@ -73,9 +81,15 @@ export function CollapsibleSidebar({ navItems, role, companyName, userEmail }: P
       {/* Role badge */}
       {!isCollapsed && (
         <div className="px-4 py-2">
-          <span className="text-[10px] uppercase tracking-widest font-bold text-text-tertiary">
-            {role === "supplier" ? "Area Fornitore" : "Area Ristorante"}
-          </span>
+          {role === "supplier" ? (
+            <span className="inline-flex items-center rounded-full border border-brand-primary-border bg-brand-primary-subtle px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] font-semibold text-brand-depth">
+              Area Fornitore
+            </span>
+          ) : (
+            <span className="text-[10px] uppercase tracking-widest font-bold text-text-tertiary">
+              Area Ristorante
+            </span>
+          )}
         </div>
       )}
 
@@ -92,14 +106,14 @@ export function CollapsibleSidebar({ navItems, role, companyName, userEmail }: P
               </p>
             )}
             {items.map((item) => (
-              <SidebarItem key={item.href} {...item} />
+              <SidebarItem key={item.href} {...item} role={role} />
             ))}
           </div>
         ))}
       </nav>
 
       {/* User card */}
-      <SidebarUserCard companyName={companyName} userEmail={userEmail} />
+      <SidebarUserCard companyName={companyName} userEmail={userEmail} role={role} />
     </motion.aside>
   );
 }

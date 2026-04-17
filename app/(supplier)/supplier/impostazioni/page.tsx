@@ -15,7 +15,9 @@ export default function SupplierSettingsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-charcoal mb-6">Impostazioni</h1>
+      <h1 className="font-display text-3xl text-text-primary mb-6">
+        Impostazioni<span className="text-brand-primary">.</span>
+      </h1>
       <div className="space-y-3">
         {sections.map((s) => (
           <Link key={s.href} href={s.href}>

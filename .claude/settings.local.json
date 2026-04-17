@@ -24,7 +24,8 @@
       "Bash(mv /tmp/_deliv_cal.tsx \"components/supplier/delivery/delivery-calendar.tsx\")",
       "Read(//tmp/**)",
       "Bash(grep -E \"\\(supplier/ddt|supplier\\\\\\\\\\\\\\\\ddt|ddt-book|ddt-preview\\)\")",
-      "Bash(grep -rn \"Suppliers\\\\|anon\" D:/Manum/GastroBridge/.env*)"
+      "Bash(grep -rn \"Suppliers\\\\|anon\" D:/Manum/GastroBridge/.env*)",
+      "Bash(vercel --version)"
     ]
   }
 }

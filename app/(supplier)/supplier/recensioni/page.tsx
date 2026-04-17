@@ -26,7 +26,9 @@ export default async function SupplierReviewsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-charcoal mb-6">Recensioni</h1>
+      <h1 className="font-display text-3xl text-text-primary mb-6">
+        Recensioni<span className="text-brand-primary">.</span>
+      </h1>
 
       {supplier && (
         <Card className="mb-6">
