@@ -224,7 +224,13 @@ export function TemplateEditorClient(props: Props) {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div
+        className="cq-section grid gap-6"
+        style={{
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(min(380px, 100%), 1fr))",
+        }}
+      >
         {/* COLONNA SINISTRA — FORM */}
         <div className="flex flex-col gap-4">
           <Card className="flex flex-col gap-4">

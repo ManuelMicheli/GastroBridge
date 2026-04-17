@@ -254,7 +254,13 @@ function QuickAdjustForm({
       }}
       className="space-y-4 rounded-lg border border-border-subtle bg-surface-card p-6"
     >
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div
+        className="cq-section grid gap-4"
+        style={{
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
+        }}
+      >
         <label className="block">
           <span className="text-sm text-text-secondary">Prodotto *</span>
           <select
@@ -562,7 +568,13 @@ function PhysicalCountForm({
         </table>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <div
+        className="cq-section grid gap-3"
+        style={{
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
+        }}
+      >
         <label className="block">
           <span className="text-sm text-text-secondary">Motivo *</span>
           <select

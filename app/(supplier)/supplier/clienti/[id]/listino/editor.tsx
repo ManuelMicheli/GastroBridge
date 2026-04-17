@@ -96,11 +96,11 @@ export function PriceListEditor({ relationshipId, products, initialEntries }: Pr
           <h2 className="font-bold text-charcoal mb-4 flex items-center gap-2">
             <Plus className="h-4 w-4" /> Aggiungi voce
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
+          <div className="cq-section grid grid-cols-1 @[520px]:grid-cols-2 @[900px]:grid-cols-6 gap-3">
             <select
               value={draft.product_id}
               onChange={(e) => setDraft({ ...draft, product_id: e.target.value })}
-              className="md:col-span-2 border-2 border-sage-muted rounded-xl py-2 px-3 text-sm"
+              className="@[900px]:col-span-2 border-2 border-sage-muted rounded-xl py-2 px-3 text-sm"
             >
               <option value="">Prodotto…</option>
               {availableProducts.map((p) => (

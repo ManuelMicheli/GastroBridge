@@ -332,7 +332,13 @@ export function ReceiveFormClient({
       </div>
 
       {/* Sales unit + quantità */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div
+        className="cq-section grid gap-4"
+        style={{
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
+        }}
+      >
         <div>
           <label className="block">
             <span className="text-sm text-text-secondary">Unità di vendita *</span>
@@ -392,7 +398,13 @@ export function ReceiveFormClient({
       </div>
 
       {/* Lot code + scadenza */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div
+        className="cq-section grid gap-4"
+        style={{
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
+        }}
+      >
         <div>
           <label className="block">
             <span className="text-sm text-text-secondary">Lot code *</span>

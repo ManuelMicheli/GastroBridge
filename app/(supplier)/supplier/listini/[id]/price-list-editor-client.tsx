@@ -206,7 +206,7 @@ export function PriceListEditorClient({
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <div className="cq-section grid grid-cols-1 @[520px]:grid-cols-2 @[900px]:grid-cols-4 gap-3">
           <label className="block">
             <span className="text-xs text-text-secondary">Valido dal</span>
             <input

@@ -245,7 +245,13 @@ export default async function SupplierDdtDetailPage({
         </Card>
       )}
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+      <div
+        className="cq-section grid gap-4"
+        style={{
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(min(240px, 100%), 1fr))",
+        }}
+      >
         <Card>
           <p className="text-xs uppercase tracking-wider text-sage">
             Data emissione

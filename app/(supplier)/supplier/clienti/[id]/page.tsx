@@ -134,8 +134,8 @@ export default async function ClienteDetailPage({ params }: { params: Params }) 
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-        <Card className="lg:col-span-2">
+      <div className="cq-section grid grid-cols-1 @[900px]:grid-cols-3 gap-6 mb-6">
+        <Card className="@[900px]:col-span-2">
           <div className="flex items-center gap-2 mb-3">
             <MessageCircle className="h-5 w-5 text-forest" />
             <h2 className="font-bold text-charcoal">Messaggi</h2>

@@ -173,9 +173,9 @@ export function DdtBookClient({
       <Card className="p-4">
         <form
           onSubmit={applyFilters}
-          className="grid grid-cols-1 gap-3 md:grid-cols-6"
+          className="cq-section grid grid-cols-1 @[520px]:grid-cols-2 @[900px]:grid-cols-6 gap-3"
         >
-          <label className="md:col-span-2 text-xs text-sage">
+          <label className="@[900px]:col-span-2 text-xs text-sage">
             <span className="flex items-center gap-1">
               <Search className="h-3.5 w-3.5" /> Cerca numero o cliente
             </span>

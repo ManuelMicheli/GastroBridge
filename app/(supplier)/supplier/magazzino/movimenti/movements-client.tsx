@@ -258,7 +258,7 @@ export function MovementsClient({
     <div className="space-y-4">
       {/* Filtri server-side */}
       <div className="rounded-xl border border-border-subtle bg-surface-card p-4">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
+        <div className="cq-section grid grid-cols-1 @[520px]:grid-cols-2 @[900px]:grid-cols-6 gap-3">
           <label className="text-sm">
             <span className="mb-1 block text-xs text-text-secondary">Tipo</span>
             <select
