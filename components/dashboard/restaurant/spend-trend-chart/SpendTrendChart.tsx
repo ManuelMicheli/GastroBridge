@@ -18,6 +18,18 @@ import {
 } from "./utils";
 
 const PERIODS: SpendTrendPeriod[] = ["7D", "30D", "90D", "YTD"];
+const PERIOD_LABEL: Record<SpendTrendPeriod, string> = {
+  "7D": "Ultimi 7 giorni",
+  "30D": "Ultimi 30 giorni",
+  "90D": "Ultimi 90 giorni",
+  "YTD": "Anno in corso",
+};
+const PERIOD_SHORT: Record<SpendTrendPeriod, string> = {
+  "7D": "7 giorni",
+  "30D": "30 giorni",
+  "90D": "90 giorni",
+  "YTD": "Anno",
+};
 
 const CHART_HEIGHT = 240;
 const X_AXIS_HEIGHT = 26;
@@ -106,12 +118,12 @@ function TickerBar({
       }}
     >
       <div
-        className="flex items-center gap-3 font-mono text-[11px]"
-        style={{ letterSpacing: "0.05em" }}
+        className="flex items-center gap-3 text-[12px]"
+        style={{ letterSpacing: "0.02em" }}
       >
-        <span style={{ color: "var(--color-text-primary)", fontWeight: 500 }}>GBR.SPEND</span>
-        <span aria-hidden style={{ color: "var(--color-border-default)" }}>|</span>
-        <span style={{ color: "var(--color-text-tertiary)" }}>{period}</span>
+        <span style={{ color: "var(--color-text-primary)", fontWeight: 600 }}>Spesa</span>
+        <span aria-hidden style={{ color: "var(--color-border-default)" }}>·</span>
+        <span style={{ color: "var(--color-text-tertiary)" }}>{PERIOD_LABEL[period]}</span>
       </div>
 
       {/* Desktop toggle */}
@@ -124,9 +136,8 @@ function TickerBar({
               type="button"
               onClick={() => onChange(p)}
               aria-pressed={active}
-              className="relative z-10 rounded-[3px] px-[10px] py-1 font-mono text-[10px] uppercase outline-none transition-colors duration-150"
+              className="relative z-10 rounded-md px-3 py-1.5 text-[12px] font-medium outline-none transition-colors duration-150"
               style={{
-                letterSpacing: "0.05em",
                 color: active
                   ? "var(--color-surface-card)"
                   : "var(--color-text-tertiary)",
@@ -147,12 +158,12 @@ function TickerBar({
               {active && (
                 <motion.span
                   layoutId="period-active"
-                  className="absolute inset-0 -z-10 rounded-[3px]"
+                  className="absolute inset-0 -z-10 rounded-md"
                   style={{ background: "var(--color-text-primary)" }}
                   transition={{ type: "spring", duration: 0.4, bounce: 0.15 }}
                 />
               )}
-              {p}
+              {PERIOD_SHORT[p]}
             </button>
           );
         })}
@@ -161,16 +172,16 @@ function TickerBar({
       {/* Mobile select */}
       <select
         aria-label="Periodo"
-        className="rounded-[3px] border bg-transparent px-2 py-1 font-mono text-[10px] uppercase sm:hidden"
+        className="rounded-md border bg-transparent px-2 py-1.5 text-[12px] font-medium sm:hidden min-h-[36px]"
         value={period}
         onChange={(e) => onChange(e.target.value as SpendTrendPeriod)}
         style={{
           borderColor: "var(--color-border-subtle)",
-          color: "var(--color-text-secondary)",
+          color: "var(--color-text-primary)",
         }}
       >
         {PERIODS.map((p) => (
-          <option key={p} value={p}>{p}</option>
+          <option key={p} value={p}>{PERIOD_SHORT[p]}</option>
         ))}
       </select>
     </div>
@@ -244,21 +255,30 @@ function Hero({
       {/* Left */}
       <div className="flex-1 min-w-0">
         <p
-          className="mb-2 font-mono uppercase"
+          className="mb-2"
           style={{
-            fontSize: "10px",
-            letterSpacing: "0.1em",
+            fontSize: "12px",
             color: "var(--color-text-tertiary)",
           }}
         >
-          Volume transato · {period}
+          Spesa totale · {PERIOD_LABEL[period]}
         </p>
-        <div className="flex items-baseline gap-2 flex-wrap">
+        <div className="flex items-baseline gap-1 flex-wrap">
+          <span
+            style={{
+              fontSize: "24px",
+              fontWeight: 500,
+              color: "var(--color-text-secondary)",
+              lineHeight: 1.05,
+            }}
+          >
+            €
+          </span>
           <span
             className="font-mono"
             style={{
-              fontSize: "38px",
-              fontWeight: 400,
+              fontSize: "var(--text-display-xl, 38px)",
+              fontWeight: 500,
               letterSpacing: "-0.02em",
               lineHeight: 1.05,
               color: "var(--color-text-primary)",
@@ -266,48 +286,35 @@ function Hero({
           >
             {formatEUR(animatedTotal)}
           </span>
-          <span
-            className="font-mono"
-            style={{
-              fontSize: "14px",
-              fontWeight: 400,
-              color: "var(--color-text-secondary)",
-            }}
-          >
-            EUR
-          </span>
         </div>
         {!stats.hasCurrentData ? (
           <p
-            className="mt-2 font-mono"
-            style={{ fontSize: "12px", color: "var(--color-text-tertiary)" }}
+            className="mt-2"
+            style={{ fontSize: "13px", color: "var(--color-text-tertiary)" }}
           >
-            — nessun ordine nel periodo
+            Nessun ordine in questo periodo
           </p>
         ) : fullDeltaAvailable ? (
           <p
-            className="mt-2 font-mono flex flex-wrap items-center gap-x-2 gap-y-0.5"
-            style={{ fontSize: "12px" }}
+            className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-0.5"
+            style={{ fontSize: "13px" }}
           >
-            <span style={{ color: deltaColor, fontWeight: 500 }}>
+            <span style={{ color: deltaColor, fontWeight: 600 }}>
               {deltaPositive ? "▲" : "▼"} {deltaPositive ? "+" : "−"}{formatEUR(animatedDeltaAbs)}
             </span>
             <span style={{ color: deltaColor, fontWeight: 500 }}>
-              ({deltaPositive ? "+" : "−"}{animatedDeltaPct.toFixed(2).replace(".", ",")}%)
+              ({deltaPositive ? "+" : "−"}{animatedDeltaPct.toFixed(1).replace(".", ",")}%)
             </span>
-            <span style={{ color: "var(--color-text-tertiary)" }}>vs periodo prec.</span>
+            <span style={{ color: "var(--color-text-tertiary)" }}>
+              rispetto al periodo precedente
+            </span>
           </p>
         ) : (
           <p
-            className="mt-2 font-mono flex flex-wrap items-center gap-x-2"
-            style={{ fontSize: "12px" }}
+            className="mt-2"
+            style={{ fontSize: "13px", color: "var(--color-text-tertiary)" }}
           >
-            <span style={{ color: "var(--color-text-secondary)", fontWeight: 500 }}>
-              {formatEUR(animatedTotal)} EUR totali
-            </span>
-            <span style={{ color: "var(--color-text-tertiary)" }}>
-              — primo periodo nello storico
-            </span>
+            Primo periodo di storico disponibile
           </p>
         )}
       </div>
@@ -318,22 +325,22 @@ function Hero({
         style={{ borderColor: "var(--color-border-subtle)" }}
       >
         <KpiBlock
-          label="AVG"
-          value={stats.hasCurrentData ? formatEUR(animatedAvg) : "—"}
+          label="Media giornaliera"
+          value={stats.hasCurrentData ? `€ ${formatEUR(animatedAvg)}` : "—"}
           delay={0.4}
           inView={inView}
           reduceMotion={reduceMotion}
         />
         <KpiBlock
-          label="HIGH"
-          value={stats.hasCurrentData ? formatEUR(animatedPeak) : "—"}
+          label="Giorno più alto"
+          value={stats.hasCurrentData ? `€ ${formatEUR(animatedPeak)}` : "—"}
           delay={0.5}
           inView={inView}
           reduceMotion={reduceMotion}
         />
         <KpiBlock
-          label="LOW"
-          value={stats.low > 0 ? formatEUR(animatedLow) : "—"}
+          label="Giorno più basso"
+          value={stats.low > 0 ? `€ ${formatEUR(animatedLow)}` : "—"}
           delay={0.6}
           inView={inView}
           reduceMotion={reduceMotion}
@@ -363,10 +370,9 @@ function KpiBlock({
       transition={{ duration: 0.3, delay, ease: [0.22, 1, 0.36, 1] }}
     >
       <p
-        className="mb-1 font-mono uppercase"
+        className="mb-1"
         style={{
-          fontSize: "9px",
-          letterSpacing: "0.1em",
+          fontSize: "11px",
           color: "var(--color-text-tertiary)",
         }}
       >
@@ -375,10 +381,11 @@ function KpiBlock({
       <p
         className="font-mono"
         style={{
-          fontSize: "18px",
-          fontWeight: 400,
+          fontSize: "16px",
+          fontWeight: 500,
           lineHeight: 1.1,
           color: "var(--color-text-primary)",
+          whiteSpace: "nowrap",
         }}
       >
         {value}
@@ -582,14 +589,13 @@ function ChartArea({
           {/* Empty state */}
           {isEmpty && (
             <div
-              className="pointer-events-none absolute inset-0 flex items-center justify-center font-mono uppercase"
+              className="pointer-events-none absolute inset-0 flex items-center justify-center"
               style={{
-                fontSize: "11px",
-                letterSpacing: "0.08em",
+                fontSize: "13px",
                 color: "var(--color-text-tertiary)",
               }}
             >
-              NO TRANSACTIONS IN PERIOD
+              Nessun ordine in questo periodo
             </div>
           )}
 
@@ -680,18 +686,17 @@ function Tooltip({
       transition={{ duration: 0.15, ease: [0.22, 1, 0.36, 1] }}
     >
       <p
-        className="mb-1 font-mono uppercase"
+        className="mb-1"
         style={{
-          fontSize: "10px",
+          fontSize: "11px",
           fontWeight: 500,
-          letterSpacing: "0.05em",
           opacity: 0.65,
         }}
       >
         {formatDateFull(point.date)}
       </p>
-      <p className="font-mono" style={{ fontSize: "13px", fontWeight: 400 }}>
-        {formatEUR(point.value)} <span style={{ opacity: 0.55 }}>EUR</span>
+      <p className="font-mono" style={{ fontSize: "14px", fontWeight: 600 }}>
+        € {formatEUR(point.value)}
       </p>
       {/* Arrow */}
       <span
@@ -717,26 +722,39 @@ function Footer({ stats, nowISO }: { stats: SpendTrendStats; nowISO: string | nu
       style={{ borderColor: "var(--color-border-subtle)" }}
     >
       <div
-        className="flex flex-wrap items-center gap-x-5 gap-y-1 font-mono uppercase"
+        className="flex flex-wrap items-center gap-x-5 gap-y-1"
         style={{
-          fontSize: "10px",
-          letterSpacing: "0.05em",
+          fontSize: "12px",
           color: "var(--color-text-tertiary)",
         }}
       >
-        <span>TXN {formatInteger(stats.transactionsCount)}</span>
-        <span>ACTIVE {formatInteger(stats.activeDays)}/{formatInteger(stats.totalDays)}</span>
-        <span>VOL/DAY {formatEUR(volPerDay)}</span>
+        <span>
+          <span style={{ color: "var(--color-text-secondary)", fontWeight: 500 }}>
+            {formatInteger(stats.transactionsCount)}
+          </span>{" "}
+          ordini
+        </span>
+        <span>
+          <span style={{ color: "var(--color-text-secondary)", fontWeight: 500 }}>
+            {formatInteger(stats.activeDays)}/{formatInteger(stats.totalDays)}
+          </span>{" "}
+          giorni con ordini
+        </span>
+        <span>
+          media{" "}
+          <span style={{ color: "var(--color-text-secondary)", fontWeight: 500 }}>
+            € {formatEUR(volPerDay)}
+          </span>{" "}
+          al giorno
+        </span>
       </div>
       <div
-        className="font-mono uppercase"
         style={{
-          fontSize: "10px",
-          letterSpacing: "0.05em",
+          fontSize: "11px",
           color: "var(--color-text-tertiary)",
         }}
       >
-        LAST UPDATE {nowISO ? formatTimeCET(nowISO) : "—"} CET
+        Aggiornato alle {nowISO ? formatTimeCET(nowISO) : "—"}
       </div>
     </div>
   );
