@@ -20,8 +20,6 @@ import { StatusBadge } from "../tables/status-badge";
 import { DataTable, type Column } from "../tables/data-table";
 import {
   SerifGreeting,
-  Ticker,
-  type TickerItem,
   PulseDot,
   CelebrationCheck,
 } from "@/components/supplier/signature";
@@ -169,81 +167,6 @@ type AlertItem = {
   cta: string;
 };
 
-function buildTickerItems({
-  kpi,
-  topClientsRich,
-  recentDeliveries,
-}: {
-  kpi: Props["kpi"];
-  topClientsRich?: TopClientRich[];
-  recentDeliveries?: RecentDelivery[];
-}): TickerItem[] {
-  const items: TickerItem[] = [
-    {
-      key: "orders-today",
-      label: "Evasi oggi",
-      value: kpi.ordersToday.toString(),
-    },
-    {
-      key: "mtd",
-      label: "Fatturato MTD",
-      value: formatCurrency(kpi.monthlyRevenue),
-    },
-    {
-      key: "clients",
-      label: "Clienti attivi",
-      value: kpi.activeClients.toString(),
-    },
-    {
-      key: "products",
-      label: "Prodotti attivi",
-      value: kpi.activeProducts.toString(),
-    },
-  ];
-
-  if (kpi.avgTicket !== undefined && kpi.avgTicket > 0) {
-    items.push({
-      key: "avg-ticket",
-      label: "Ticket medio",
-      value: formatCurrency(Math.round(kpi.avgTicket)),
-    });
-  }
-
-  if (kpi.orderBacklogCount !== undefined && kpi.orderBacklogCount > 0) {
-    const oldest = kpi.orderBacklogOldestHours ?? 0;
-    items.push({
-      key: "backlog",
-      label: "Backlog",
-      value:
-        oldest > 0
-          ? `${kpi.orderBacklogCount} · ${oldest}h`
-          : kpi.orderBacklogCount.toString(),
-    });
-  }
-
-  const topClient = topClientsRich?.[0];
-  if (topClient) {
-    items.push({
-      key: "top-client",
-      label: "Top cliente",
-      value: topClient.name,
-    });
-  }
-
-  const deliveredCount = (recentDeliveries ?? []).filter(
-    (d) => d.status === "delivered",
-  ).length;
-  if (deliveredCount > 0) {
-    items.push({
-      key: "delivered",
-      label: "Consegnate",
-      value: deliveredCount.toString(),
-    });
-  }
-
-  return items;
-}
-
 function buildAlerts(alerts: Props["alerts"]): AlertItem[] {
   if (!alerts) return [];
   const list: AlertItem[] = [];
@@ -319,13 +242,8 @@ export function SupplierDashboard({
 
   return (
     <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-6">
-      {/* Editorial hero — serif greeting + live ticker */}
-      <div className="space-y-4">
-        <SerifGreeting name={companyName} />
-        <Ticker
-          items={buildTickerItems({ kpi, topClientsRich, recentDeliveries })}
-        />
-      </div>
+      {/* Editorial hero */}
+      <SerifGreeting name={companyName} />
 
       {/* Alert banner (Task 11) */}
       {alertItems.length > 0 && (
