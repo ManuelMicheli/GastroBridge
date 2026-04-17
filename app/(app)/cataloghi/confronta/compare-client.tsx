@@ -144,15 +144,24 @@ export function CompareClient({ suppliers, items, orderedNormalizedNames, prefer
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6">
       <div>
-        <Link href="/cataloghi" className="inline-flex items-center gap-1 text-sm text-text-secondary hover:text-text-primary">
+        <Link href="/cataloghi" className="inline-flex items-center gap-1 text-sm text-text-secondary hover:text-text-primary min-h-[44px] -my-2 py-2">
           <ArrowLeft className="h-4 w-4" /> Cataloghi
         </Link>
       </div>
 
       <header className="space-y-2">
-        <h1 className="text-2xl font-semibold text-text-primary">Confronto prezzi</h1>
+        <h1
+          className="font-semibold text-text-primary"
+          style={{
+            fontSize: "var(--text-display-lg, 24px)",
+            lineHeight: "var(--text-display-lg--line-height, 1.2)",
+            letterSpacing: "var(--text-display-lg--letter-spacing, -0.01em)",
+          }}
+        >
+          Confronto prezzi
+        </h1>
         <p className="text-sm text-text-secondary">
           Per ogni prodotto, il prezzo più basso è evidenziato in verde. Lo score tiene conto delle tue preferenze.
         </p>
@@ -160,10 +169,10 @@ export function CompareClient({ suppliers, items, orderedNormalizedNames, prefer
 
       <ActiveFiltersBar prefs={prefs} />
 
-      {/* Supplier toggle */}
-      <div className="flex flex-wrap gap-2">
+      {/* Supplier toggle — scrollable chips on narrow */}
+      <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory -mx-4 px-4 pb-2 md:mx-0 md:px-0 md:pb-0 md:flex-wrap md:overflow-visible">
         {suppliers.map((s) => (
-          <label key={s.id} className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm cursor-pointer ${
+          <label key={s.id} className={`inline-flex items-center gap-2 px-3 py-2 rounded-full border text-sm cursor-pointer shrink-0 snap-start min-h-[36px] md:min-h-0 md:py-1.5 ${
             selected.has(s.id) ? "border-accent-green/50 bg-accent-green/10 text-accent-green" : "border-border-subtle text-text-secondary"
           }`}>
             <input type="checkbox" className="sr-only" checked={selected.has(s.id)}
@@ -181,7 +190,7 @@ export function CompareClient({ suppliers, items, orderedNormalizedNames, prefer
       {/* Filters */}
       <div className="flex flex-wrap gap-3 items-center">
         <input type="search" placeholder="Cerca prodotto..." value={query} onChange={(e) => setQuery(e.target.value)}
-          className="rounded-lg bg-surface-base border border-border-subtle px-3 py-2 text-text-primary w-64" />
+          className="rounded-lg bg-surface-base border border-border-subtle px-3 py-3 md:py-2 text-base md:text-sm text-text-primary w-full md:w-64 min-h-[44px] focus-ring" />
         <label className="inline-flex items-center gap-2 text-sm text-text-secondary">
           <input type="checkbox" checked={onlyMulti} onChange={(e) => setOnlyMulti(e.target.checked)} />
           Solo prodotti offerti da ≥ 2 fornitori

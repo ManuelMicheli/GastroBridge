@@ -209,7 +209,13 @@ export function SearchPageClient({ suppliers, items, preferences }: Props) {
       <TypicalOrderSection groups={groups} />
 
       <div className="border-t border-border-subtle pt-6 space-y-4">
-        <h2 className="text-xl font-semibold text-text-primary flex items-center gap-2">
+        <h2
+          className="font-semibold text-text-primary flex items-center gap-2"
+          style={{
+            fontSize: "var(--text-title-lg, 18px)",
+            lineHeight: "var(--text-title-lg--line-height, 1.3)",
+          }}
+        >
           <SearchIcon className="h-5 w-5 text-accent-green" /> Ricerca singolo prodotto
         </h2>
         <div className="relative max-w-xl">
@@ -219,7 +225,7 @@ export function SearchPageClient({ suppliers, items, preferences }: Props) {
             placeholder="Es. farina, olio, pomodoro..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            className="w-full rounded-lg bg-surface-base border border-border-subtle pl-9 pr-3 py-2.5 text-text-primary"
+            className="w-full rounded-lg bg-surface-base border border-border-subtle pl-9 pr-3 py-3 md:py-2.5 text-base md:text-sm text-text-primary min-h-[44px] focus-ring"
           />
         </div>
       </div>
