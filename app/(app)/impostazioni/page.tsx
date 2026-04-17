@@ -32,19 +32,29 @@ export default async function SettingsPage() {
       />
 
       <SectionHeader title="Sezioni" />
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-10">
+      <div
+        className="cq-section grid gap-3 mb-10"
+        style={{
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(min(300px, 100%), 1fr))",
+        }}
+      >
         {SETTINGS_SECTIONS.map((section) => (
-          <Link key={section.href} href={section.href}>
-            <Card className="motion-lift hover:shadow-elevated transition-shadow">
+          <Link
+            key={section.href}
+            href={section.href}
+            className="block focus-ring rounded-2xl"
+          >
+            <Card className="motion-lift hover:shadow-elevated transition-shadow min-h-[80px]">
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-sage-muted/20 rounded-lg">
+                <div className="p-3 bg-sage-muted/20 rounded-lg shrink-0">
                   <section.icon className="h-5 w-5 text-forest" />
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <h3 className="font-bold text-charcoal">{section.label}</h3>
-                  <p className="text-sm text-sage">{section.description}</p>
+                  <p className="text-sm text-sage truncate">{section.description}</p>
                 </div>
-                <ChevronRight className="h-5 w-5 text-sage" />
+                <ChevronRight className="h-5 w-5 text-sage shrink-0" />
               </div>
             </Card>
           </Link>

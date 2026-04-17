@@ -11,6 +11,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { EmptyCartIllustration } from "@/components/illustrations";
 import { formatCurrency, formatUnitShort } from "@/lib/utils/formatters";
 import { Trash2, Plus, Minus, AlertTriangle } from "lucide-react";
+import { StickyActionBar } from "@/components/ui/sticky-action-bar";
 import type { UnitType } from "@/types/database";
 import { createCatalogOrder } from "@/lib/orders/actions";
 import { submitOrder } from "@/lib/orders/submit";
@@ -152,14 +153,14 @@ export default function CartPage() {
       />
 
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-24 md:pb-0">
         {/* Items by supplier */}
         <div className="lg:col-span-2 space-y-6">
           {supplierGroups.map((group) => (
             <Card key={group.supplierId}>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-charcoal">{group.supplierName}</h3>
-                <span className="text-sm font-mono font-bold text-forest">
+              <div className="flex items-center justify-between mb-4 gap-3">
+                <h3 className="font-bold text-charcoal min-w-0 truncate">{group.supplierName}</h3>
+                <span className="text-sm font-mono font-bold text-forest shrink-0">
                   {formatCurrency(group.subtotal)}
                 </span>
               </div>
@@ -171,34 +172,37 @@ export default function CartPage() {
               )}
               <div className="space-y-3">
                 {group.items.map((item) => (
-                  <div key={item.productId} className="flex items-center gap-4 py-2 border-t border-sage-muted/20 first:border-0">
-                    <div className="flex-1 min-w-0">
+                  <div key={item.productId} className="flex flex-wrap items-center gap-3 py-3 border-t border-sage-muted/20 first:border-0">
+                    <div className="flex-1 min-w-0 basis-full sm:basis-auto">
                       <p className="font-semibold text-charcoal text-sm truncate">{item.name}</p>
                       <p className="text-xs text-sage">
                         {formatCurrency(item.unitPrice)}/{formatUnitShort(item.unit as UnitType)}
                       </p>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 rounded-lg border border-sage-muted/40">
                       <button
                         onClick={() => updateQuantity(item.productId, Math.max(item.minQuantity, item.quantity - 1))}
-                        className="p-1 rounded-lg hover:bg-sage-muted/30"
+                        className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-l-lg hover:bg-sage-muted/30 focus-ring"
+                        aria-label="Diminuisci quantità"
                       >
-                        <Minus className="h-3.5 w-3.5" />
+                        <Minus className="h-4 w-4" />
                       </button>
-                      <span className="w-8 text-center font-mono text-sm">{item.quantity}</span>
+                      <span className="w-10 text-center font-mono text-sm tabular-nums">{item.quantity}</span>
                       <button
                         onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                        className="p-1 rounded-lg hover:bg-sage-muted/30"
+                        className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-r-lg hover:bg-sage-muted/30 focus-ring"
+                        aria-label="Aumenta quantità"
                       >
-                        <Plus className="h-3.5 w-3.5" />
+                        <Plus className="h-4 w-4" />
                       </button>
                     </div>
-                    <span className="font-mono font-bold text-sm w-20 text-right">
+                    <span className="font-mono font-bold text-sm min-w-[80px] text-right">
                       {formatCurrency(item.unitPrice * item.quantity)}
                     </span>
                     <button
                       onClick={() => removeItem(item.productId)}
-                      className="p-1.5 rounded-lg hover:bg-red-50 text-sage hover:text-red-500"
+                      className="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg hover:bg-red-50 text-sage hover:text-red-500 focus-ring"
+                      aria-label="Rimuovi prodotto"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -209,17 +213,17 @@ export default function CartPage() {
           ))}
         </div>
 
-        {/* Summary */}
-        <div>
+        {/* Summary — desktop sticky side panel */}
+        <div className="hidden md:block">
           <Card className="sticky top-20">
             <h3 className="font-bold text-charcoal mb-4">Riepilogo Ordine</h3>
             {supplierGroups.map((g) => (
-              <div key={g.supplierId} className="flex justify-between text-sm py-1">
+              <div key={g.supplierId} className="flex justify-between text-sm py-1 gap-2">
                 <span className="text-sage truncate">{g.supplierName}</span>
-                <span className="font-mono">{formatCurrency(g.subtotal)}</span>
+                <span className="font-mono shrink-0">{formatCurrency(g.subtotal)}</span>
               </div>
             ))}
-            <div className="border-t border-sage-muted/30 mt-3 pt-3 flex justify-between">
+            <div className="border-t border-sage-muted/30 mt-3 pt-3 flex justify-between gap-2">
               <span className="font-bold text-charcoal">Totale</span>
               <span className="font-mono font-bold text-xl text-forest">{formatCurrency(totalAmount)}</span>
             </div>
@@ -232,6 +236,22 @@ export default function CartPage() {
           </Card>
         </div>
       </div>
+
+      {/* Mobile sticky checkout bar */}
+      <StickyActionBar
+        leading={
+          <div className="min-w-0">
+            <p className="text-xs text-sage">Totale ({supplierGroups.length} fornitori)</p>
+            <p className="font-mono font-bold text-lg text-forest truncate">
+              {formatCurrency(totalAmount)}
+            </p>
+          </div>
+        }
+      >
+        <Button size="lg" onClick={handleCheckout} disabled={pending}>
+          {pending ? "Invio..." : "Conferma"}
+        </Button>
+      </StickyActionBar>
     </div>
   );
 }

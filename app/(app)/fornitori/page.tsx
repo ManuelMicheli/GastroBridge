@@ -106,11 +106,21 @@ export default async function SuppliersPage() {
           context="page"
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div
+          className="cq-section grid gap-4"
+          style={{
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(min(320px, 100%), 1fr))",
+          }}
+        >
           {visible.map((rel) => {
             const s = rel.supplier!;
             return (
-              <Link key={rel.id} href={`/fornitori/${s.id}`}>
+              <Link
+                key={rel.id}
+                href={`/fornitori/${s.id}`}
+                className="block focus-ring rounded-2xl"
+              >
                 <Card className="motion-lift hover:shadow-elevated transition-shadow h-full">
                   <div className="flex items-start gap-4">
                     <div className="w-14 h-14 bg-sage-muted/30 rounded-xl flex items-center justify-center shrink-0 overflow-hidden">
