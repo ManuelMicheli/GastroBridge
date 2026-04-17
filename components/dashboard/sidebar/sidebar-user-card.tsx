@@ -8,9 +8,10 @@ import { AnimatePresence, motion } from "motion/react";
 type Props = {
   companyName: string;
   userEmail: string;
+  role?: "restaurant" | "supplier";
 };
 
-export function SidebarUserCard({ companyName, userEmail }: Props) {
+export function SidebarUserCard({ companyName, userEmail, role }: Props) {
   const { isCollapsed } = useSidebar();
 
   const initials = companyName
@@ -20,12 +21,28 @@ export function SidebarUserCard({ companyName, userEmail }: Props) {
     .slice(0, 2)
     .toUpperCase();
 
+  const isSupplier = role === "supplier";
+
   return (
     <div className="border-t border-border-subtle p-3">
       <div className="flex items-center gap-3">
         {/* Avatar */}
-        <div className="shrink-0 h-9 w-9 rounded-lg bg-accent-green-muted flex items-center justify-center">
-          <span className="text-xs font-bold text-accent-green">{initials}</span>
+        <div
+          className={
+            isSupplier
+              ? "shrink-0 h-9 w-9 rounded-lg bg-brand-primary-subtle flex items-center justify-center"
+              : "shrink-0 h-9 w-9 rounded-lg bg-accent-green-muted flex items-center justify-center"
+          }
+        >
+          <span
+            className={
+              isSupplier
+                ? "text-xs font-bold text-brand-primary"
+                : "text-xs font-bold text-accent-green"
+            }
+          >
+            {initials}
+          </span>
         </div>
 
         <AnimatePresence mode="wait">
