@@ -496,6 +496,20 @@ body {
   --elevation-card-active-hover: var(--elevation-card-hover);
   --elevation-modal-active: var(--elevation-modal);
   --caption-color: var(--color-brand-depth);
+
+  /* =========================================
+     Fluid typography (mobile-first responsive)
+     Scales smoothly 320→1440px viewport.
+     Body/caption/mono stay fixed (readability anchor).
+     ========================================= */
+  --text-display-2xl: clamp(32px, 4.5vw + 16px, 64px);
+  --text-display-2xl--line-height: 1.08;
+  --text-display-xl: clamp(28px, 3vw + 16px, 44px);
+  --text-display-xl--line-height: 1.12;
+  --text-display-lg: clamp(22px, 2vw + 14px, 32px);
+  --text-display-lg--line-height: 1.18;
+  --text-title-lg: clamp(18px, 1vw + 14px, 22px);
+  --text-title-md: clamp(15px, 0.5vw + 13px, 17px);
 }
 
 /* =========================================
@@ -551,6 +565,20 @@ body {
   --elevation-card-active-hover: var(--elevation-card-hover-dark);
   --elevation-modal-active: var(--elevation-modal-dark);
   --caption-color: var(--color-brand-depth);
+
+  /* =========================================
+     Fluid typography (mobile-first responsive)
+     Scales smoothly 320→1440px viewport.
+     Body/caption/mono stay fixed (readability anchor).
+     ========================================= */
+  --text-display-2xl: clamp(32px, 4.5vw + 16px, 64px);
+  --text-display-2xl--line-height: 1.08;
+  --text-display-xl: clamp(28px, 3vw + 16px, 44px);
+  --text-display-xl--line-height: 1.12;
+  --text-display-lg: clamp(22px, 2vw + 14px, 32px);
+  --text-display-lg--line-height: 1.18;
+  --text-title-lg: clamp(18px, 1vw + 14px, 22px);
+  --text-title-md: clamp(15px, 0.5vw + 13px, 17px);
 }
 
 /* =========================================
