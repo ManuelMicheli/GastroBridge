@@ -276,7 +276,13 @@ export function SupplierDashboard({
       )}
 
       {/* KPI Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div
+        className="cq-section grid gap-4"
+        style={{
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(min(220px, 100%), 1fr))",
+        }}
+      >
         <KPICard
           label="Ordini oggi"
           value={kpi.ordersToday.toString()}
@@ -312,7 +318,13 @@ export function SupplierDashboard({
       {(kpi.avgTicket !== undefined ||
         kpi.orderBacklogCount !== undefined ||
         kpi.revenueYoYDeltaPct !== undefined) && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        <div
+          className="cq-section grid gap-4"
+          style={{
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(min(260px, 100%), 1fr))",
+          }}
+        >
           {kpi.avgTicket !== undefined && (
             <KPICard
               label="Ticket medio (14gg)"
@@ -358,8 +370,8 @@ export function SupplierDashboard({
       )}
 
       {/* Row 2: Revenue Chart + Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <DarkCard className="lg:col-span-2" noPadding>
+      <div className="cq-section grid grid-cols-1 @[900px]:grid-cols-3 gap-4">
+        <DarkCard className="@[900px]:col-span-2" noPadding>
           <div className="p-5 pb-0">
             <DarkCardHeader>
               <DarkCardTitle>Andamento Fatturato</DarkCardTitle>
@@ -455,9 +467,9 @@ export function SupplierDashboard({
       </div>
 
       {/* Row 3: Orders + Products + Clients */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="cq-section grid grid-cols-1 @[900px]:grid-cols-3 gap-4">
         {/* Recent Orders */}
-        <DarkCard className="lg:col-span-2" noPadding>
+        <DarkCard className="@[900px]:col-span-2" noPadding>
           <div className="p-5 pb-0">
             <DarkCardHeader>
               <DarkCardTitle>Ordini recenti</DarkCardTitle>
@@ -495,7 +507,13 @@ export function SupplierDashboard({
 
       {/* Row 4: Top Clienti + Top Prodotti (Task 12) */}
       {(topClientsList.length > 0 || topProductsList.length > 0) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div
+          className="cq-section grid gap-4"
+          style={{
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(min(340px, 100%), 1fr))",
+          }}
+        >
           {/* Top Clienti ranked */}
           <DarkCard>
             <DarkCardHeader>
@@ -660,7 +678,13 @@ export function SupplierDashboard({
           <DarkCardHeader>
             <DarkCardTitle>Top Clienti</DarkCardTitle>
           </DarkCardHeader>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div
+            className="cq-card grid gap-3"
+            style={{
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(min(180px, 100%), 1fr))",
+            }}
+          >
             {topClients.map((client, i) => (
               <motion.div
                 key={client.name}
