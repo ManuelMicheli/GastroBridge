@@ -20,16 +20,13 @@ type Props = {
 
 export function SidebarDrawer({ open, onClose, navItems, role, companyName }: Props) {
   const pathname = usePathname();
-  const isSupplier = role === "supplier";
   const pointerStart = useRef<{ x: number; y: number } | null>(null);
 
   function handlePointerDown(e: React.PointerEvent<HTMLElement>) {
-    if (!isSupplier) return;
     pointerStart.current = { x: e.clientX, y: e.clientY };
   }
 
   function handlePointerUp(e: React.PointerEvent<HTMLElement>) {
-    if (!isSupplier) return;
     const start = pointerStart.current;
     pointerStart.current = null;
     if (!start) return;
@@ -56,12 +53,7 @@ export function SidebarDrawer({ open, onClose, navItems, role, companyName }: Pr
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className={cn(
-              "fixed inset-0 z-40 lg:hidden",
-              isSupplier
-                ? "bg-surface-overlay backdrop-blur-xl"
-                : "bg-surface-overlay backdrop-blur-sm",
-            )}
+            className="fixed inset-0 z-40 lg:hidden bg-surface-overlay backdrop-blur-xl"
             onClick={onClose}
           />
 
@@ -73,11 +65,7 @@ export function SidebarDrawer({ open, onClose, navItems, role, companyName }: Pr
             transition={{ type: "spring", stiffness: 400, damping: 35 }}
             onPointerDown={handlePointerDown}
             onPointerUp={handlePointerUp}
-            className={cn(
-              "fixed left-0 top-0 bottom-0 w-72 bg-surface-sidebar border-r border-border-subtle z-50 flex flex-col lg:hidden",
-              isSupplier &&
-                "pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]",
-            )}
+            className="fixed left-0 top-0 bottom-0 w-72 bg-surface-sidebar border-r border-border-subtle z-50 flex flex-col lg:hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
           >
             {/* Header */}
             <div className="flex items-center justify-between p-4 h-16 border-b border-border-subtle">
