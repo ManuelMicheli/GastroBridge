@@ -8,6 +8,7 @@ import {
 import { DarkCard, DarkCardHeader, DarkCardTitle } from "../cards/dark-card";
 import { QuickAction } from "../cards/quick-action";
 import { AreaChart } from "../charts/area-chart";
+import { SpendingTrendCard } from "./spending-trend-card";
 import { StatusBadge } from "../tables/status-badge";
 import { DataTable, type Column } from "../tables/data-table";
 import { formatCurrency, formatDate } from "@/lib/utils/formatters";
@@ -277,39 +278,11 @@ export function RestaurantDashboard({ companyName, kpi, spendingSparkline, chart
         </div>
       </DarkCard>
 
-      {/* Row 2: Chart + Quick Actions */}
+      {/* Row 2: Spending trend (premium) + Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Spending Chart */}
-        <DarkCard className="lg:col-span-2" noPadding>
-          <div className="p-5 pb-0 flex items-center justify-between">
-            <div>
-              <p
-                className="uppercase mb-1"
-                style={{
-                  fontSize: "var(--text-caption)",
-                  letterSpacing: "var(--text-caption--letter-spacing)",
-                  fontWeight: "var(--text-caption--font-weight)",
-                  color: "var(--color-text-tertiary)",
-                }}
-              >
-                30 giorni
-              </p>
-              <h2
-                style={{
-                  fontSize: "var(--text-title-md)",
-                  lineHeight: "var(--text-title-md--line-height)",
-                  fontWeight: 600,
-                  color: "var(--color-text-primary)",
-                }}
-              >
-                Andamento spesa
-              </h2>
-            </div>
-          </div>
-          <div className="px-2 pb-3">
-            <AreaChart data={chartData} height={220} />
-          </div>
-        </DarkCard>
+        <div className="lg:col-span-2">
+          <SpendingTrendCard data={chartData} />
+        </div>
 
         {/* Quick Actions */}
         <DarkCard>
