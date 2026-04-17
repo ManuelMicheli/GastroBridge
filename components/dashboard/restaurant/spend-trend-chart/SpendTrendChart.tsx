@@ -319,9 +319,9 @@ function Hero({
         )}
       </div>
 
-      {/* Right — secondary KPI */}
+      {/* Right — secondary KPI (single row on all viewports) */}
       <div
-        className="flex flex-wrap gap-x-8 gap-y-4 md:border-l md:pl-8"
+        className="flex flex-nowrap items-start gap-x-4 md:gap-x-8 w-full md:w-auto md:border-l md:pl-8"
         style={{ borderColor: "var(--color-border-subtle)" }}
       >
         <KpiBlock
@@ -365,15 +365,17 @@ function KpiBlock({
 }) {
   return (
     <motion.div
+      className="flex-1 min-w-0 md:flex-initial"
       initial={reduceMotion ? false : { opacity: 0, y: 8 }}
       animate={inView ? { opacity: 1, y: 0 } : {}}
       transition={{ duration: 0.3, delay, ease: [0.22, 1, 0.36, 1] }}
     >
       <p
-        className="mb-1"
+        className="mb-1 truncate"
         style={{
-          fontSize: "11px",
+          fontSize: "clamp(10px, 2.4vw, 11px)",
           color: "var(--color-text-tertiary)",
+          lineHeight: 1.2,
         }}
       >
         {label}
@@ -381,7 +383,7 @@ function KpiBlock({
       <p
         className="font-mono"
         style={{
-          fontSize: "16px",
+          fontSize: "clamp(13px, 3.2vw, 16px)",
           fontWeight: 500,
           lineHeight: 1.1,
           color: "var(--color-text-primary)",
@@ -718,34 +720,36 @@ function Footer({ stats, nowISO }: { stats: SpendTrendStats; nowISO: string | nu
   const volPerDay = stats.totalDays > 0 ? stats.total / stats.totalDays : 0;
   return (
     <div
-      className="flex flex-wrap items-center justify-between gap-3 border-t px-6 pb-4 pt-3.5"
+      className="flex flex-col md:flex-row md:flex-wrap md:items-center md:justify-between gap-3 border-t px-6 pb-4 pt-3.5"
       style={{ borderColor: "var(--color-border-subtle)" }}
     >
       <div
-        className="flex flex-wrap items-center gap-x-5 gap-y-1"
+        className="flex flex-nowrap items-center gap-x-4 md:gap-x-5 overflow-x-auto"
         style={{
-          fontSize: "12px",
+          fontSize: "clamp(11px, 2.8vw, 12px)",
           color: "var(--color-text-tertiary)",
         }}
       >
-        <span>
+        <span className="whitespace-nowrap shrink-0">
           <span style={{ color: "var(--color-text-secondary)", fontWeight: 500 }}>
             {formatInteger(stats.transactionsCount)}
           </span>{" "}
           ordini
         </span>
-        <span>
+        <span className="whitespace-nowrap shrink-0">
           <span style={{ color: "var(--color-text-secondary)", fontWeight: 500 }}>
             {formatInteger(stats.activeDays)}/{formatInteger(stats.totalDays)}
           </span>{" "}
-          giorni con ordini
+          <span className="hidden sm:inline">giorni con ordini</span>
+          <span className="sm:hidden">giorni</span>
         </span>
-        <span>
+        <span className="whitespace-nowrap shrink-0">
           media{" "}
           <span style={{ color: "var(--color-text-secondary)", fontWeight: 500 }}>
             € {formatEUR(volPerDay)}
-          </span>{" "}
-          al giorno
+          </span>
+          <span className="hidden sm:inline"> al giorno</span>
+          <span className="sm:hidden">/g</span>
         </span>
       </div>
       <div
