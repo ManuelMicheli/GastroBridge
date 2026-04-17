@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Search as SearchIcon, BookMarked, Plus, Trash2, ShoppingBasket, Upload, UploadCloud, Check, ArrowLeft, Download } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
 import { parseCsv, parseXlsx, suggestMapping, type ParsedSheet } from "@/lib/catalogs/parse-file";
 import { normalizeName, normalizeUnit } from "@/lib/catalogs/normalize";
 import {
@@ -172,33 +174,35 @@ export function SearchPageClient({ suppliers, items, preferences }: Props) {
 
   if (suppliers.length === 0) {
     return (
-      <div className="p-6 max-w-3xl space-y-4">
-        <h1 className="text-2xl font-semibold text-text-primary">Cerca prodotti</h1>
-        <div className="rounded-xl border border-dashed border-border-subtle p-12 text-center">
-          <BookMarked className="mx-auto h-8 w-8 text-text-tertiary" />
-          <h2 className="mt-3 text-lg font-medium text-text-primary">Nessun catalogo ancora</h2>
-          <p className="mt-1 text-sm text-text-secondary">
-            La ricerca confronta i prodotti tra i tuoi cataloghi fornitore. Crea il primo catalogo per iniziare.
-          </p>
-          <Link
-            href="/cataloghi"
-            className="mt-4 inline-flex px-4 py-2 rounded-lg bg-accent-green text-surface-base font-medium"
-          >
-            Vai ai cataloghi
-          </Link>
-        </div>
+      <div className="space-y-6">
+        <PageHeader
+          title="Cerca prodotti"
+          subtitle="Confronta prezzi tra i tuoi cataloghi fornitore."
+        />
+        <EmptyState
+          title="Nessun catalogo ancora"
+          description="La ricerca confronta i prodotti tra i tuoi cataloghi fornitore. Crea il primo catalogo per iniziare."
+          icon={BookMarked}
+          context="page"
+          action={
+            <Link
+              href="/cataloghi"
+              className="inline-flex px-4 py-2 rounded-lg bg-brand-primary text-brand-on-primary font-medium hover:bg-brand-primary-hover transition-colors"
+            >
+              Vai ai cataloghi
+            </Link>
+          }
+        />
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold text-text-primary">Cerca prodotti</h1>
-        <p className="text-sm text-text-secondary">
-          Trova il prezzo più basso tra i tuoi {suppliers.length} cataloghi fornitore.
-        </p>
-      </header>
+    <div className="space-y-6">
+      <PageHeader
+        title="Cerca prodotti"
+        subtitle={`Trova il prezzo più basso tra i tuoi ${suppliers.length} cataloghi fornitore.`}
+      />
 
       <ActiveFiltersBar prefs={prefs} />
 
@@ -248,7 +252,7 @@ export function SearchPageClient({ suppliers, items, preferences }: Props) {
                   {top && (
                     <span className="text-sm text-text-secondary flex items-center gap-2">
                       <span>
-                        <span className={`font-medium ${scoreColorClass(top.scored.score)}`}>€ {top.price.toFixed(2)}</span>
+                        <span className={`font-medium tabular-nums ${scoreColorClass(top.scored.score)}`}>€ {top.price.toFixed(2)}</span>
                         {" "}da {top.supplier.supplier_name}
                       </span>
                       {savings > 0 && (
