@@ -22,6 +22,7 @@ export function SectionFrame({
 }) {
   return (
     <section
+      aria-label={label}
       className={`rounded-xl border border-border-subtle bg-surface-card ${className}`}
     >
       <header className="flex items-center gap-3 px-4 pt-3 pb-2">

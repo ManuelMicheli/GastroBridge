@@ -24,4 +24,5 @@ export interface SpendTrendChartProps {
   transactionsByDate?: Record<string, number>;
   initialPeriod?: SpendTrendPeriod;
   className?: string;
+  bare?: boolean;
 }

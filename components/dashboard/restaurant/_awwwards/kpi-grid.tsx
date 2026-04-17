@@ -21,7 +21,12 @@ export type KpiGridProps = {
   prevAvgOrder: number;
   savings: number;
   activeSuppliers: number;
-  asOf: string; // "HH:mm" string
+  /**
+   * Optional "HH:mm" caption rendered top-right of the hero. When the grid
+   * is wrapped in a SectionFrame that already shows AS OF in its header,
+   * leave this undefined to avoid duplication.
+   */
+  asOf?: string;
 };
 
 function DeltaChip({
@@ -104,10 +109,13 @@ export function KpiGrid({
 
   return (
     <div className="relative">
-      {/* AS OF caption, top-right */}
-      <span className="pointer-events-none absolute right-0 top-0 font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
-        AS OF {asOf}
-      </span>
+      {/* Optional AS OF caption, top-right (skipped when the wrapping frame
+          already renders it in its header). */}
+      {asOf ? (
+        <span className="pointer-events-none absolute right-0 top-0 font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+          AS OF {asOf}
+        </span>
+      ) : null}
 
       {/* Main number + delta */}
       <div className="flex items-baseline gap-3 flex-wrap pr-20">

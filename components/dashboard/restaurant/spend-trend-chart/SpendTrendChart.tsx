@@ -44,6 +44,7 @@ export function SpendTrendChart({
   transactionsByDate,
   initialPeriod = "30D",
   className,
+  bare = false,
 }: SpendTrendChartProps) {
   const [period, setPeriod] = useState<SpendTrendPeriod>(initialPeriod);
   const reduce = useReducedMotion();
@@ -73,14 +74,18 @@ export function SpendTrendChart({
       role="region"
       aria-label={`Andamento spesa — ${period}`}
       className={[
-        "overflow-hidden rounded-2xl border",
+        bare ? "" : "overflow-hidden rounded-2xl border",
         className ?? "",
       ].join(" ")}
-      style={{
-        background: "var(--color-surface-card)",
-        borderColor: "var(--color-border-subtle)",
-        boxShadow: "var(--shadow-card-dark)",
-      }}
+      style={
+        bare
+          ? undefined
+          : {
+              background: "var(--color-surface-card)",
+              borderColor: "var(--color-border-subtle)",
+              boxShadow: "var(--shadow-card-dark)",
+            }
+      }
       initial={reduceMotion ? false : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}

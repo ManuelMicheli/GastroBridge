@@ -112,34 +112,38 @@ export function RestaurantDashboard({
       </div>
 
       {/* Block 3 — KPI hero + savings alert (same frame) */}
-      <section className="animate-[fadeInUp_260ms_ease-out_both] [animation-delay:120ms] rounded-xl border border-border-subtle bg-surface-card">
-        <header className="flex items-center gap-3 px-4 pt-3 pb-2">
-          <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
-            Spesa · Questo mese
-          </span>
-          <span aria-hidden className="h-px flex-1 bg-border-subtle" />
-        </header>
-        <div className="px-4 pt-3 pb-4">
-          <KpiGrid
-            spending={kpi.spending}
-            spendingDelta={spendingDelta}
-            ordersThisMonth={kpi.ordersThisMonth}
-            ordersDelta={ordersDelta}
-            avgOrder={avgOrder}
-            prevAvgOrder={prevAvgOrder}
-            savings={kpi.savings}
-            activeSuppliers={kpi.activeSuppliers}
-            asOf={asOf}
-          />
-        </div>
-        <div className="border-t border-border-subtle px-4 py-3">
-          <SavingsAlert savings={kpi.savings} />
-        </div>
-      </section>
+      <div className="animate-[fadeInUp_260ms_ease-out_both] [animation-delay:120ms]">
+        <SectionFrame
+          label="Spesa · Questo mese"
+          trailing={<span className="tabular-nums">AS OF {asOf}</span>}
+          padded={false}
+        >
+          <div className="px-4 pt-3 pb-4">
+            <KpiGrid
+              spending={kpi.spending}
+              spendingDelta={spendingDelta}
+              ordersThisMonth={kpi.ordersThisMonth}
+              ordersDelta={ordersDelta}
+              avgOrder={avgOrder}
+              prevAvgOrder={prevAvgOrder}
+              savings={kpi.savings}
+              activeSuppliers={kpi.activeSuppliers}
+              /* AS OF lives on the SectionFrame header above */
+            />
+          </div>
+          <div className="border-t border-border-subtle px-4 py-3">
+            <SavingsAlert savings={kpi.savings} />
+          </div>
+        </SectionFrame>
+      </div>
 
       {/* Block 4 — Spend trend chart in terminal frame */}
       <div className="animate-[fadeInUp_280ms_ease-out_both] [animation-delay:180ms]">
-        <SectionFrame label="Spend Trend · 730 days" padded={false}>
+        <SectionFrame
+          label="Spend Trend · 730 days"
+          trailing="Live"
+          padded={false}
+        >
           <SpendTrendChart
             points={spendPoints}
             transactionsByDate={transactionsByDate}
