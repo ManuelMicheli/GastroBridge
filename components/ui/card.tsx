@@ -1,12 +1,41 @@
 import { type HTMLAttributes, forwardRef } from "react";
 import { cn } from "@/lib/utils/formatters";
 
-const Card = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
-  ({ className, style, ...props }, ref) => (
+type CardPadding = "compact" | "default" | "hero" | "none";
+
+interface CardProps extends HTMLAttributes<HTMLDivElement> {
+  padding?: CardPadding;
+  clickable?: boolean;
+  glow?: boolean;
+}
+
+const paddingMap: Record<CardPadding, string> = {
+  none: "p-0",
+  compact: "p-4",
+  default: "p-5",
+  hero: "p-7",
+};
+
+const Card = forwardRef<HTMLDivElement, CardProps>(
+  (
+    {
+      className,
+      style,
+      padding = "default",
+      clickable = false,
+      glow = false,
+      ...props
+    },
+    ref
+  ) => (
     <div
       ref={ref}
       className={cn(
-        "bg-white rounded-xl p-5 border border-[color:var(--color-border-subtle)]",
+        "bg-white rounded-xl border border-[color:var(--color-border-subtle)]",
+        paddingMap[padding],
+        clickable &&
+          "cursor-pointer hover:-translate-y-[1px] transition-[transform,box-shadow] duration-[var(--duration-fast,150ms)]",
+        glow && "dark:hover:[box-shadow:var(--glow-brand)]",
         className
       )}
       style={{ boxShadow: "var(--elevation-card-active)", ...style }}
@@ -65,4 +94,28 @@ const CardFooter = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
 );
 CardFooter.displayName = "CardFooter";
 
-export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter };
+const CardEyebrow = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(
+        "font-mono text-[10px] uppercase tracking-[0.2em] text-brand-depth",
+        className
+      )}
+      {...props}
+    />
+  )
+);
+CardEyebrow.displayName = "CardEyebrow";
+
+export {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+  CardEyebrow,
+  type CardProps,
+  type CardPadding,
+};
