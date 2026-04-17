@@ -5,6 +5,7 @@ import { useTheme } from "next-themes";
 import { CollapsibleSidebar } from "./sidebar/collapsible-sidebar";
 import { DarkTopbar } from "./topbar/dark-topbar";
 import { DarkMobileNav, type MobileNavItem } from "./mobile/dark-mobile-nav";
+import { DarkMobileNavWithCart } from "./mobile/dark-mobile-nav-with-cart";
 import { SidebarDrawer } from "./mobile/sidebar-drawer";
 import { CommandPaletteProvider } from "./command-palette/command-palette-provider";
 import { CommandPalette } from "./command-palette/command-palette";
@@ -90,8 +91,12 @@ export function DashboardShell({
           companyName={companyName}
         />
 
-        {/* Mobile bottom nav */}
-        <DarkMobileNav items={mobileNavItems} />
+        {/* Mobile bottom nav — restaurant gets cart badge wrapper */}
+        {role === "restaurant" ? (
+          <DarkMobileNavWithCart items={mobileNavItems} />
+        ) : (
+          <DarkMobileNav items={mobileNavItems} />
+        )}
 
         {/* Command Palette overlay */}
         <CommandPalette />

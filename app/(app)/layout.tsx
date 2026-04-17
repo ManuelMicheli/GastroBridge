@@ -18,11 +18,11 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 const MOBILE_NAV: MobileNavItem[] = [
-  { href: "/dashboard",    label: "Home",    iconName: "LayoutDashboard" },
-  { href: "/cerca",        label: "Cerca",   iconName: "Search" },
-  { href: "/cataloghi",    label: "Catal.",  iconName: "BookMarked" },
-  { href: "/ordini",       label: "Ordini",  iconName: "ClipboardList" },
-  { href: "/impostazioni", label: "Altro",   iconName: "Settings" },
+  { href: "/dashboard",    label: "Home",     iconName: "LayoutDashboard" },
+  { href: "/cerca",        label: "Cerca",    iconName: "Search" },
+  { href: "/carrello",     label: "Carrello", iconName: "ShoppingCart" },
+  { href: "/ordini",       label: "Ordini",   iconName: "ClipboardList" },
+  { href: "/impostazioni", label: "Account",  iconName: "Settings" },
 ];
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
