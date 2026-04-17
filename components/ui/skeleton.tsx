@@ -7,6 +7,7 @@ interface SkeletonProps {
   className?: string;
   width?: string | number;
   height?: string | number;
+  shimmer?: boolean;
 }
 
 const variantStyles: Record<SkeletonVariant, string> = {
@@ -16,14 +17,19 @@ const variantStyles: Record<SkeletonVariant, string> = {
   circle: "rounded-full",
 };
 
-function Skeleton({ variant = "text", className, width, height }: SkeletonProps) {
+function Skeleton({
+  variant = "text",
+  className,
+  width,
+  height,
+  shimmer = false,
+}: SkeletonProps) {
+  const base = shimmer
+    ? "shimmer-bg"
+    : "animate-pulse bg-[color:var(--color-surface-hover)]";
   return (
     <div
-      className={cn(
-        "animate-pulse bg-[color:var(--color-surface-hover)]",
-        variantStyles[variant],
-        className
-      )}
+      className={cn(base, variantStyles[variant], className)}
       style={{
         width: typeof width === "number" ? `${width}px` : width,
         height: typeof height === "number" ? `${height}px` : height,
