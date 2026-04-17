@@ -510,6 +510,18 @@ body {
   --text-display-lg--line-height: 1.18;
   --text-title-lg: clamp(18px, 1vw + 14px, 22px);
   --text-title-md: clamp(15px, 0.5vw + 13px, 17px);
+
+  /* =========================================
+     Fluid spacing — page chrome scales with viewport
+     ========================================= */
+  --page-gutter: clamp(16px, 4vw, 48px);
+  --section-gap: clamp(24px, 5vw, 72px);
+  --card-pad: clamp(16px, 2.5vw, 24px);
+  --page-max-width: min(1440px, 100%);
+
+  /* Safe-area insets (iOS notch / home indicator) */
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
 }
 
 /* =========================================
