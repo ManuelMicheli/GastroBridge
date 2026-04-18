@@ -226,7 +226,7 @@ export async function getMovements(filter: {
       lot:lot_id ( id, lot_code ),
       member:created_by_member_id (
         id,
-        profile:profile_id ( full_name )
+        profile:profile_id ( company_name )
       )
       `,
     )
@@ -248,7 +248,7 @@ export async function getMovements(filter: {
     lot: { id: string; lot_code: string } | null;
     member: {
       id: string;
-      profile: { full_name: string | null } | null;
+      profile: { company_name: string | null } | null;
     } | null;
   };
 
@@ -265,7 +265,7 @@ export async function getMovements(filter: {
         ...(rest as StockMovementRow),
         product_name: products?.name ?? "",
         warehouse_name: warehouses?.name ?? "",
-        created_by_name: member?.profile?.full_name ?? null,
+        created_by_name: member?.profile?.company_name ?? null,
         lot_code: lot?.lot_code ?? null,
       };
     });
