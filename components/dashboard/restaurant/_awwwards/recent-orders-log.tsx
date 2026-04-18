@@ -7,9 +7,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ORDER_STATUS_LABELS } from "@/lib/utils/constants";
 import { formatCurrency } from "@/lib/utils/formatters";
-import { statusColorClass } from "@/app/(app)/ordini/_lib/bucketize";
+import { getOrderStatusMeta } from "@/lib/orders/status-meta";
+import { StatusDot } from "@/components/ui/status-dot";
 
 export type DashboardOrderRow = {
   id: string;
@@ -60,8 +60,8 @@ export function RecentOrdersLog({
   return (
     <ul className="flex flex-col">
       {rows.map((row) => {
-        const label = ORDER_STATUS_LABELS[row.status] ?? row.status;
-        const dot = statusColorClass(row.status);
+        const meta = getOrderStatusMeta(row.status);
+        const label = meta.label;
         const ts = formatTime(row.created_at);
         const supplier = row.supplier_name && row.supplier_name !== "—"
           ? row.supplier_name
@@ -81,10 +81,10 @@ export function RecentOrdersLog({
               </span>
 
               {/* status dot */}
-              <span
-                className={`h-2 w-2 rounded-full ${dot}`}
-                aria-hidden
-                title={label}
+              <StatusDot
+                tone={meta.tone}
+                size={8}
+                className="shrink-0"
               />
 
               {/* id + supplier */}
