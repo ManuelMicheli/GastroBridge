@@ -174,7 +174,7 @@ export function AnalyticsContent({ data }: Props) {
               Nessun fornitore
             </div>
           ) : (
-            <ul className="flex flex-col gap-2.5 max-h-80 overflow-y-auto pr-1">
+            <ul className="flex flex-col gap-2.5">
               {data.supplierBreakdown.map((s) => (
                 <li key={s.name}>
                   <div className="flex items-baseline justify-between gap-2">
