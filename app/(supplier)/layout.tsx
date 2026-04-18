@@ -7,7 +7,19 @@ import type { MobileNavItem } from "@/components/dashboard/mobile/dark-mobile-na
 import { isPhase1Enabled } from "@/lib/supplier/feature-flags";
 import { getStockAlertCounts } from "@/lib/supplier/stock/queries";
 import { getPendingOrdersCount } from "@/lib/supplier/orders/queries";
+import { getTotalUnreadMessagesForCurrentUser } from "@/lib/messages/queries";
+import { getSectionSeenAt } from "@/lib/nav/section-seen";
+import { getRecentInAppNotifications } from "@/lib/notifications/queries";
+import { SupplierRealtimeProvider } from "@/lib/realtime/supplier-provider";
 import type { SupplierRole } from "@/types/database";
+
+// Force dynamic rendering for all supplier pages — data must always be
+// fresh on every request (stock counts, pending orders, unread messages,
+// analytics KPIs, etc.). Disables full-route cache + data cache for
+// the entire /supplier route segment.
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 type GatedNavItem = NavItem & {
   roles?: SupplierRole[];
@@ -19,6 +31,7 @@ const BASE_NAV: GatedNavItem[] = [
   { href: "/supplier/catalogo", label: "Catalogo", iconName: "Package" },
   { href: "/supplier/ordini", label: "Ordini", iconName: "ClipboardList" },
   { href: "/supplier/clienti", label: "Clienti", iconName: "Users" },
+  { href: "/supplier/messaggi", label: "Messaggi", iconName: "MessageCircle" },
   { href: "/supplier/analytics", label: "Analytics", iconName: "BarChart3", section: "Insights" },
   { href: "/supplier/recensioni", label: "Recensioni", iconName: "Star", section: "Insights" },
   {
@@ -84,6 +97,7 @@ function buildNavItems(
   phase1Enabled: boolean,
   stockBadge = 0,
   ordersBadge = 0,
+  messagesBadge = 0,
 ): NavItem[] {
   return BASE_NAV.filter((item) => {
     if (item.requiresPhase1 && !phase1Enabled) return false;
@@ -97,6 +111,9 @@ function buildNavItems(
     }
     if (nav.href === "/supplier/ordini" && ordersBadge > 0) {
       return { ...nav, badge: ordersBadge };
+    }
+    if (nav.href === "/supplier/messaggi" && messagesBadge > 0) {
+      return { ...nav, badge: messagesBadge };
     }
     return nav;
   });
@@ -120,8 +137,16 @@ export default async function SupplierLayout({ children }: { children: ReactNode
   let phase1Enabled = false;
   let stockBadge = 0;
   let ordersBadge = 0;
+  let messagesBadge = 0;
+  let supplierId: string | null = null;
 
   if (user) {
+    const msgSeenAt = await getSectionSeenAt("supplier_messages");
+    try {
+      messagesBadge = await getTotalUnreadMessagesForCurrentUser(msgSeenAt);
+    } catch {
+      messagesBadge = 0;
+    }
     const { data: member } = await supabase
       .from("supplier_members")
       .select("role, supplier_id")
@@ -133,6 +158,7 @@ export default async function SupplierLayout({ children }: { children: ReactNode
 
     if (member) {
       currentRole = member.role;
+      supplierId = member.supplier_id;
       const { data: supplier } = await supabase
         .from("suppliers")
         .select("feature_flags")
@@ -153,16 +179,26 @@ export default async function SupplierLayout({ children }: { children: ReactNode
       }
 
       try {
-        ordersBadge = await getPendingOrdersCount(member.supplier_id);
+        const ordSeenAt = await getSectionSeenAt("supplier_orders");
+        ordersBadge = await getPendingOrdersCount(member.supplier_id, ordSeenAt);
       } catch {
         ordersBadge = 0;
       }
     }
   }
 
-  const navItems = buildNavItems(currentRole, phase1Enabled, stockBadge, ordersBadge);
+  const navItems = buildNavItems(
+    currentRole,
+    phase1Enabled,
+    stockBadge,
+    ordersBadge,
+    messagesBadge,
+  );
 
-  return (
+  const initialNotifications =
+    user && supplierId ? await getRecentInAppNotifications(20) : [];
+
+  const shell = (
     <SidebarProvider>
       <DashboardShell
         navItems={navItems}
@@ -174,5 +210,22 @@ export default async function SupplierLayout({ children }: { children: ReactNode
         {children}
       </DashboardShell>
     </SidebarProvider>
+  );
+
+  if (!user || !supplierId) return shell;
+
+  return (
+    <SupplierRealtimeProvider
+      supplierId={supplierId}
+      profileId={user.id}
+      initialBadges={{
+        orders: ordersBadge,
+        stock: stockBadge,
+        messages: messagesBadge,
+      }}
+      initialNotifications={initialNotifications}
+    >
+      {shell}
+    </SupplierRealtimeProvider>
   );
 }

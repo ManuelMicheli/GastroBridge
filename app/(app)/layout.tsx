@@ -5,6 +5,15 @@ import { SidebarProvider } from "@/components/dashboard/sidebar/sidebar-provider
 import { DashboardShell } from "@/components/dashboard/shell";
 import type { NavItem } from "@/components/dashboard/sidebar/sidebar-item";
 import type { MobileNavItem } from "@/components/dashboard/mobile/dark-mobile-nav";
+import { getTotalUnreadMessagesForCurrentUser } from "@/lib/messages/queries";
+import { getSectionSeenAt } from "@/lib/nav/section-seen";
+
+// Force dynamic rendering for all restaurant pages — data must always be
+// fresh (dashboard KPIs, analytics, orders, cart totals, unread badges).
+// Disables full-route cache + data cache for the entire /(app) segment.
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard",    label: "Dashboard",       iconName: "LayoutDashboard" },
@@ -13,6 +22,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/cataloghi",    label: "Cataloghi",       iconName: "BookMarked" },
   { href: "/ordini",       label: "Ordini",          iconName: "ClipboardList" },
   { href: "/carrello",     label: "Carrello",        iconName: "ShoppingCart" },
+  { href: "/messaggi",     label: "Messaggi",        iconName: "MessageCircle" },
   { href: "/analytics",    label: "Analytics",       iconName: "BarChart3",     section: "Gestione" },
   { href: "/impostazioni", label: "Impostazioni",    iconName: "Settings",      section: "Gestione" },
 ];
@@ -35,6 +45,20 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     .eq("id", user?.id ?? "")
     .single<{ company_name: string }>();
 
+  let messagesBadge = 0;
+  try {
+    const seenAt = await getSectionSeenAt("restaurant_messages");
+    messagesBadge = await getTotalUnreadMessagesForCurrentUser(seenAt);
+  } catch {
+    messagesBadge = 0;
+  }
+
+  const navItems: NavItem[] = NAV_ITEMS.map((item) =>
+    item.href === "/messaggi" && messagesBadge > 0
+      ? { ...item, badge: messagesBadge }
+      : item,
+  );
+
   return (
     <CartProvider>
       <SidebarProvider>
@@ -45,7 +69,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           Vai al contenuto
         </a>
         <DashboardShell
-          navItems={NAV_ITEMS}
+          navItems={navItems}
           mobileNavItems={MOBILE_NAV}
           role="restaurant"
           companyName={profile?.company_name || "Ristorante"}
