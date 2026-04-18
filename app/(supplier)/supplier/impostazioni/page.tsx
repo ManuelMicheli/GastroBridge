@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { Card } from "@/components/ui/card";
 import Link from "next/link";
-import { MapPin, CreditCard, Settings, ChevronRight, Warehouse, Bell } from "lucide-react";
+import { MapPin, CreditCard, ChevronRight, Warehouse, Bell, Sparkles } from "lucide-react";
 
 export const metadata: Metadata = { title: "Impostazioni Fornitore" };
 
 export default function SupplierSettingsPage() {
   const sections = [
+    { href: "/supplier/impostazioni/profilo", label: "Profilo pubblico", description: "Logo, copertina e descrizione visibili ai ristoratori", icon: Sparkles },
     { href: "/supplier/impostazioni/sedi", label: "Sedi / Magazzini", description: "Gestisci i magazzini e la sede principale", icon: Warehouse },
     { href: "/supplier/impostazioni/zone", label: "Zone di Consegna", description: "Gestisci province e CAP di consegna", icon: MapPin },
     { href: "/supplier/impostazioni/notifiche", label: "Notifiche", description: "Push browser e canali di avviso", icon: Bell },
