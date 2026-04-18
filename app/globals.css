@@ -631,6 +631,34 @@ body {
   /* Safe-area insets (iOS notch / home indicator) */
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
+
+  /* =========================================
+     Status tone palette (badges, dots)
+     Soft tints on white surface; ring for hairline definition.
+     ========================================= */
+  --tone-neutral-bg:   rgb(244 244 245);
+  --tone-neutral-fg:   rgb(82 82 91);
+  --tone-neutral-ring: rgb(228 228 231);
+
+  --tone-amber-bg:     rgb(254 243 199);
+  --tone-amber-fg:     rgb(146 64 14);
+  --tone-amber-ring:   rgb(253 230 138);
+
+  --tone-blue-bg:      rgb(219 234 254);
+  --tone-blue-fg:      rgb(29 78 216);
+  --tone-blue-ring:    rgb(191 219 254);
+
+  --tone-brand-bg:     var(--color-brand-primary-subtle);
+  --tone-brand-fg:     var(--color-brand-depth);
+  --tone-brand-ring:   var(--color-brand-primary-border);
+
+  --tone-emerald-bg:   rgb(209 250 229);
+  --tone-emerald-fg:   rgb(4 120 87);
+  --tone-emerald-ring: rgb(167 243 208);
+
+  --tone-rose-bg:      rgb(255 228 230);
+  --tone-rose-fg:      rgb(159 18 57);
+  --tone-rose-ring:    rgb(254 205 211);
 }
 
 /* =========================================
@@ -700,6 +728,31 @@ body {
   --text-display-lg--line-height: 1.18;
   --text-title-lg: clamp(18px, 1vw + 14px, 22px);
   --text-title-md: clamp(15px, 0.5vw + 13px, 17px);
+
+  /* Status tone palette — dark mode (alpha-tinted bg, brightened fg) */
+  --tone-neutral-bg:   rgba(244, 244, 245, 0.06);
+  --tone-neutral-fg:   rgb(212 212 216);
+  --tone-neutral-ring: rgba(244, 244, 245, 0.14);
+
+  --tone-amber-bg:     rgba(251, 191, 36, 0.12);
+  --tone-amber-fg:     rgb(252 211 77);
+  --tone-amber-ring:   rgba(251, 191, 36, 0.28);
+
+  --tone-blue-bg:      rgba(96, 165, 250, 0.12);
+  --tone-blue-fg:      rgb(147 197 253);
+  --tone-blue-ring:    rgba(96, 165, 250, 0.28);
+
+  --tone-brand-bg:     var(--color-brand-primary-subtle);
+  --tone-brand-fg:     var(--color-brand-depth);
+  --tone-brand-ring:   var(--color-brand-primary-border);
+
+  --tone-emerald-bg:   rgba(52, 211, 153, 0.12);
+  --tone-emerald-fg:   rgb(110 231 183);
+  --tone-emerald-ring: rgba(52, 211, 153, 0.28);
+
+  --tone-rose-bg:      rgba(251, 113, 133, 0.12);
+  --tone-rose-fg:      rgb(253 164 175);
+  --tone-rose-ring:    rgba(251, 113, 133, 0.28);
 }
 
 /* =========================================
@@ -1034,4 +1087,19 @@ body {
 }
 .rt-badge-pulse {
   animation: rt-badge-pulse 450ms ease-out;
+}
+
+/* Continuous ripple contained inside a rounded-full badge. Parent sets
+   `overflow-hidden rounded-full`; this inner layer grows from the center
+   and fades at the badge border, so the pulse reads as "on/in the badge"
+   instead of escaping as an outside dot. */
+@keyframes rt-badge-inner-ripple {
+  0%   { transform: scale(0.35); opacity: 0.55; }
+  100% { transform: scale(1);    opacity: 0; }
+}
+.rt-badge-inner-ripple {
+  animation: rt-badge-inner-ripple 1800ms ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rt-badge-inner-ripple { animation: none; opacity: 0; }
 }
