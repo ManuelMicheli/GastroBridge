@@ -137,19 +137,14 @@ export function RestaurantDashboard({
         </SectionFrame>
       </div>
 
-      {/* Block 4 — Spend trend chart in terminal frame */}
+      {/* Block 4 — Spend trend chart (own card, not wrapped in SectionFrame
+          to preserve the chart's own header, period toggle, and in-view
+          animations which break when placed inside another framed container). */}
       <div className="animate-[fadeInUp_280ms_ease-out_both] [animation-delay:180ms]">
-        <SectionFrame
-          label="Spend Trend · 730 days"
-          trailing="Live"
-          padded={false}
-        >
-          <SpendTrendChart
-            points={spendPoints}
-            transactionsByDate={transactionsByDate}
-            bare
-          />
-        </SectionFrame>
+        <SpendTrendChart
+          points={spendPoints}
+          transactionsByDate={transactionsByDate}
+        />
       </div>
 
       {/* Block 5 — Recent orders log */}
@@ -172,8 +167,10 @@ export function RestaurantDashboard({
         </SectionFrame>
       </div>
 
-      {/* Shared keyframes for stagger reveal (scoped via styled-jsx). */}
-      <style jsx>{`
+      {/* Shared keyframes for stagger reveal — MUST be global so
+          `className="animate-[fadeInUp_...]"` utilities can reference the
+          raw keyframe name (styled-jsx scoped mode renames it). */}
+      <style jsx global>{`
         @keyframes fadeInUp {
           from {
             opacity: 0;
