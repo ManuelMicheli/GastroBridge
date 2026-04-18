@@ -3,11 +3,10 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Check, Clock, Package, Truck } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { OrderStatusBadge } from "@/components/ui/order-status-badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { SectionHeader } from "@/components/ui/section-header";
 import { formatCurrency, formatDate } from "@/lib/utils/formatters";
-import { ORDER_STATUS_LABELS } from "@/lib/utils/constants";
 
 const TIMELINE_STEPS = [
   { key: "submitted", label: "Inviato", icon: Check },
@@ -125,9 +124,11 @@ export default async function OrderDetailPage({
         title={`Ordine #${id.slice(0, 8)}`}
         subtitle={formatDate(order.created_at)}
         meta={
-          <Badge variant={order.status === "delivered" ? "success" : "info"}>
-            {ORDER_STATUS_LABELS[order.status] ?? order.status}
-          </Badge>
+          <OrderStatusBadge
+            status={order.status}
+            size="md"
+            celebrate={order.status === "delivered" || order.status === "completed"}
+          />
         }
       />
 
@@ -224,7 +225,7 @@ export default async function OrderDetailPage({
           <Card key={split.id} className="mb-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-charcoal">{supplier?.company_name ?? "Fornitore"}</h3>
-              <Badge variant="info">{ORDER_STATUS_LABELS[split.status] ?? split.status}</Badge>
+              <OrderStatusBadge status={split.status} size="sm" />
             </div>
             <div className="space-y-2">
               {splitItems.map((item) => {
