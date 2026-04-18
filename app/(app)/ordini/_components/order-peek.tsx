@@ -3,9 +3,8 @@
 
 import Link from "next/link";
 import { ArrowRight, X } from "lucide-react";
-import { ORDER_STATUS_LABELS } from "@/lib/utils/constants";
+import { OrderStatusBadge } from "@/components/ui/order-status-badge";
 import { formatCurrency, formatDateTime } from "@/lib/utils/formatters";
-import { statusColorClass } from "../_lib/bucketize";
 import type { OrderFeedRow } from "../_lib/types";
 
 export function OrderPeek({
@@ -28,7 +27,6 @@ export function OrderPeek({
     );
   }
 
-  const statusLabel = ORDER_STATUS_LABELS[row.status] ?? row.status;
   const shortId = row.id.slice(0, 8).toUpperCase();
 
   return (
@@ -58,15 +56,7 @@ export function OrderPeek({
       {/* Meta grid */}
       <div className="grid grid-cols-2 gap-3 border-b border-border-subtle px-5 py-4">
         <MetaItem label="Stato">
-          <span className="inline-flex items-center gap-1.5">
-            <span
-              className={`h-2 w-2 rounded-full ${statusColorClass(row.status)}`}
-              aria-hidden
-            />
-            <span className="font-mono text-[11px] uppercase tracking-[0.06em] text-text-primary">
-              {statusLabel}
-            </span>
-          </span>
+          <OrderStatusBadge status={row.status} size="md" />
         </MetaItem>
         <MetaItem label="Totale">
           <span className="font-mono text-[14px] tabular-nums text-text-primary">
