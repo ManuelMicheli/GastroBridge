@@ -2,9 +2,9 @@
 "use client";
 
 import { forwardRef } from "react";
-import { ORDER_STATUS_LABELS } from "@/lib/utils/constants";
+import { getOrderStatusMeta } from "@/lib/orders/status-meta";
+import { StatusDot } from "@/components/ui/status-dot";
 import { formatCurrency } from "@/lib/utils/formatters";
-import { statusColorClass } from "../_lib/bucketize";
 import type { OrderFeedRow, TimeBucket } from "../_lib/types";
 
 function formatTimestamp(iso: string, bucket: TimeBucket): string {
@@ -43,8 +43,8 @@ export const TimelineRow = forwardRef<
     rowId: string;
   }
 >(function TimelineRow({ row, bucket, selected, onSelect, rowId }, ref) {
-  const statusLabel = ORDER_STATUS_LABELS[row.status] ?? row.status;
-  const dot = statusColorClass(row.status);
+  const meta = getOrderStatusMeta(row.status);
+  const statusLabel = meta.label;
   const ts = formatTimestamp(row.createdAt, bucket);
   const shortId = row.id.slice(0, 8).toUpperCase();
 
@@ -69,11 +69,7 @@ export const TimelineRow = forwardRef<
       </span>
 
       {/* status dot */}
-      <span
-        className={`h-2 w-2 rounded-full ${dot}`}
-        aria-hidden
-        title={statusLabel}
-      />
+      <StatusDot tone={meta.tone} size={8} pulse={meta.pulse} />
 
       {/* id + supplier */}
       <span className="flex min-w-0 items-center gap-3">
