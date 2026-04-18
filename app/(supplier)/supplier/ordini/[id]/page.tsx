@@ -2,6 +2,8 @@ import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkflowState } from "@/lib/orders/workflow-state";
+import { resolveRelationshipIdForPair } from "@/lib/messages/context";
+import { getUnreadCount } from "@/lib/messages/queries";
 import { OrderDetailClient } from "./order-detail-client";
 
 export const metadata: Metadata = { title: "Dettaglio Ordine Fornitore" };
@@ -101,6 +103,15 @@ export default async function SupplierOrderDetailPage({
   const restaurantName = split.orders?.restaurants?.name ?? "Ristorante";
   const orderCreatedAt = split.orders?.created_at ?? null;
 
+  // Resolve the partnership relationship and unread-count for the per-order chat drawer.
+  const restaurantId = split.orders?.restaurants?.id ?? null;
+  const relationshipId = restaurantId
+    ? await resolveRelationshipIdForPair(restaurantId, split.supplier_id)
+    : null;
+  const unreadChat = relationshipId
+    ? await getUnreadCount(relationshipId, split.id)
+    : 0;
+
   return (
     <OrderDetailClient
       splitId={split.id}
@@ -110,6 +121,9 @@ export default async function SupplierOrderDetailPage({
       subtotal={split.subtotal}
       workflowState={workflowState}
       rawStatus={split.status}
+      relationshipId={relationshipId}
+      currentUserId={user.id}
+      unreadChat={unreadChat}
       lines={(lines ?? []).map((l) => ({
         id: l.id,
         productName: l.products?.name ?? "Prodotto",

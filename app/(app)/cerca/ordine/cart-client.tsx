@@ -89,12 +89,19 @@ export function OptimalCartClient({
   suppliers,
   items,
   preferences,
+  connectedSupplierIds = [],
 }: {
   suppliers: SupplierLite[];
   items: CatalogItemLite[];
   preferences: Preferences | null;
+  /** supplier.id values that map to real `suppliers.id` (not `restaurant_catalogs.id`).
+   *  Items from these suppliers carry real `products.id` UUIDs and go through
+   *  the marketplace RPC flow (`submitOrder`); others use the legacy
+   *  `createCatalogOrder` header-only path. */
+  connectedSupplierIds?: string[];
 }) {
   const prefs = preferences ?? defaultPrefs;
+  const connectedSet = useMemo(() => new Set(connectedSupplierIds), [connectedSupplierIds]);
   const router = useRouter();
   const { addItem } = useCart();
   const [order, setOrder] = useState<OrderLine[]>([]);
@@ -486,14 +493,15 @@ export function OptimalCartClient({
     try {
       let count = 0;
       for (const b of buckets) {
+        const isReal = connectedSet.has(b.supplier.id);
         for (const p of b.picks) {
           addItem({
-            productId:    `catalog_${p.itemId}`,
+            productId:    isReal ? p.itemId : `catalog_${p.itemId}`,
             supplierId:   b.supplier.id,
             supplierName: b.supplier.supplier_name,
             name:         `${p.productName} (${p.unit})`,
             brand:        null,
-            unit:         "pz" as UnitType,
+            unit:         (p.unit || "pz") as UnitType,
             unitPrice:    p.price,
             quantity:     p.qty,
             imageUrl:     null,

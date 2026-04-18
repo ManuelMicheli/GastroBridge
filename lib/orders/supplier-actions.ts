@@ -57,10 +57,11 @@ import {
   type WorkflowState,
 } from "./workflow-state";
 
-// `getWorkflowState` non puo' essere re-esportato da questo modulo "use server":
-// tutti gli export a runtime devono essere async. I consumer devono importarlo
-// direttamente da "@/lib/orders/workflow-state".
-export type { WorkflowState };
+// NOTE: Next.js "use server" modules can only export async functions at runtime.
+// Turbopack occasionally mis-compiles type re-exports here into value exports,
+// which triggers runtime "ReferenceError: WorkflowState is not defined".
+// Consumers must import `WorkflowState` and other non-async helpers directly
+// from "@/lib/orders/workflow-state".
 
 // -----------------------------------------------------------------------------
 // Types
@@ -159,6 +160,45 @@ function revalidateSupplierOrders(splitId: string) {
   revalidatePath("/supplier/ordini");
   revalidatePath(`/supplier/ordini/${splitId}`);
   revalidatePath("/ordini");
+}
+
+/**
+ * Ensure `order_splits.warehouse_id` is populated. If it is already set,
+ * returns it. Otherwise picks the supplier's primary warehouse (fallback:
+ * first available) and updates the split row. Returns null when the supplier
+ * has no warehouse at all — the caller must skip stock reservation in that case.
+ */
+async function ensureSplitWarehouse(
+  supabase: SupabaseClient<any, any, any>,
+  splitId: string,
+  supplierId: string,
+): Promise<string | null> {
+  const { data: current } = await (supabase as any)
+    .from("order_splits")
+    .select("warehouse_id")
+    .eq("id", splitId)
+    .maybeSingle() as { data: { warehouse_id: string | null } | null };
+
+  if (current?.warehouse_id) return current.warehouse_id;
+
+  const { data: warehouses } = await (supabase as any)
+    .from("warehouses")
+    .select("id, is_primary")
+    .eq("supplier_id", supplierId) as {
+      data: Array<{ id: string; is_primary: boolean | null }> | null;
+    };
+
+  if (!warehouses || warehouses.length === 0) return null;
+
+  const primary = warehouses.find((w) => w.is_primary) ?? warehouses[0]!;
+
+  const { error: upErr } = await (supabase as any)
+    .from("order_splits")
+    .update({ warehouse_id: primary.id })
+    .eq("id", splitId);
+  if (upErr) return null;
+
+  return primary.id;
 }
 
 // -----------------------------------------------------------------------------
@@ -302,27 +342,35 @@ export async function acceptOrderLines(
     // 7. Determina esito globale.
     const totalDecisions = decisions.length;
 
-    // Caso A: tutte accepted → confirmed + reserve.
+    // Caso A: tutte accepted → confirmed (+ reserve, se magazzino presente).
     if (counts.accept === totalDecisions) {
-      const reserve = await reserveStockForSplit(split.supplier_id, splitId);
-      if (!reserve.ok && "conflicts" in reserve && reserve.conflicts) {
-        // Conflict stock: segna stock_conflict.
-        await setSplitWorkflow(supabase, splitId, "stock_conflict");
-        await emitSplitEvent(supabase, {
-          splitId,
-          eventType: "stock_conflict",
-          memberId: member.id,
-          metadata: { conflicts: reserve.conflicts },
-        });
-        revalidateSupplierOrders(splitId);
-        return {
-          ok: true,
-          data: { splitStatus: "stock_conflict", conflicts: reserve.conflicts },
-        };
+      // Best-effort: se lo split non ha warehouse_id, prova ad assegnarne uno
+      // automaticamente (primary del supplier → fallback primo disponibile).
+      // Se il supplier non ha alcun magazzino, la prenotazione stock viene
+      // saltata e l'ordine viene comunque confermato.
+      const warehouseId = await ensureSplitWarehouse(supabase, splitId, split.supplier_id);
+
+      if (warehouseId) {
+        const reserve = await reserveStockForSplit(split.supplier_id, splitId);
+        if (!reserve.ok && "conflicts" in reserve && reserve.conflicts) {
+          await setSplitWorkflow(supabase, splitId, "stock_conflict");
+          await emitSplitEvent(supabase, {
+            splitId,
+            eventType: "stock_conflict",
+            memberId: member.id,
+            metadata: { conflicts: reserve.conflicts },
+          });
+          revalidateSupplierOrders(splitId);
+          return {
+            ok: true,
+            data: { splitStatus: "stock_conflict", conflicts: reserve.conflicts },
+          };
+        }
+        if (!reserve.ok) {
+          return { ok: false, error: reserve.error ?? "Errore prenotazione stock" };
+        }
       }
-      if (!reserve.ok) {
-        return { ok: false, error: reserve.error ?? "Errore prenotazione stock" };
-      }
+
       const wf = await setSplitWorkflow(supabase, splitId, "confirmed");
       if (!wf.ok) return wf;
       await emitOrderEvent(supabase, {

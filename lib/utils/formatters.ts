@@ -20,24 +20,30 @@ export function formatPricePerUnit(price: number, unit: UnitType): string {
   return `${formatCurrency(price)}/${formatUnitShort(unit)}`;
 }
 
-/** Format date in Italian locale */
-export function formatDate(date: string | Date): string {
+/** Format date in Italian locale. Returns "—" for missing/invalid input. */
+export function formatDate(date: string | Date | null | undefined): string {
+  if (!date) return "—";
+  const d = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(d.getTime())) return "—";
   return new Intl.DateTimeFormat("it-IT", {
     day: "numeric",
     month: "long",
     year: "numeric",
-  }).format(new Date(date));
+  }).format(d);
 }
 
-/** Format date with time */
-export function formatDateTime(date: string | Date): string {
+/** Format date with time. Returns "—" for missing/invalid input. */
+export function formatDateTime(date: string | Date | null | undefined): string {
+  if (!date) return "—";
+  const d = date instanceof Date ? date : new Date(date);
+  if (Number.isNaN(d.getTime())) return "—";
   return new Intl.DateTimeFormat("it-IT", {
     day: "numeric",
     month: "short",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(new Date(date));
+  }).format(d);
 }
 
 /** Format relative time (e.g., "2 ore fa") */

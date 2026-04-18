@@ -32,8 +32,10 @@ import {
   acceptOrderLines,
   markPacked,
   markShipped,
+  transitionToPreparing,
   type LineDecision,
 } from "@/lib/orders/supplier-actions";
+import { OrderChatDrawer } from "@/components/shared/chat/OrderChatDrawer";
 
 // -----------------------------------------------------------------------------
 // Types
@@ -79,6 +81,9 @@ type Props = {
   rawStatus: string;
   lines: LineRow[];
   events: EventRow[];
+  relationshipId: string | null;
+  currentUserId: string;
+  unreadChat?: number;
 };
 
 // -----------------------------------------------------------------------------
@@ -188,6 +193,9 @@ export function OrderDetailClient({
   rawStatus,
   lines,
   events,
+  relationshipId,
+  currentUserId,
+  unreadChat = 0,
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -276,7 +284,21 @@ export function OrderDetailClient({
   }, [focusedLineId, lines, updateDecision]);
 
   // Bulk actions.
+  /**
+   * "Accetta tutto" — sets all pending rows to accept AND immediately submits
+   * the response, so the supplier does not have to click "Invia risposta" as
+   * a separate step. On success the flow auto-transitions to `preparing`
+   * and routes to the picking page (see handleSubmit).
+   */
   function bulkAccept() {
+    if (pendingLines.length === 0) {
+      toast.error("Nessuna riga in attesa");
+      return;
+    }
+    const payload: LineDecision[] = pendingLines.map((l) => ({
+      lineId: l.id,
+      action: "accept" as const,
+    }));
     setDecisions((prev) => {
       const next: Record<string, Decision> = { ...prev };
       for (const l of pendingLines) {
@@ -289,7 +311,7 @@ export function OrderDetailClient({
       }
       return next;
     });
-    toast.success("Tutte le righe in attesa segnate come accettate");
+    submitDecisions(payload);
   }
 
   function bulkReject() {
@@ -302,6 +324,42 @@ export function OrderDetailClient({
       return next;
     });
     toast.success("Tutte le righe in attesa segnate come rifiutate");
+  }
+
+  /**
+   * Shared submission path — calls acceptOrderLines with a fully-formed
+   * decision payload. On `confirmed`, auto-advances to preparing and
+   * routes the supplier to the picking workflow.
+   */
+  function submitDecisions(payload: LineDecision[]) {
+    startTransition(async () => {
+      const res = await acceptOrderLines({ splitId, decisions: payload });
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+
+      if (res.data.splitStatus === "confirmed") {
+        toast.success("Ordine confermato — avvio preparazione");
+        const prep = await transitionToPreparing(splitId);
+        if (!prep.ok) {
+          toast.error(prep.error);
+          router.refresh();
+          return;
+        }
+        router.push(`/supplier/ordini/${splitId}/preparazione`);
+        return;
+      }
+
+      toast.success(
+        res.data.splitStatus === "rejected"
+          ? "Ordine rifiutato"
+          : res.data.splitStatus === "stock_conflict"
+            ? "Conflitto stock rilevato"
+            : "Risposta inviata, in attesa di conferma cliente",
+      );
+      router.refresh();
+    });
   }
 
   // Submit.
@@ -343,23 +401,7 @@ export function OrderDetailClient({
       };
     });
 
-    startTransition(async () => {
-      const res = await acceptOrderLines({ splitId, decisions: payload });
-      if (res.ok) {
-        toast.success(
-          res.data.splitStatus === "confirmed"
-            ? "Ordine confermato"
-            : res.data.splitStatus === "rejected"
-              ? "Ordine rifiutato"
-              : res.data.splitStatus === "stock_conflict"
-                ? "Conflitto stock rilevato"
-                : "Risposta inviata, in attesa di conferma cliente",
-        );
-        router.refresh();
-      } else {
-        toast.error(res.error);
-      }
-    });
+    submitDecisions(payload);
   }
 
   function handleMarkPacked() {
@@ -755,6 +797,17 @@ export function OrderDetailClient({
           />
         )}
       </Modal>
+
+      {relationshipId && (
+        <OrderChatDrawer
+          relationshipId={relationshipId}
+          orderSplitId={splitId}
+          currentUserId={currentUserId}
+          viewpoint="supplier"
+          counterpartyName={restaurantName}
+          initialUnread={unreadChat}
+        />
+      )}
     </div>
   );
 }

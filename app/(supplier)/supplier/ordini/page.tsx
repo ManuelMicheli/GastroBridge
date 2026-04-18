@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
 import { getWorkflowState } from "@/lib/orders/workflow-state";
+import { markSectionSeen } from "@/lib/nav/section-seen";
 import {
   SupplierOrdersClient,
   type SupplierOrderRow,
@@ -44,6 +45,8 @@ export default async function SupplierOrdersPage({
   const filterRestaurant = firstParam(sp.restaurant).trim();
   const filterFrom = firstParam(sp.from);
   const filterTo = firstParam(sp.to);
+
+  await markSectionSeen("supplier_orders");
 
   const supabase = await createClient();
   const {

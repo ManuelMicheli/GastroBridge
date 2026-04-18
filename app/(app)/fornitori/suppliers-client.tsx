@@ -11,7 +11,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Filter, Keyboard, Plus } from "lucide-react";
+import { Filter, Keyboard, Plus, Store, FileSpreadsheet } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import {
   MobileDrawer,
   useSearchKeyboard,
 } from "@/components/shared/awwwards";
+import { CatalogsClient } from "@/app/(app)/cataloghi/catalogs-client";
 
 import {
   hasActiveFacets,
@@ -37,13 +38,18 @@ import {
 import { SearchBarMini } from "./_components/search-bar-mini";
 import { SupplierList } from "./_components/supplier-list";
 import { SupplierDetailPane } from "./_components/supplier-detail-pane";
+import type { ImportedCatalog } from "./page";
+
+type TabId = "connessi" | "importati";
 
 export function SuppliersClient({
   relationships,
   hasRestaurant,
+  importedCatalogs,
 }: {
   relationships: RelationshipRow[];
   hasRestaurant: boolean;
+  importedCatalogs: ImportedCatalog[];
 }) {
   const router = useRouter();
   const sp = useSearchParams();
@@ -59,6 +65,10 @@ export function SuppliersClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
+
+  const initialTab: TabId =
+    sp.get("tab") === "importati" ? "importati" : "connessi";
+  const [tab, setTab] = useState<TabId>(initialTab);
 
   const [query, setQuery] = useState(initial.query);
   const [facets, setFacets] = useState<SupplierFacetState>(initial.facets);
@@ -163,11 +173,12 @@ export function SuppliersClient({
   useEffect(() => {
     const t = setTimeout(() => {
       const params = writeUrlState({ query, facets, selectedId });
+      if (tab === "importati") params.set("tab", "importati");
       const qs = params.toString();
       router.replace(qs ? `/fornitori?${qs}` : "/fornitori", { scroll: false });
     }, 300);
     return () => clearTimeout(t);
-  }, [query, facets, selectedId, router]);
+  }, [query, facets, selectedId, tab, router]);
 
   // Keyboard wiring
   const focusSearch = useCallback(() => searchInputRef.current?.focus(), []);
@@ -204,7 +215,7 @@ export function SuppliersClient({
     onShowHelp: () => setHelpOpen(true),
   });
 
-  // === Empty-state branches ===
+  // === Empty: missing restaurant ===
   if (!hasRestaurant) {
     return (
       <div>
@@ -221,9 +232,31 @@ export function SuppliersClient({
     );
   }
 
+  // ============= TAB: importati =============
+  if (tab === "importati") {
+    return (
+      <div className="flex min-h-[calc(100vh-var(--chrome-top,64px))] flex-col">
+        <TabStrip
+          tab={tab}
+          onChange={setTab}
+          connessiCount={rows.length}
+          importatiCount={importedCatalogs.length}
+        />
+        <CatalogsClient initialCatalogs={importedCatalogs} />
+      </div>
+    );
+  }
+
+  // ============= TAB: connessi (empty) =============
   if (rows.length === 0) {
     return (
       <div>
+        <TabStrip
+          tab={tab}
+          onChange={setTab}
+          connessiCount={rows.length}
+          importatiCount={importedCatalogs.length}
+        />
         <PageHeader
           title="Fornitori"
           subtitle="I partner con cui hai una relazione attiva o in corso di attivazione."
@@ -252,8 +285,15 @@ export function SuppliersClient({
     );
   }
 
+  // ============= TAB: connessi (split-view) =============
   return (
     <div className="flex h-[calc(100vh-var(--chrome-top,64px))] flex-col">
+      <TabStrip
+        tab={tab}
+        onChange={setTab}
+        connessiCount={rows.length}
+        importatiCount={importedCatalogs.length}
+      />
       {/* Header: title + actions */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-4 py-3">
         <PageHeader
@@ -366,3 +406,70 @@ export function SuppliersClient({
     </div>
   );
 }
+
+function TabStrip({
+  tab,
+  onChange,
+  connessiCount,
+  importatiCount,
+}: {
+  tab: TabId;
+  onChange: (t: TabId) => void;
+  connessiCount: number;
+  importatiCount: number;
+}) {
+  const tabs: Array<{
+    id: TabId;
+    label: string;
+    icon: typeof Store;
+    count: number;
+  }> = [
+    { id: "connessi", label: "Marketplace", icon: Store, count: connessiCount },
+    {
+      id: "importati",
+      label: "Importati",
+      icon: FileSpreadsheet,
+      count: importatiCount,
+    },
+  ];
+  return (
+    <div className="flex items-end gap-1 border-b border-border-subtle px-4 pt-2">
+      {tabs.map((t) => {
+        const active = tab === t.id;
+        const Icon = t.icon;
+        return (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => onChange(t.id)}
+            className={`relative inline-flex items-center gap-1.5 rounded-t-lg px-3 py-2 text-[12px] font-semibold transition-colors ${
+              active
+                ? "text-text-primary"
+                : "text-text-tertiary hover:text-text-secondary"
+            }`}
+            aria-pressed={active}
+          >
+            <Icon className="h-3.5 w-3.5" />
+            {t.label}
+            <span
+              className={`ml-1 inline-flex h-4 min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-mono ${
+                active
+                  ? "bg-accent-green/15 text-accent-green"
+                  : "bg-surface-hover text-text-tertiary"
+              }`}
+            >
+              {t.count}
+            </span>
+            {active && (
+              <span
+                aria-hidden
+                className="absolute inset-x-1 -bottom-px h-0.5 rounded-t-full bg-accent-green"
+              />
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
