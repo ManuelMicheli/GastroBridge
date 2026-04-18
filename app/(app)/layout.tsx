@@ -7,6 +7,8 @@ import type { NavItem } from "@/components/dashboard/sidebar/sidebar-item";
 import type { MobileNavItem } from "@/components/dashboard/mobile/dark-mobile-nav";
 import { getTotalUnreadMessagesForCurrentUser } from "@/lib/messages/queries";
 import { getSectionSeenAt } from "@/lib/nav/section-seen";
+import { getRecentInAppNotifications } from "@/lib/notifications/queries";
+import { RestaurantRealtimeProvider } from "@/lib/realtime/restaurant-provider";
 
 // Force dynamic rendering for all restaurant pages — data must always be
 // fresh (dashboard KPIs, analytics, orders, cart totals, unread badges).
@@ -59,7 +61,9 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       : item,
   );
 
-  return (
+  const initialNotifications = user ? await getRecentInAppNotifications(20) : [];
+
+  const shell = (
     <CartProvider>
       <SidebarProvider>
         <a
@@ -81,5 +85,16 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
         </DashboardShell>
       </SidebarProvider>
     </CartProvider>
+  );
+
+  if (!user) return shell;
+
+  return (
+    <RestaurantRealtimeProvider
+      profileId={user.id}
+      initialNotifications={initialNotifications}
+    >
+      {shell}
+    </RestaurantRealtimeProvider>
   );
 }
