@@ -156,6 +156,34 @@ async function loadSplitForSupplier(
   return { ok: true, split: data };
 }
 
+/**
+ * Resolve the owning restaurant's profile_id for a given order. Used to copy
+ * in-app notifications to the restaurant recipient when the supplier transitions
+ * a split (accepted / shipped / delivered). Best-effort — failures return null
+ * so the dispatcher falls back to supplier-only delivery.
+ */
+async function resolveRestaurantProfileId(
+  supabase: SupabaseClient<any, any, any>,
+  orderId: string,
+): Promise<string | null> {
+  try {
+    const { data: order } = await (supabase as any)
+      .from("orders")
+      .select("restaurant_id")
+      .eq("id", orderId)
+      .maybeSingle();
+    if (!order?.restaurant_id) return null;
+    const { data: restaurant } = await (supabase as any)
+      .from("restaurants")
+      .select("profile_id")
+      .eq("id", order.restaurant_id)
+      .maybeSingle();
+    return (restaurant?.profile_id as string | undefined) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 function revalidateSupplierOrders(splitId: string) {
   revalidatePath("/supplier/ordini");
   revalidatePath(`/supplier/ordini/${splitId}`);
@@ -373,11 +401,16 @@ export async function acceptOrderLines(
 
       const wf = await setSplitWorkflow(supabase, splitId, "confirmed");
       if (!wf.ok) return wf;
+      const restaurantProfileId = await resolveRestaurantProfileId(
+        supabase,
+        split.order_id,
+      );
       await emitOrderEvent(supabase, {
         splitId,
         eventType: "accepted",
         memberId: member.id,
         supplierId: split.supplier_id,
+        restaurantProfileIds: restaurantProfileId ? [restaurantProfileId] : undefined,
         notificationPayload: {},
       });
       revalidateSupplierOrders(splitId);
@@ -388,6 +421,8 @@ export async function acceptOrderLines(
     if (counts.reject === totalDecisions) {
       const wf = await setSplitWorkflow(supabase, splitId, "rejected");
       if (!wf.ok) return wf;
+      // Note: dispatcher currently does not map `rejected` to a notification
+      // event, so no restaurant/supplier in-app rows are created here.
       await emitOrderEvent(supabase, {
         splitId,
         eventType: "rejected",
@@ -728,11 +763,16 @@ export async function markShipped(splitId: string): Promise<SimpleResult> {
       .eq("id", splitId);
     if (upErr) return { ok: false, error: upErr.message };
 
+    const restaurantProfileId = await resolveRestaurantProfileId(
+      supabase,
+      split.order_id,
+    );
     await emitOrderEvent(supabase, {
       splitId,
       eventType: "shipped",
       memberId: member.id,
       supplierId: split.supplier_id,
+      restaurantProfileIds: restaurantProfileId ? [restaurantProfileId] : undefined,
     });
 
     revalidateSupplierOrders(splitId);
@@ -835,11 +875,16 @@ export async function transitionSplitStatus(
       if (error) return { ok: false, error: error.message };
 
       if (targetStatus === "shipped" || targetStatus === "delivered") {
+        const restaurantProfileId = await resolveRestaurantProfileId(
+          supabase,
+          split.order_id,
+        );
         await emitOrderEvent(supabase, {
           splitId,
           eventType: targetStatus,
           memberId: member.id,
           supplierId: split.supplier_id,
+          restaurantProfileIds: restaurantProfileId ? [restaurantProfileId] : undefined,
         });
       } else {
         await emitSplitEvent(supabase, {
@@ -916,10 +961,15 @@ export async function confirmCustomerResponse(
       const wf = await setSplitWorkflow(supabase, splitId, "confirmed");
       if (!wf.ok) return wf;
 
+      const restaurantProfileId = await resolveRestaurantProfileId(
+        supabase,
+        split.order_id,
+      );
       await emitOrderEvent(supabase, {
         splitId,
         eventType: "accepted",
         supplierId: split.supplier_id,
+        restaurantProfileIds: restaurantProfileId ? [restaurantProfileId] : undefined,
         note: "Conferma ricevuta dal ristorante",
       });
       revalidateSupplierOrders(splitId);

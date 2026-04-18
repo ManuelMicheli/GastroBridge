@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronLeft, Bell, Mail, Smartphone, Inbox } from "lucide-react";
