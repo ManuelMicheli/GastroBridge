@@ -135,46 +135,55 @@ export function ComparePivotTable({
         </tbody>
 
         <tfoot>
+          <tr aria-hidden>
+            <td
+              colSpan={colSpanTotal}
+              className="h-2 border-t-2 border-border-subtle bg-surface-base/30 p-0"
+            />
+          </tr>
           <tr className="bg-surface-base/40">
             <td
               colSpan={2}
-              className="border-t border-border-subtle px-3 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary"
+              className="px-3 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary"
             >
               Totale fornitore
             </td>
             {filteredSuppliers.map((s) => {
               const total = totals[s.id] ?? 0;
+              const isOptimal = pivotSupplierIsMin(totals, s.id);
               return (
                 <td
                   key={s.id}
-                  className="border-l border-t border-border-subtle px-3 py-2 text-right font-mono text-[12px] tabular-nums text-text-primary"
+                  className={`border-l border-border-subtle px-3 py-2 text-right font-mono text-[12px] tabular-nums ${
+                    isOptimal ? "text-accent-green" : "text-text-primary"
+                  }`}
                 >
                   € {total.toFixed(2)}
                 </td>
               );
             })}
-            <td className="border-l border-t border-border-subtle" />
+            <td className="border-l border-border-subtle" />
           </tr>
-          <tr className="bg-surface-base/40">
+          <tr className="border-t border-border-subtle/60 bg-accent-green/5">
             <td
               colSpan={2}
-              className="border-t border-border-subtle/60 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-accent-green"
+              className="px-3 py-2 font-mono text-[10px] uppercase tracking-[0.08em] text-accent-green"
             >
               Basket ottimale
             </td>
             <td
               colSpan={filteredSuppliers.length}
-              className="border-l border-t border-border-subtle/60 px-3 py-2 text-right font-mono text-[13px] font-semibold tabular-nums text-accent-green"
+              className="border-l border-border-subtle/60 px-3 py-2 text-right font-mono text-[13px] font-semibold tabular-nums text-accent-green"
             >
               € {basketOptimalPrice.toFixed(2)}
             </td>
-            <td className="border-l border-t border-border-subtle/60" />
+            <td className="border-l border-border-subtle/60" />
           </tr>
           {saving > 0 && (
-            <tr className="bg-surface-base/20">
+            <tr className="border-t border-border-subtle/60 bg-surface-base/20">
               <td
                 colSpan={colSpanTotal}
-                className="border-t border-border-subtle/60 px-3 py-2 text-right font-mono text-[11px] uppercase tracking-[0.08em] text-accent-green"
+                className="px-3 py-2 text-right font-mono text-[11px] uppercase tracking-[0.08em] text-accent-green"
               >
                 Risparmio{" "}
                 <span className="tabular-nums">€ {saving.toFixed(2)}</span>
@@ -192,4 +201,19 @@ export function ComparePivotTable({
 function supplierName(suppliers: SupplierCol[], id: string | null): string {
   if (!id) return "—";
   return suppliers.find((s) => s.id === id)?.supplier_name ?? "—";
+}
+
+/** True when `supplierId` has the strictly lowest total (>0) in `totals`.
+ *  Ties and zero totals return false — no supplier is singled out. */
+function pivotSupplierIsMin(
+  totals: Record<string, number>,
+  supplierId: string,
+): boolean {
+  const entries = Object.entries(totals).filter(([, v]) => v > 0);
+  if (entries.length < 2) return false;
+  const min = Math.min(...entries.map(([, v]) => v));
+  const minCount = entries.filter(([, v]) => v === min).length;
+  if (minCount > 1) return false;
+  const own = totals[supplierId] ?? 0;
+  return own === min;
 }

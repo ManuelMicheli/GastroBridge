@@ -226,6 +226,18 @@ export function CompareClient({
         filteredSuppliers={filteredSuppliers}
         visibleRows={visibleRows}
       />
+
+      <footer className="pt-1 text-right font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+        <span className="tabular-nums text-text-secondary">
+          {visibleRows.length}
+        </span>
+        /<span className="tabular-nums">{pivot.rows.length}</span> prodotti
+        <span className="mx-2 text-border-subtle">·</span>
+        <span className="tabular-nums text-text-secondary">
+          {filteredSuppliers.length}
+        </span>
+        /<span className="tabular-nums">{suppliers.length}</span> fornitori
+      </footer>
     </div>
   );
 }
