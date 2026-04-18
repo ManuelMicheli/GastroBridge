@@ -62,27 +62,3 @@ export function bucketLabel(b: TimeBucket): string {
       return "PRECEDENTI";
   }
 }
-
-// Status → colored dot helper. Returns a tailwind bg class.
-export function statusColorClass(status: string): string {
-  switch (status) {
-    case "pending":
-    case "pending_confirmation":
-    case "submitted":
-      return "bg-amber-500";
-    case "confirmed":
-      return "bg-blue-500";
-    case "preparing":
-    case "in_transit":
-    case "shipping":
-    case "shipped":
-      return "bg-yellow-500";
-    case "delivered":
-    case "completed":
-      return "bg-accent-green";
-    case "cancelled":
-      return "bg-red-500";
-    default:
-      return "bg-text-tertiary";
-  }
-}

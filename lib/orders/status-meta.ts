@@ -1,8 +1,8 @@
 // lib/orders/status-meta.ts
 //
 // Single source of truth for restaurant-area order status semantics.
-// Consumed by <OrderStatusBadge>, <StatusDot> call sites, and the
-// deprecated statusColorClass bridge in bucketize.ts.
+// Consumed by <OrderStatusBadge>, <StatusDot>, and direct call sites
+// that need tone/label outside a badge pill.
 
 import type { StatusTone } from "@/lib/ui/tones";
 

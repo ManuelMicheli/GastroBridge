@@ -241,13 +241,3 @@ export const ORDER_STATUS_LABELS: Record<string, string> = {
   delivered: "Consegnato",
   cancelled: "Annullato",
 };
-
-export const ORDER_STATUS_COLORS: Record<string, string> = {
-  draft: "text-sage",
-  submitted: "text-terracotta",
-  confirmed: "text-forest",
-  preparing: "text-terracotta",
-  shipping: "text-forest-dark",
-  delivered: "text-forest",
-  cancelled: "text-red-500",
-};
