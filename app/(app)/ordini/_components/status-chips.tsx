@@ -2,7 +2,8 @@
 "use client";
 
 import { ORDER_STATUS_LABELS } from "@/lib/utils/constants";
-import { statusColorClass } from "../_lib/bucketize";
+import { StatusDot } from "@/components/ui/status-dot";
+import { getOrderStatusMeta } from "@/lib/orders/status-meta";
 
 // Statuses we expose as filter chips, in display order.
 // We hide `draft` by default (rare in the user feed) and only surface it
@@ -51,6 +52,7 @@ export function StatusChips({
     <div className="flex flex-wrap items-center gap-1.5">
       {present.map(([status, count]) => {
         const active = selected.has(status);
+        const tone = getOrderStatusMeta(status).tone;
         return (
           <button
             key={status}
@@ -63,10 +65,7 @@ export function StatusChips({
             }`}
             aria-pressed={active}
           >
-            <span
-              className={`h-2 w-2 shrink-0 rounded-full ${statusColorClass(status)}`}
-              aria-hidden
-            />
+            <StatusDot tone={tone} size={8} />
             <span className="whitespace-nowrap">
               {ORDER_STATUS_LABELS[status] ?? status}
             </span>
