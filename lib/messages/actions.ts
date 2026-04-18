@@ -58,14 +58,19 @@ export async function sendMessage(input: SendMessageInput): Promise<Result<Partn
       relationship_id: parsed.data.relationship_id,
       sender_role:     role,
       sender_profile:  user.id,
-      body:            parsed.data.body,
-      attachments:     parsed.data.attachments ?? null,
+      body:            parsed.data.body ?? null,
+      attachments:     parsed.data.attachments && parsed.data.attachments.length > 0
+                         ? parsed.data.attachments
+                         : null,
+      order_split_id:  parsed.data.order_split_id ?? null,
     })
     .select("*")
     .single() as { data: PartnershipMessageRow | null; error: { message: string } | null };
 
   if (error || !data) return { ok: false, error: error?.message ?? "Errore invio messaggio" };
 
+  revalidatePath(`/messaggi`);
+  revalidatePath(`/supplier/messaggi`);
   revalidatePath(`/fornitori`);
   revalidatePath(`/supplier/clienti`);
   return { ok: true, data };
@@ -74,18 +79,30 @@ export async function sendMessage(input: SendMessageInput): Promise<Result<Partn
 /**
  * Mark all messages in a thread as read for the current recipient.
  * RLS + trigger ensure only the non-sender can do it.
+ * If `orderSplitId` is provided, only messages scoped to that split are marked.
  */
-export async function markThreadRead(relationshipId: string): Promise<Result> {
+export async function markThreadRead(
+  relationshipId: string,
+  orderSplitId?: string | null,
+): Promise<Result> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Utente non autenticato" };
 
-  const { error } = await (supabase as any)
+  let query = (supabase as any)
     .from("partnership_messages")
     .update({ read_at: new Date().toISOString() })
     .eq("relationship_id", relationshipId)
     .is("read_at", null)
     .neq("sender_profile", user.id);
+
+  if (orderSplitId !== undefined) {
+    query = orderSplitId === null
+      ? query.is("order_split_id", null)
+      : query.eq("order_split_id", orderSplitId);
+  }
+
+  const { error } = await query;
 
   if (error) return { ok: false, error: error.message };
   return { ok: true, data: undefined };

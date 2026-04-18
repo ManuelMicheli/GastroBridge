@@ -5,8 +5,9 @@ export type PartnershipMessageRow = {
   relationship_id: string;
   sender_role: MessageRole;
   sender_profile: string;
-  body: string;
+  body: string | null;
   attachments: unknown | null;
+  order_split_id: string | null;
   read_at: string | null;
   created_at: string;
 };
