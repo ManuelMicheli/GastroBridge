@@ -75,6 +75,7 @@ export default async function SuppliersPage() {
       notes: c.notes,
       created_at: c.created_at,
       updated_at: c.updated_at,
+      source: "manual",
       aggregates: computeAggregates(rawItems),
     };
   });

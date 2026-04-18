@@ -24,11 +24,17 @@ import {
   type GalleryStats,
 } from "./_components/catalog-gallery-header";
 
+export type CatalogSource = "manual" | "connected";
+
 export type EnrichedCatalog = CatalogRow & {
+  source: CatalogSource;
   aggregates: CatalogAggregates;
 };
 
+export type SourceFilter = "all" | "manual" | "connected";
+
 const VALID_SORTS: readonly SortMode[] = ["updated", "name", "items"];
+const VALID_SOURCES: readonly SourceFilter[] = ["all", "manual", "connected"];
 
 function normalize(s: string): string {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -62,12 +68,18 @@ export function CatalogsClient({
       s && (VALID_SORTS as readonly string[]).includes(s)
         ? (s as SortMode)
         : "updated";
-    return { q, sort };
+    const src = params.get("src");
+    const source: SourceFilter =
+      src && (VALID_SOURCES as readonly string[]).includes(src)
+        ? (src as SourceFilter)
+        : "all";
+    return { q, sort, source };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const [query, setQuery] = useState(initial.q);
   const [sort, setSort] = useState<SortMode>(initial.sort);
+  const [sourceFilter, setSourceFilter] = useState<SourceFilter>(initial.source);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
 
@@ -99,14 +111,30 @@ export function CatalogsClient({
     return { catalogCount, totalItems, avgBasket, updatedTodayCount };
   }, [initialCatalogs]);
 
-  // Filter
+  // Per-source counts (for filter chip labels)
+  const sourceCounts = useMemo(() => {
+    let manual = 0;
+    let connected = 0;
+    for (const c of initialCatalogs) {
+      if (c.source === "connected") connected += 1;
+      else manual += 1;
+    }
+    return {
+      all: initialCatalogs.length,
+      manual,
+      connected,
+    };
+  }, [initialCatalogs]);
+
+  // Filter by source, then by search query
   const filtered = useMemo(() => {
     const q = normalize(deferredQuery.trim());
-    if (!q) return initialCatalogs;
-    return initialCatalogs.filter((c) =>
-      normalize(c.supplier_name).includes(q),
-    );
-  }, [initialCatalogs, deferredQuery]);
+    return initialCatalogs.filter((c) => {
+      if (sourceFilter !== "all" && c.source !== sourceFilter) return false;
+      if (q && !normalize(c.supplier_name).includes(q)) return false;
+      return true;
+    });
+  }, [initialCatalogs, deferredQuery, sourceFilter]);
 
   // Sort
   const sorted = useMemo(() => {
@@ -130,11 +158,12 @@ export function CatalogsClient({
       const params = new URLSearchParams();
       if (query) params.set("q", query);
       if (sort !== "updated") params.set("sort", sort);
+      if (sourceFilter !== "all") params.set("src", sourceFilter);
       const qs = params.toString();
       router.replace(qs ? `/cataloghi?${qs}` : "/cataloghi", { scroll: false });
     }, 300);
     return () => clearTimeout(t);
-  }, [query, sort, router]);
+  }, [query, sort, sourceFilter, router]);
 
   // Keyboard shortcuts
   const focusSearch = useCallback(() => searchInputRef.current?.focus(), []);
@@ -224,6 +253,9 @@ export function CatalogsClient({
         onQueryChange={setQuery}
         sort={sort}
         onSortChange={setSort}
+        sourceFilter={sourceFilter}
+        onSourceFilterChange={setSourceFilter}
+        sourceCounts={sourceCounts}
         onNewCatalog={() => setDialogOpen(true)}
         onOpenHelp={() => setHelpOpen(true)}
         canCompare={canCompare}
@@ -236,14 +268,19 @@ export function CatalogsClient({
             Nessun catalogo trovato
           </p>
           <p className="mt-1 text-sm text-text-secondary">
-            Nessun fornitore corrisponde a &ldquo;{query}&rdquo;.
+            {query
+              ? <>Nessun fornitore corrisponde a &ldquo;{query}&rdquo;.</>
+              : "Nessun catalogo con i filtri attivi."}
           </p>
           <button
             type="button"
-            onClick={() => setQuery("")}
+            onClick={() => {
+              setQuery("");
+              setSourceFilter("all");
+            }}
             className="mt-3 font-mono text-[11px] uppercase tracking-wide text-accent-green hover:underline"
           >
-            Pulisci filtro
+            Pulisci filtri
           </button>
         </div>
       ) : (
@@ -262,9 +299,12 @@ export function CatalogsClient({
               minOrderAmount: c.min_order_amount,
               notes: c.notes,
               updatedAt: c.updated_at,
+              source: c.source,
               aggregates: c.aggregates,
             };
-            return <CatalogStackCard key={c.id} catalog={cardData} />;
+            return (
+              <CatalogStackCard key={`${c.source}-${c.id}`} catalog={cardData} />
+            );
           })}
         </div>
       )}
