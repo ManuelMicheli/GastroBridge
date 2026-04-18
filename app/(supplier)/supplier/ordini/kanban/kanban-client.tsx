@@ -17,6 +17,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
+import { useFlashOnSplitUpdate } from "@/components/supplier/realtime/flash-highlight";
 import { formatCurrency, formatDate } from "@/lib/utils/formatters";
 import {
   transitionSplitStatus,
@@ -151,6 +152,7 @@ function DraggableCard({ card }: { card: KanbanCard }) {
 
   const dLeft = daysUntil(card.expectedDeliveryDate);
   const badge = WORKFLOW_BADGE(card.workflow);
+  const flash = useFlashOnSplitUpdate(card.id);
 
   const style: React.CSSProperties = {
     opacity: isDragging ? 0.4 : 1,
@@ -158,8 +160,8 @@ function DraggableCard({ card }: { card: KanbanCard }) {
   };
 
   return (
-    <div ref={setNodeRef} style={style} {...listeners} {...attributes}>
-      <Card className="p-4 border border-sage-muted/60 bg-white hover:shadow-elevated transition-shadow select-none">
+    <div ref={setNodeRef} style={style} data-split-id={card.id} {...listeners} {...attributes}>
+      <Card className={`p-4 border border-sage-muted/60 bg-white hover:shadow-elevated transition-shadow select-none ${flash}`}>
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="min-w-0">
             <p className="font-semibold text-charcoal truncate">

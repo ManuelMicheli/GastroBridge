@@ -5,6 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Search, LayoutGrid, List } from "lucide-react";
 import { CelebrationCheck, PulseDot } from "@/components/supplier/signature";
+import { useFlashOnSplitUpdate } from "@/components/supplier/realtime/flash-highlight";
 
 export type SupplierOrderRow = {
   splitId: string;
@@ -304,47 +305,48 @@ export function SupplierOrdersClient({ orders, filters, total }: Props) {
                   </td>
                 </tr>
               ) : (
-                shown.map((r) => (
-                  <tr
-                    key={r.splitId}
-                    className="hover:bg-surface-hover/40 transition-colors"
-                  >
-                    <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-text-primary">
-                      {r.orderNumber ?? `#${r.splitId.slice(0, 8)}`}
-                    </td>
-                    <td className="px-4 py-3 text-text-primary">
-                      {r.restaurantName}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-text-secondary">
-                      {formatDate(r.createdAt)}
-                    </td>
-                    <td className="px-4 py-3 text-text-secondary">
-                      {r.zoneName ?? "—"}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-text-secondary">
-                      {formatDate(r.expectedDeliveryDate)}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right font-mono tabular-nums text-text-primary">
-                      {euroFmt.format(Number(r.subtotal || 0))}
-                    </td>
-                    <td className="px-4 py-3">
-                      <StateBadge state={r.workflowState} />
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right">
-                      <Link
-                        href={`/supplier/ordini/${r.splitId}`}
-                        className="text-accent-blue hover:underline text-xs"
-                      >
-                        Apri
-                      </Link>
-                    </td>
-                  </tr>
-                ))
+                shown.map((r) => <OrderRow key={r.splitId} row={r} />)
               )}
             </tbody>
           </table>
         </div>
       </div>
     </div>
+  );
+}
+
+function OrderRow({ row: r }: { row: SupplierOrderRow }) {
+  const flash = useFlashOnSplitUpdate(r.splitId);
+  return (
+    <tr
+      data-split-id={r.splitId}
+      className={`hover:bg-surface-hover/40 transition-colors ${flash}`}
+    >
+      <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-text-primary">
+        {r.orderNumber ?? `#${r.splitId.slice(0, 8)}`}
+      </td>
+      <td className="px-4 py-3 text-text-primary">{r.restaurantName}</td>
+      <td className="whitespace-nowrap px-4 py-3 text-text-secondary">
+        {formatDate(r.createdAt)}
+      </td>
+      <td className="px-4 py-3 text-text-secondary">{r.zoneName ?? "—"}</td>
+      <td className="whitespace-nowrap px-4 py-3 text-text-secondary">
+        {formatDate(r.expectedDeliveryDate)}
+      </td>
+      <td className="whitespace-nowrap px-4 py-3 text-right font-mono tabular-nums text-text-primary">
+        {euroFmt.format(Number(r.subtotal || 0))}
+      </td>
+      <td className="px-4 py-3">
+        <StateBadge state={r.workflowState} />
+      </td>
+      <td className="whitespace-nowrap px-4 py-3 text-right">
+        <Link
+          href={`/supplier/ordini/${r.splitId}`}
+          className="text-accent-blue hover:underline text-xs"
+        >
+          Apri
+        </Link>
+      </td>
+    </tr>
   );
 }

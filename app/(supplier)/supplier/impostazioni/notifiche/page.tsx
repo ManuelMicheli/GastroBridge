@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/server";
 import { PushSubscriptionManager } from "@/components/supplier/notifications/push-subscription-manager";
+import { RealtimeLivePrefs } from "@/components/supplier/notifications/live-prefs";
 
 export const metadata: Metadata = { title: "Notifiche — Impostazioni Fornitore" };
 
@@ -161,6 +162,8 @@ export default async function SupplierNotificationsSettingsPage() {
           })}
         </ul>
       </Card>
+
+      <RealtimeLivePrefs />
 
       <Card>
         <div className="space-y-2">

@@ -13,6 +13,7 @@ import { createClient } from "@/lib/supabase/server";
  */
 export async function getPendingOrdersCount(
   supplierId: string,
+  sinceSeenAt?: string | null,
 ): Promise<number> {
   try {
     const supabase = await createClient();
@@ -21,6 +22,21 @@ export async function getPendingOrdersCount(
       p_permission: "order.read",
     });
     if (!data) return 0;
+
+    // order_splits has no created_at column of its own — filter by parent order's
+    // created_at via a nested query when sinceSeenAt is provided.
+    if (sinceSeenAt) {
+      const { data: rows } = await (supabase as any)
+        .from("order_splits")
+        .select("id, orders:order_id(created_at)")
+        .eq("supplier_id", supplierId)
+        .eq("status", "submitted") as {
+          data: Array<{ id: string; orders: { created_at: string } | null }> | null;
+        };
+      return (rows ?? []).filter(
+        (r) => r.orders?.created_at && r.orders.created_at > sinceSeenAt,
+      ).length;
+    }
 
     const { count } = await supabase
       .from("order_splits")
