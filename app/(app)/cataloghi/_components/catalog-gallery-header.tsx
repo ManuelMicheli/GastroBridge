@@ -7,6 +7,7 @@ import { GitCompareArrows, Keyboard, Plus, Search } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/formatters";
 
 export type SortMode = "updated" | "name" | "items";
+export type SourceFilter = "all" | "manual" | "connected";
 
 export type GalleryStats = {
   catalogCount: number;
@@ -15,12 +16,21 @@ export type GalleryStats = {
   updatedTodayCount: number;
 };
 
+export type SourceCounts = {
+  all: number;
+  manual: number;
+  connected: number;
+};
+
 type Props = {
   stats: GalleryStats;
   query: string;
   onQueryChange: (q: string) => void;
   sort: SortMode;
   onSortChange: (s: SortMode) => void;
+  sourceFilter: SourceFilter;
+  onSourceFilterChange: (s: SourceFilter) => void;
+  sourceCounts: SourceCounts;
   onNewCatalog: () => void;
   onOpenHelp: () => void;
   canCompare: boolean;
@@ -33,6 +43,12 @@ const SORT_OPTIONS: Array<{ value: SortMode; label: string }> = [
   { value: "items", label: "prodotti" },
 ];
 
+const SOURCE_OPTIONS: Array<{ value: SourceFilter; label: string }> = [
+  { value: "all", label: "tutti" },
+  { value: "manual", label: "manuali" },
+  { value: "connected", label: "da piattaforma" },
+];
+
 export const CatalogGalleryHeader = forwardRef<HTMLInputElement, Props>(
   function CatalogGalleryHeader(
     {
@@ -41,6 +57,9 @@ export const CatalogGalleryHeader = forwardRef<HTMLInputElement, Props>(
       onQueryChange,
       sort,
       onSortChange,
+      sourceFilter,
+      onSourceFilterChange,
+      sourceCounts,
       onNewCatalog,
       onOpenHelp,
       canCompare,
@@ -179,6 +198,44 @@ export const CatalogGalleryHeader = forwardRef<HTMLInputElement, Props>(
               );
             })}
           </div>
+        </div>
+
+        {/* Source filter chips */}
+        <div
+          className="flex flex-wrap items-center gap-1 rounded-lg border border-border-subtle p-0.5"
+          role="radiogroup"
+          aria-label="Filtra per origine"
+        >
+          <span className="px-2 font-mono text-[10px] uppercase tracking-wide text-text-tertiary">
+            src
+          </span>
+          {SOURCE_OPTIONS.map((opt) => {
+            const active = sourceFilter === opt.value;
+            const count = sourceCounts[opt.value];
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                role="radio"
+                aria-checked={active}
+                onClick={() => onSourceFilterChange(opt.value)}
+                className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 font-mono text-[11px] uppercase tracking-wide transition-colors ${
+                  active
+                    ? "bg-accent-green/15 text-accent-green"
+                    : "text-text-secondary hover:text-text-primary"
+                }`}
+              >
+                <span>{opt.label}</span>
+                <span
+                  className={`tabular-nums ${
+                    active ? "text-accent-green" : "text-text-tertiary"
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </header>
     );

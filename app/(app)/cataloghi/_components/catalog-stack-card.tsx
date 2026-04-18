@@ -14,6 +14,7 @@ export type CatalogStackCardData = {
   minOrderAmount: number | null;
   notes: string | null;
   updatedAt: string;
+  source: "manual" | "connected";
   aggregates: CatalogAggregates;
 };
 
@@ -32,6 +33,7 @@ export function CatalogStackCard({ catalog }: Props) {
     deliveryDays,
     minOrderAmount,
     updatedAt,
+    source,
     aggregates,
   } = catalog;
   const {
@@ -45,6 +47,13 @@ export function CatalogStackCard({ catalog }: Props) {
 
   const hasPrices =
     priceMin !== null && priceMax !== null && Number.isFinite(priceMin) && Number.isFinite(priceMax);
+
+  const isConnected = source === "connected";
+  const openHref = isConnected ? `/fornitori/${id}` : `/cataloghi/${id}`;
+  const sourceLabel = isConnected ? "DA PIATTAFORMA" : "MANUALE";
+  const sourceBadgeClass = isConnected
+    ? "border-accent-blue/40 bg-accent-blue/10 text-accent-blue"
+    : "border-border-subtle bg-surface-base text-text-tertiary";
 
   return (
     <article
@@ -67,8 +76,20 @@ export function CatalogStackCard({ catalog }: Props) {
           >
             {supplierName}
           </h3>
-          <p className="mt-0.5 font-mono text-[11px] uppercase tracking-wide text-text-tertiary">
-            <span className="tabular-nums">{itemCount}</span> prodott{itemCount === 1 ? "o" : "i"}
+          <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] uppercase tracking-wide text-text-tertiary">
+            <span>
+              <span className="tabular-nums">{itemCount}</span> prodott{itemCount === 1 ? "o" : "i"}
+            </span>
+            <span
+              className={`inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.08em] ${sourceBadgeClass}`}
+              title={
+                isConnected
+                  ? "Fornitore collegato sulla piattaforma"
+                  : "Listino inserito manualmente"
+              }
+            >
+              {sourceLabel}
+            </span>
           </p>
         </div>
       </header>
@@ -157,10 +178,10 @@ export function CatalogStackCard({ catalog }: Props) {
       {/* Actions */}
       <footer className="mt-4 flex items-center gap-2">
         <Link
-          href={`/cataloghi/${id}`}
+          href={openHref}
           className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border-subtle bg-surface-base px-3 py-1.5 font-mono text-[11px] uppercase tracking-wide text-text-primary transition-colors hover:border-accent-green/40 hover:bg-surface-hover"
         >
-          Apri catalogo
+          {isConnected ? "Apri fornitore" : "Apri catalogo"}
           <ArrowRight className="h-3 w-3" aria-hidden />
         </Link>
         <Link
