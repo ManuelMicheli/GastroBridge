@@ -1,90 +1,155 @@
 import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { PageHeader } from "@/components/ui/page-header";
-import { SectionHeader } from "@/components/ui/section-header";
 import Link from "next/link";
-import { User, MapPin, Users, CreditCard, ChevronRight, SlidersHorizontal, Target } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { PageHeader } from "@/components/ui/page-header";
+import { SectionFrame } from "@/components/dashboard/restaurant/_awwwards/section-frame";
+import { SettingsNavRow } from "./_components/settings-nav-row";
 
 export const metadata: Metadata = { title: "Impostazioni" };
 
 const SETTINGS_SECTIONS = [
-  { href: "/impostazioni", label: "Profilo", description: "Dati azienda, P.IVA, contatti", icon: User },
-  { href: "/impostazioni/sedi", label: "Sedi", description: "Gestisci i tuoi ristoranti", icon: MapPin },
-  { href: "/impostazioni/esigenze-fornitura", label: "Esigenze di fornitura", description: "Vincoli, priorità e profilo di acquisto", icon: SlidersHorizontal },
-  { href: "/impostazioni/budget", label: "Budget mensile", description: "Tetto di spesa per tracking analytics", icon: Target },
-  { href: "/impostazioni/team", label: "Team", description: "Membri del team", icon: Users },
-  { href: "/impostazioni/abbonamento", label: "Abbonamento", description: "Piano e fatturazione", icon: CreditCard },
-];
+  {
+    href: "#profilo",
+    label: "Profilo",
+    description: "Dati azienda, P.IVA, contatti",
+  },
+  {
+    href: "/impostazioni/sedi",
+    label: "Sedi",
+    description: "Gestisci i tuoi ristoranti",
+  },
+  {
+    href: "/impostazioni/esigenze-fornitura",
+    label: "Esigenze di fornitura",
+    description: "Vincoli, priorità e profilo di acquisto",
+  },
+  {
+    href: "/impostazioni/budget",
+    label: "Budget mensile",
+    description: "Tetto di spesa per tracking analytics",
+  },
+  {
+    href: "/impostazioni/team",
+    label: "Team",
+    description: "Membri del team",
+  },
+  {
+    href: "/impostazioni/abbonamento",
+    label: "Abbonamento",
+    description: "Piano e fatturazione",
+  },
+] as const;
+
+type ProfileRow = {
+  company_name: string | null;
+  vat_number: string | null;
+  city: string | null;
+  phone: string | null;
+};
+
+function ProfileValue({ value }: { value: string | null | undefined }) {
+  const has = value && value.trim().length > 0;
+  return (
+    <span
+      className={
+        has
+          ? "font-mono text-[13px] text-text-primary"
+          : "font-mono text-[13px] text-text-tertiary"
+      }
+    >
+      {has ? value : "\u2014"}
+    </span>
+  );
+}
 
 export default async function SettingsPage() {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   const { data: profile } = await supabase
-    .from("profiles").select("*").eq("id", user?.id ?? "")
-    .single<{ company_name: string; vat_number: string | null; city: string | null; phone: string | null }>();
+    .from("profiles")
+    .select("*")
+    .eq("id", user?.id ?? "")
+    .single<ProfileRow>();
+
+  const companyName = profile?.company_name?.trim() || "Azienda";
 
   return (
-    <div>
+    <div className="space-y-6">
       <PageHeader
         title="Impostazioni"
         subtitle="Gestisci profilo, sedi, team e parametri della piattaforma."
+        meta={
+          <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+            {companyName.toUpperCase()}
+          </span>
+        }
       />
 
-      <SectionHeader title="Sezioni" />
-      <div
-        className="cq-section grid gap-3 mb-10"
-        style={{
-          gridTemplateColumns:
-            "repeat(auto-fit, minmax(min(300px, 100%), 1fr))",
-        }}
+      <SectionFrame
+        label={`Sezioni \u00B7 ${SETTINGS_SECTIONS.length}`}
+        padded={false}
       >
-        {SETTINGS_SECTIONS.map((section) => (
-          <Link
-            key={section.href}
-            href={section.href}
-            className="block focus-ring rounded-2xl"
-          >
-            <Card className="motion-lift hover:shadow-elevated transition-shadow min-h-[80px]">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-sage-muted/20 rounded-lg shrink-0">
-                  <section.icon className="h-5 w-5 text-forest" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-charcoal">{section.label}</h3>
-                  <p className="text-sm text-sage truncate">{section.description}</p>
-                </div>
-                <ChevronRight className="h-5 w-5 text-sage shrink-0" />
-              </div>
-            </Card>
-          </Link>
-        ))}
-      </div>
+        <nav aria-label="Sezioni impostazioni" className="px-1 pb-1">
+          <ul className="flex flex-col">
+            {SETTINGS_SECTIONS.map((section, i) => (
+              <li key={section.href}>
+                <SettingsNavRow
+                  index={i + 1}
+                  href={section.href}
+                  label={section.label}
+                  description={section.description}
+                  isLast={i === SETTINGS_SECTIONS.length - 1}
+                />
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </SectionFrame>
 
-      <SectionHeader title="Profilo Azienda" />
-      <Card>
-        <CardHeader><CardTitle>Dati anagrafici</CardTitle></CardHeader>
-        <CardContent>
-          <div className="space-y-3 text-sm">
-            <div className="flex justify-between py-2 border-b border-sage-muted/20">
-              <span className="text-sage">Azienda</span>
-              <span className="font-semibold">{profile?.company_name ?? "—"}</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-sage-muted/20">
-              <span className="text-sage">P.IVA</span>
-              <span className="font-semibold">{profile?.vat_number ?? "—"}</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-sage-muted/20">
-              <span className="text-sage">Citta</span>
-              <span className="font-semibold">{profile?.city ?? "—"}</span>
-            </div>
-            <div className="flex justify-between py-2">
-              <span className="text-sage">Telefono</span>
-              <span className="font-semibold">{profile?.phone ?? "—"}</span>
-            </div>
+      <section id="profilo">
+        <SectionFrame label={`Profilo \u00B7 Azienda`}>
+          <dl className="grid grid-cols-[96px_1fr] sm:grid-cols-[140px_1fr] gap-x-4 gap-y-0">
+            {[
+              { k: "Azienda", v: profile?.company_name },
+              { k: "P.IVA", v: profile?.vat_number },
+              { k: "Citta", v: profile?.city },
+              { k: "Telefono", v: profile?.phone },
+            ].map((row, idx, arr) => (
+              <div key={row.k} className="contents">
+                <dt
+                  className={[
+                    "font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary",
+                    "flex items-center py-2.5",
+                    idx === arr.length - 1 ? "" : "border-b border-border-subtle",
+                  ].join(" ")}
+                >
+                  {row.k}
+                </dt>
+                <dd
+                  className={[
+                    "flex items-center py-2.5",
+                    idx === arr.length - 1 ? "" : "border-b border-border-subtle",
+                  ].join(" ")}
+                >
+                  <ProfileValue value={row.v} />
+                </dd>
+              </div>
+            ))}
+          </dl>
+
+          <div className="mt-4 flex justify-end">
+            <Link
+              href="/impostazioni/sedi"
+              className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-text-secondary hover:text-accent-green transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-green rounded"
+            >
+              Modifica profilo
+              <span aria-hidden>{"\u2192"}</span>
+            </Link>
           </div>
-        </CardContent>
-      </Card>
+        </SectionFrame>
+      </section>
     </div>
   );
 }
