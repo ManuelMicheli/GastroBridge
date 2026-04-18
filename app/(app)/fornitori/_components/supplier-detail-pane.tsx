@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { ArrowUpRight, MapPin, Search, Shield, Star, X } from "lucide-react";
-import { RelationshipStatusBadge } from "@/components/shared/relationship-status-badge";
+import { RelationshipStatusBadge } from "@/components/ui/relationship-status-badge";
 import { Button } from "@/components/ui/button";
 import { ratingColorClass, type RelationshipRow } from "../_lib/types";
 
@@ -67,7 +67,7 @@ export function SupplierDetailPane({
               )}
             </div>
             <div className="mt-1 flex items-center gap-2">
-              <RelationshipStatusBadge status={relationship.status} />
+              <RelationshipStatusBadge status={relationship.status} size="md" />
               <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
                 invitato {formatDate(relationship.invited_at)}
               </span>

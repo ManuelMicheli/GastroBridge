@@ -3,17 +3,7 @@
 
 import { ChevronRight, Shield, Star } from "lucide-react";
 import { ratingColorClass, type RelationshipRow } from "../_lib/types";
-
-const STATUS_TONE: Record<
-  string,
-  { label: string; cls: string }
-> = {
-  active: { label: "ATTIVO", cls: "bg-accent-green/15 text-accent-green" },
-  pending: { label: "IN ATTESA", cls: "bg-yellow-500/15 text-yellow-600" },
-  paused: { label: "IN PAUSA", cls: "bg-blue-500/15 text-blue-600" },
-  rejected: { label: "RIFIUTATO", cls: "bg-surface-hover text-text-tertiary" },
-  archived: { label: "ARCHIVIATO", cls: "bg-surface-hover text-text-tertiary" },
-};
+import { RelationshipStatusBadge } from "@/components/ui/relationship-status-badge";
 
 export function SupplierRow({
   rel,
@@ -30,8 +20,7 @@ export function SupplierRow({
   if (!s) return null;
 
   const rating = s.rating_avg ?? 0;
-  const ratingCls = ratingColorClass(rating);
-  const tone = STATUS_TONE[rel.status] ?? STATUS_TONE.archived!;
+  const ratingCls = ratingColorClass(rating);;
 
   return (
     <button
@@ -69,11 +58,7 @@ export function SupplierRow({
         {s.is_verified && (
           <Shield className="h-3.5 w-3.5 shrink-0 text-accent-green" />
         )}
-        <span
-          className={`shrink-0 rounded px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-[0.08em] ${tone.cls}`}
-        >
-          {tone.label}
-        </span>
+        <RelationshipStatusBadge status={rel.status} size="xs" />
       </span>
 
       <span className="hidden shrink-0 truncate font-mono text-[11px] text-text-tertiary md:inline max-w-[140px]">
