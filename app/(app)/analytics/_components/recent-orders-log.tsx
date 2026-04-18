@@ -8,9 +8,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ORDER_STATUS_LABELS } from "@/lib/utils/constants";
 import { formatCurrency } from "@/lib/utils/formatters";
-import { statusColorClass } from "@/app/(app)/ordini/_lib/bucketize";
+import { StatusDot } from "@/components/ui/status-dot";
+import { getOrderStatusMeta } from "@/lib/orders/status-meta";
 import type { RecentOrderRow } from "@/lib/analytics/restaurant";
 
 function formatTime(iso: string): string {
@@ -78,8 +78,8 @@ export function AnalyticsRecentOrdersLog({ rows }: { rows: RecentOrderRow[] }) {
   return (
     <ul className="flex flex-col">
       {rows.map((row) => {
-        const label = ORDER_STATUS_LABELS[row.status] ?? row.status;
-        const dot = statusColorClass(row.status);
+        const meta = getOrderStatusMeta(row.status);
+        const label = meta.label;
         const ts = formatTime(row.created_at);
         const shortId = row.id.slice(0, 8).toUpperCase();
 
@@ -97,11 +97,7 @@ export function AnalyticsRecentOrdersLog({ rows }: { rows: RecentOrderRow[] }) {
               </span>
 
               {/* status dot */}
-              <span
-                className={`h-2 w-2 rounded-full ${dot}`}
-                aria-hidden
-                title={label}
-              />
+              <StatusDot tone={meta.tone} size={8} />
 
               {/* id + supplier dots */}
               <span className="flex min-w-0 items-center gap-3">
