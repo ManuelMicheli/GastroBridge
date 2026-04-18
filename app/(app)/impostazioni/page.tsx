@@ -19,6 +19,11 @@ const SETTINGS_SECTIONS = [
     description: "Gestisci i tuoi ristoranti",
   },
   {
+    href: "/impostazioni/notifiche",
+    label: "Notifiche",
+    description: "Canali, push browser e avvisi in tempo reale",
+  },
+  {
     href: "/impostazioni/esigenze-fornitura",
     label: "Esigenze di fornitura",
     description: "Vincoli, priorità e profilo di acquisto",
