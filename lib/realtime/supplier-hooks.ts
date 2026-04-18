@@ -8,6 +8,7 @@ import {
   type RealtimeEvent,
   type SupplierEventType,
 } from "./supplier-provider";
+import { useRestaurantRealtime } from "./restaurant-provider";
 
 /**
  * Live badge counts. Safe to call outside the supplier area — returns zeroes.
@@ -18,8 +19,9 @@ export function useBadges(): Badges {
 }
 
 /**
- * Ring buffer of recent in-app notifications + read helpers. Returns an empty
- * buffer outside of the provider.
+ * Ring buffer of recent in-app notifications + read helpers. Universal across
+ * the restaurant and supplier areas — reads from whichever provider is mounted.
+ * Returns empty defaults if neither is present (safe to call anywhere).
  */
 export function useRecentNotifications(): {
   notifications: InAppNotification[];
@@ -27,12 +29,26 @@ export function useRecentNotifications(): {
   markRead: (id: string) => Promise<void>;
   markAllRead: () => Promise<void>;
 } {
-  const ctx = useSupplierRealtime();
+  const supplier = useSupplierRealtime();
+  const restaurant = useRestaurantRealtime();
+  // If both are mounted (shouldn't happen), supplier wins — the supplier area
+  // is the more data-rich context.
+  const ctx = supplier ?? restaurant;
+  if (!ctx) {
+    return {
+      notifications: [],
+      unreadCount: 0,
+      markRead: async () => {},
+      markAllRead: async () => {},
+    };
+  }
+  // Supplier ctx shape: { recentNotifications, unreadCount, markNotificationRead, markAllRead, ... }
+  // Restaurant ctx shape: { recentNotifications, unreadCount, markNotificationRead, markAllRead, ... }
   return {
-    notifications: ctx?.recentNotifications ?? [],
-    unreadCount: ctx?.unreadCount ?? 0,
-    markRead: ctx?.markNotificationRead ?? (async () => {}),
-    markAllRead: ctx?.markAllRead ?? (async () => {}),
+    notifications: ctx.recentNotifications,
+    unreadCount: ctx.unreadCount,
+    markRead: ctx.markNotificationRead,
+    markAllRead: ctx.markAllRead,
   };
 }
 
@@ -73,14 +89,17 @@ export function useRealtimeStatus(): "connecting" | "connected" | "disconnected"
 }
 
 /**
- * Preferences accessor — used by the notifications settings page.
+ * Preferences accessor — used by the notifications settings pages. Reads from
+ * whichever provider is mounted (supplier or restaurant).
  */
 export function useNotificationPrefs(): {
   chimeEnabled: boolean;
   setChimeEnabled: (enabled: boolean) => void;
   requestBrowserPushPermission: () => Promise<NotificationPermission>;
 } {
-  const ctx = useSupplierRealtime();
+  const supplier = useSupplierRealtime();
+  const restaurant = useRestaurantRealtime();
+  const ctx = supplier ?? restaurant;
   return {
     chimeEnabled: ctx?.chimeEnabled ?? true,
     setChimeEnabled: ctx?.setChimeEnabled ?? (() => {}),
