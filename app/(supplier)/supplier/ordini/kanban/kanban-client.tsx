@@ -363,12 +363,70 @@ export function KanbanClient({
         />
       )}
 
+      {/* Mobile: kanban drag-drop unusable with touch → fallback to list CTA */}
+      <div className="lg:hidden mx-3 mt-4 mb-3">
+        <div className="rounded-xl bg-[color:var(--color-brand-primary-subtle)] ring-[0.5px] ring-[color:var(--color-brand-primary-border)] px-4 py-4">
+          <div
+            className="text-[11px] font-medium uppercase tracking-[0.14em] text-[color:var(--caption-color)]"
+          >
+            Kanban · vista desktop
+          </div>
+          <p
+            className="mt-2 font-serif text-[17px] font-medium leading-snug text-[color:var(--color-text-primary)] dark:text-white"
+            style={{ fontFamily: "Georgia, serif" }}
+          >
+            Il trascinamento kanban funziona solo su schermo grande.
+          </p>
+          <p className="mt-1 text-[12px] text-[color:var(--text-muted-light)]">
+            Su mobile gestisci gli ordini dalla lista con azioni contestuali.
+          </p>
+          <Link
+            href="/supplier/ordini"
+            className="mt-3 inline-flex h-10 items-center justify-center rounded-lg bg-[color:var(--color-brand-primary)] px-4 text-[14px] font-semibold text-[color:var(--color-brand-on-primary)] active:opacity-90"
+          >
+            Apri lista ordini →
+          </Link>
+        </div>
+
+        {/* Quick state summary — read-only counts per column */}
+        <div className="mt-4 space-y-2">
+          {COLUMNS.map((col) => {
+            const n = (cardsByColumn.get(col.id) ?? []).length;
+            return (
+              <div
+                key={col.id}
+                className="flex items-center justify-between rounded-xl bg-[color:var(--ios-surface)] px-4 py-3 shadow-[0_0.5px_0_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.03)]"
+              >
+                <div>
+                  <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-[color:var(--caption-color)]">
+                    {col.label}
+                  </div>
+                  <div
+                    className="mt-0.5 font-serif text-[18px] font-medium text-[color:var(--color-brand-primary)]"
+                    style={{ fontFamily: "Georgia, serif" }}
+                  >
+                    {n}
+                  </div>
+                </div>
+                <Link
+                  href={`/supplier/ordini?state=${col.states[0] ?? ""}`}
+                  className="text-[12px] font-semibold text-[color:var(--color-brand-primary)]"
+                >
+                  Apri →
+                </Link>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Desktop kanban with dnd */}
       <DndContext
         sensors={sensors}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex gap-4 overflow-x-auto pb-4">
+        <div className="hidden lg:flex gap-4 overflow-x-auto pb-4">
           {COLUMNS.map((col) => {
             const isActiveTarget =
               activeCard !== null &&

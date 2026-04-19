@@ -4,9 +4,11 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useTheme } from "next-themes";
 import { CollapsibleSidebar } from "./sidebar/collapsible-sidebar";
 import { DarkTopbar } from "./topbar/dark-topbar";
-import { DarkMobileNav, type MobileNavItem } from "./mobile/dark-mobile-nav";
+import { type MobileNavItem } from "./mobile/dark-mobile-nav";
+import { FloatingPillNav } from "./mobile/floating-pill-nav";
 import { FloatingPillNavWithCart } from "./mobile/floating-pill-nav-with-cart";
 import { MobileRestaurantTopbar } from "./mobile/mobile-restaurant-topbar";
+import { MobileSupplierTopbar } from "./mobile/mobile-supplier-topbar";
 import { SidebarDrawer } from "./mobile/sidebar-drawer";
 import { CommandPaletteProvider } from "./command-palette/command-palette-provider";
 import { CommandPalette } from "./command-palette/command-palette";
@@ -63,7 +65,6 @@ export function DashboardShell({
         <div className="flex-1 flex flex-col min-w-0">
           {role === "restaurant" ? (
             <>
-              {/* Restaurant: mobile gets iOS-style translucent topbar, desktop keeps DarkTopbar */}
               <div className="lg:hidden">
                 <MobileRestaurantTopbar
                   onMenuToggle={() => setDrawerOpen(true)}
@@ -74,12 +75,21 @@ export function DashboardShell({
               </div>
             </>
           ) : (
-            <DarkTopbar onMenuToggle={() => setDrawerOpen(true)} />
+            <>
+              <div className="lg:hidden">
+                <MobileSupplierTopbar
+                  onMenuToggle={() => setDrawerOpen(true)}
+                />
+              </div>
+              <div className="hidden lg:block">
+                <DarkTopbar onMenuToggle={() => setDrawerOpen(true)} />
+              </div>
+            </>
           )}
           <main
             className={cn(
               "flex-1 w-full cq-shell lg:pb-6",
-              role === "restaurant" && "bg-[color:var(--ios-grouped-bg)] lg:bg-transparent"
+              "bg-[color:var(--ios-grouped-bg)] lg:bg-transparent"
             )}
             style={{
               paddingBottom:
@@ -87,21 +97,10 @@ export function DashboardShell({
             }}
           >
             <div
-              className={cn(
-                "w-full mx-auto",
-                role === "restaurant"
-                  ? "lg:py-6 py-1"
-                  : "py-6"
-              )}
+              className={cn("w-full mx-auto", "lg:py-6 py-1")}
               style={{
-                paddingLeft:
-                  role === "restaurant"
-                    ? "var(--page-gutter, 0px)"
-                    : "var(--page-gutter, 16px)",
-                paddingRight:
-                  role === "restaurant"
-                    ? "var(--page-gutter, 0px)"
-                    : "var(--page-gutter, 16px)",
+                paddingLeft: "var(--page-gutter, 0px)",
+                paddingRight: "var(--page-gutter, 0px)",
                 maxWidth: "var(--page-max-width, 100%)",
               }}
             >
@@ -120,11 +119,11 @@ export function DashboardShell({
           companyName={companyName}
         />
 
-        {/* Mobile bottom nav — restaurant gets floating-pill variant with cart badge */}
+        {/* Mobile bottom nav — both areas get floating-pill */}
         {role === "restaurant" ? (
           <FloatingPillNavWithCart items={mobileNavItems} />
         ) : (
-          <DarkMobileNav items={mobileNavItems} />
+          <FloatingPillNav items={mobileNavItems} />
         )}
 
         {/* Command Palette overlay */}

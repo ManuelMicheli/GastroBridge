@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Search, LayoutGrid, List } from "lucide-react";
 import { CelebrationCheck, PulseDot } from "@/components/supplier/signature";
 import { useFlashOnSplitUpdate } from "@/components/supplier/realtime/flash-highlight";
+import { SupplierOrdersClientMobile } from "./orders-client-mobile";
 
 export type SupplierOrderRow = {
   splitId: string;
@@ -175,7 +176,14 @@ export function SupplierOrdersClient({ orders, filters, total }: Props) {
   const shown = useMemo(() => orders, [orders]);
 
   return (
-    <div className="space-y-4">
+    <>
+      {/* Mobile Apple-app view */}
+      <div className="lg:hidden">
+        <SupplierOrdersClientMobile orders={orders} total={total} />
+      </div>
+
+      {/* Desktop */}
+      <div className="hidden lg:block space-y-4">
       {/* Toggle vista + titolo */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="inline-flex rounded-md border border-border-subtle bg-surface-card p-0.5">
@@ -311,7 +319,8 @@ export function SupplierOrdersClient({ orders, filters, total }: Props) {
           </table>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 

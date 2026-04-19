@@ -25,6 +25,7 @@ import {
 } from "@/components/supplier/signature";
 import { formatCurrency, formatDate } from "@/lib/utils/formatters";
 import { useRouter } from "next/navigation";
+import { SupplierDashboardMobile } from "./supplier-dashboard-mobile";
 
 type OrderRow = {
   id: string;
@@ -241,7 +242,25 @@ export function SupplierDashboard({
   );
 
   return (
-    <motion.div variants={stagger} initial="hidden" animate="show" className="space-y-6">
+    <>
+      {/* Mobile Apple-app view */}
+      <div className="lg:hidden">
+        <SupplierDashboardMobile
+          companyName={companyName}
+          kpi={kpi}
+          recentOrders={recentOrders}
+          topClients={topClientsList}
+          alerts={alertItems}
+        />
+      </div>
+
+      {/* Desktop */}
+      <motion.div
+        variants={stagger}
+        initial="hidden"
+        animate="show"
+        className="hidden lg:block space-y-6"
+      >
       {/* Editorial hero */}
       <SerifGreeting name={companyName} />
 
@@ -709,6 +728,7 @@ export function SupplierDashboard({
           </div>
         </DarkCard>
       )}
-    </motion.div>
+      </motion.div>
+    </>
   );
 }

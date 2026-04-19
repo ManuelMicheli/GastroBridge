@@ -11,6 +11,9 @@ import {
   type ProductListSort,
 } from "@/lib/supplier/catalog/queries";
 import { CatalogTable } from "@/components/supplier/catalog/catalog-table";
+import { LargeTitle } from "@/components/ui/large-title";
+import { GroupedList, GroupedListRow } from "@/components/ui/grouped-list";
+import { formatCurrency } from "@/lib/utils/formatters";
 
 export const metadata: Metadata = { title: "Catalogo" };
 
@@ -96,7 +99,104 @@ export default async function CatalogPage({
     .returns<Array<{ id: string; name: string }>>();
 
   return (
-    <div>
+    <>
+      {/* Mobile Apple-app view */}
+      <div className="lg:hidden pb-4">
+        <LargeTitle
+          eyebrow={`${summary.categories} categorie · ${summary.available} disponibili`}
+          title={`${summary.total.toLocaleString("it-IT")} prodotti`}
+          subtitle="Gestisci il tuo catalogo"
+          actions={
+            <Link
+              href="/supplier/catalogo/nuovo"
+              className="flex h-9 items-center gap-1 rounded-lg bg-[color:var(--color-brand-primary)] px-3 text-[13px] font-semibold text-[color:var(--color-brand-on-primary)] active:opacity-90"
+              aria-label="Nuovo prodotto"
+            >
+              <Plus className="h-3.5 w-3.5" /> Nuovo
+            </Link>
+          }
+        />
+
+        <GroupedList className="mt-3" label="Azioni">
+          <GroupedListRow
+            href="/supplier/catalogo/import"
+            leading={
+              <div
+                className="flex h-[26px] w-[26px] items-center justify-center rounded-md bg-[#2B6F42] text-white"
+                aria-hidden
+              >
+                <Upload className="h-3.5 w-3.5" />
+              </div>
+            }
+            title="Importa CSV"
+            subtitle="Carica prodotti in blocco"
+            showChevron
+          />
+        </GroupedList>
+
+        {items.length === 0 ? (
+          <div className="mt-6 px-6 text-center text-[color:var(--text-muted-light)]">
+            Nessun prodotto. Inizia aggiungendo il primo.
+          </div>
+        ) : (
+          <GroupedList
+            className="mt-3"
+            label={`Prodotti · ${items.length}`}
+            labelAction={
+              nextCursor ? (
+                <Link
+                  href={`/supplier/catalogo?cursor=${nextCursor}`}
+                  className="text-[11px] text-[color:var(--color-brand-primary)]"
+                >
+                  Carica altri →
+                </Link>
+              ) : null
+            }
+          >
+            {items.map((p) => (
+              <GroupedListRow
+                key={p.id}
+                href={`/supplier/catalogo/${p.id}`}
+                leading={
+                  p.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={p.image_url}
+                      alt=""
+                      className="h-[36px] w-[36px] rounded-md object-cover"
+                    />
+                  ) : (
+                    <div
+                      aria-hidden
+                      className="h-[36px] w-[36px] rounded-md bg-gradient-to-br from-[#E8DDC9] to-[#D3C4AE]"
+                    />
+                  )
+                }
+                title={p.name}
+                subtitle={
+                  <span>
+                    {p.brand ? `${p.brand} · ` : ""}
+                    {p.unit}
+                    {p.is_available === false ? " · NON disponibile" : ""}
+                  </span>
+                }
+                trailing={
+                  <span
+                    className="font-serif text-[14px] text-[color:var(--color-brand-primary)]"
+                    style={{ fontFamily: "Georgia, serif" }}
+                  >
+                    {formatCurrency(Number(p.price))}
+                  </span>
+                }
+                showChevron
+              />
+            ))}
+          </GroupedList>
+        )}
+      </div>
+
+      {/* Desktop */}
+      <div className="hidden lg:block">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="font-display text-3xl text-text-primary">
@@ -130,6 +230,7 @@ export default async function CatalogPage({
         sort={sort}
         filters={filters}
       />
-    </div>
+      </div>
+    </>
   );
 }

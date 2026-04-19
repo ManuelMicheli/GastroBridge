@@ -434,16 +434,16 @@ body {
   --glow-highlight: 0 0 18px rgba(232, 181, 71, 0.22);
 
   /* =========================================
-     Fluid typography + spacing (mobile-first responsive)
-     Same formulas as restaurant scope.
+     Fluid typography — mobile-tuned (Apple-app, supplier light)
+     Floor rebalanced for 320–430px display legibility.
      ========================================= */
-  --text-display-2xl: clamp(32px, 4.5vw + 16px, 64px);
-  --text-display-2xl--line-height: 1.08;
-  --text-display-xl: clamp(28px, 3vw + 16px, 44px);
-  --text-display-xl--line-height: 1.12;
-  --text-display-lg: clamp(22px, 2vw + 14px, 32px);
-  --text-display-lg--line-height: 1.18;
-  --text-title-lg: clamp(18px, 1vw + 14px, 22px);
+  --text-display-2xl: clamp(28px, 7vw + 6px, 56px);
+  --text-display-2xl--line-height: 1.06;
+  --text-display-xl: clamp(24px, 6vw + 4px, 42px);
+  --text-display-xl--line-height: 1.08;
+  --text-display-lg: clamp(22px, 4vw + 6px, 32px);
+  --text-display-lg--line-height: 1.12;
+  --text-title-lg: clamp(17px, 1vw + 14px, 20px);
   --text-title-md: clamp(15px, 0.5vw + 13px, 17px);
 
   --page-gutter: clamp(16px, 4vw, 48px);
@@ -453,6 +453,23 @@ body {
 
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
+
+  /* =========================================
+     iOS Apple-app surface + chrome tokens (supplier — light)
+     Palette: avorio #FBF8F1 base, ocra #A87535 primary, marrone depth.
+     ========================================= */
+  --ios-grouped-bg:    #F4EEDD;
+  --ios-surface:       #FDF9EE;
+  --ios-separator:     rgba(92, 63, 24, 0.10);
+  --ios-separator-strong: rgba(92, 63, 24, 0.16);
+  --ios-fill-quinary:  rgba(168, 117, 53, 0.10);
+  --ios-fill-quaternary: rgba(168, 117, 53, 0.18);
+  --ios-chrome-bg:     rgba(244, 238, 221, 0.82);
+  --ios-chrome-blur:   blur(20px) saturate(180%);
+  --ios-chev-muted:    rgba(155, 130, 88, 1);
+  --sticky-cta-shadow: 0 6px 16px rgba(168, 117, 53, 0.30);
+  --pill-nav-ring:     rgba(168, 117, 53, 0.10);
+  --pill-nav-shadow:   0 12px 30px rgba(92, 63, 24, 0.10);
 }
 
 /* =========================================
@@ -513,15 +530,32 @@ body {
   --glow-brand-strong: 0 0 40px rgba(232, 163, 85, 0.40);
   --glow-highlight: 0 0 20px rgba(245, 196, 90, 0.30);
 
-  /* Fluid tokens for dark mode (same as light — clamp works regardless) */
-  --text-display-2xl: clamp(32px, 4.5vw + 16px, 64px);
-  --text-display-2xl--line-height: 1.08;
-  --text-display-xl: clamp(28px, 3vw + 16px, 44px);
-  --text-display-xl--line-height: 1.12;
-  --text-display-lg: clamp(22px, 2vw + 14px, 32px);
-  --text-display-lg--line-height: 1.18;
-  --text-title-lg: clamp(18px, 1vw + 14px, 22px);
+  /* Mobile-tuned fluid typography (supplier dark) */
+  --text-display-2xl: clamp(28px, 7vw + 6px, 56px);
+  --text-display-2xl--line-height: 1.06;
+  --text-display-xl: clamp(24px, 6vw + 4px, 42px);
+  --text-display-xl--line-height: 1.08;
+  --text-display-lg: clamp(22px, 4vw + 6px, 32px);
+  --text-display-lg--line-height: 1.12;
+  --text-title-lg: clamp(17px, 1vw + 14px, 20px);
   --text-title-md: clamp(15px, 0.5vw + 13px, 17px);
+
+  /* =========================================
+     iOS Apple-app surface + chrome tokens (supplier — dark)
+     Ocra bright on very-dark surface.
+     ========================================= */
+  --ios-grouped-bg:    #0D0C09;
+  --ios-surface:       #17140E;
+  --ios-separator:     rgba(232, 163, 85, 0.10);
+  --ios-separator-strong: rgba(232, 163, 85, 0.18);
+  --ios-fill-quinary:  rgba(232, 163, 85, 0.14);
+  --ios-fill-quaternary: rgba(232, 163, 85, 0.22);
+  --ios-chrome-bg:     rgba(13, 12, 9, 0.80);
+  --ios-chrome-blur:   blur(20px) saturate(180%);
+  --ios-chev-muted:    rgba(200, 153, 104, 0.7);
+  --sticky-cta-shadow: 0 6px 18px rgba(232, 163, 85, 0.32);
+  --pill-nav-ring:     rgba(232, 163, 85, 0.18);
+  --pill-nav-shadow:   0 12px 30px rgba(0, 0, 0, 0.5);
 }
 
 /* Density adaptive for supplier (mirror restaurant pattern) */

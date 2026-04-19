@@ -2,7 +2,7 @@
 
 import { MobileRouteTransition } from "@/components/shared/mobile-route-transition";
 
-export default function RestaurantRouteTemplate({
+export default function SupplierRouteTemplate({
   children,
 }: {
   children: React.ReactNode;
