@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BookMarked, Filter, Keyboard } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { LargeTitle } from "@/components/ui/large-title";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   rankOffers,
@@ -279,8 +280,20 @@ export function SearchPageClient({
 
   return (
     <div className="flex h-[calc(100vh-var(--chrome-top,64px))] flex-col">
-      {/* Header row: title + tabs */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-4 py-3">
+      {/* Mobile editorial hero */}
+      <div className="lg:hidden">
+        <LargeTitle
+          eyebrow={`${suppliers.length} cataloghi attivi`}
+          title="Cerca prodotti"
+          subtitle="Confronta prezzi tra fornitori"
+        />
+        <div className="mt-2 px-3">
+          <TabSwitch tab={tab} onChange={setTab} />
+        </div>
+      </div>
+
+      {/* Header row: title + tabs (desktop) */}
+      <div className="hidden lg:flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-4 py-3">
         <PageHeader
           title="Cerca prodotti"
           subtitle={`${suppliers.length} cataloghi`}

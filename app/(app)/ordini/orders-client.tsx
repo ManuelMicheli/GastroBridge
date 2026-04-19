@@ -23,6 +23,7 @@ import { readUrlState, writeUrlState } from "./_lib/url-state";
 import { StatusChips } from "./_components/status-chips";
 import { Timeline } from "./_components/timeline";
 import { OrderPeek } from "./_components/order-peek";
+import { OrdersClientMobile } from "./orders-client-mobile";
 
 const CHEATSHEET_ROWS = [
   { keys: ["⌘", "K"], label: "Focus ricerca" },
@@ -183,7 +184,14 @@ export function OrdersClient({
   }
 
   return (
-    <div className="flex h-[calc(100vh-var(--chrome-top,64px))] flex-col">
+    <>
+      {/* Mobile Apple-app view */}
+      <div className="lg:hidden">
+        <OrdersClientMobile orders={orders} stats={stats} />
+      </div>
+
+      {/* Desktop terminal-dense view */}
+      <div className="hidden lg:flex h-[calc(100vh-var(--chrome-top,64px))] flex-col">
       {/* Top bar: title + stats */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-4 py-3">
         <div className="flex min-w-0 items-baseline gap-3">
@@ -329,6 +337,7 @@ export function OrdersClient({
       <span className="sr-only" aria-hidden>
         {CHEATSHEET_ROWS.map((r) => r.label).join(" ")}
       </span>
-    </div>
+      </div>
+    </>
   );
 }

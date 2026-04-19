@@ -13,6 +13,8 @@ import { ReceiptItemRow } from "./_components/receipt-item-row";
 import { ReceiptSupplierBlock } from "./_components/receipt-supplier-block";
 import { ReceiptSummary } from "./_components/receipt-summary";
 import { ReceiptFooter } from "./_components/receipt-footer";
+import { CartPageMobile } from "./cart-page-mobile";
+import type { CartItem } from "@/types/orders";
 import { runCheckout } from "./_lib/checkout";
 import {
   fetchCurrentRestaurant,
@@ -101,7 +103,30 @@ export default function CartPage() {
       : `Invia ordini a ${supplierGroups.length} forn.`;
 
   return (
-    <div className="mx-auto max-w-[640px] px-4 py-8">
+    <>
+      {/* Mobile Apple-app view */}
+      <div className="lg:hidden">
+        <CartPageMobile
+          supplierGroups={supplierGroups}
+          totalAmount={totalAmount}
+          itemCount={itemCount}
+          ctaLabel={ctaLabel}
+          pending={pending}
+          onCheckout={handleCheckout}
+          onInc={(it: CartItem) => updateQuantity(it.productId, it.quantity + 1)}
+          onDec={(it: CartItem) =>
+            updateQuantity(
+              it.productId,
+              Math.max(it.minQuantity, it.quantity - 1),
+            )
+          }
+          onRemove={removeItem}
+          onClear={clearCart}
+        />
+      </div>
+
+      {/* Desktop receipt view */}
+      <div className="hidden lg:block mx-auto max-w-[640px] px-4 py-8">
       <article className="rounded-xl border border-border-subtle bg-surface-card">
         <ReceiptHeader restaurantName={restaurant?.name ?? null} />
 
@@ -187,6 +212,7 @@ export default function CartPage() {
 
         <ReceiptFooter />
       </article>
-    </div>
+      </div>
+    </>
   );
 }

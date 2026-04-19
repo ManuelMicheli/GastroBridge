@@ -5,7 +5,8 @@ import { useTheme } from "next-themes";
 import { CollapsibleSidebar } from "./sidebar/collapsible-sidebar";
 import { DarkTopbar } from "./topbar/dark-topbar";
 import { DarkMobileNav, type MobileNavItem } from "./mobile/dark-mobile-nav";
-import { DarkMobileNavWithCart } from "./mobile/dark-mobile-nav-with-cart";
+import { FloatingPillNavWithCart } from "./mobile/floating-pill-nav-with-cart";
+import { MobileRestaurantTopbar } from "./mobile/mobile-restaurant-topbar";
 import { SidebarDrawer } from "./mobile/sidebar-drawer";
 import { CommandPaletteProvider } from "./command-palette/command-palette-provider";
 import { CommandPalette } from "./command-palette/command-palette";
@@ -60,19 +61,47 @@ export function DashboardShell({
 
         {/* Main content */}
         <div className="flex-1 flex flex-col min-w-0">
-          <DarkTopbar onMenuToggle={() => setDrawerOpen(true)} />
+          {role === "restaurant" ? (
+            <>
+              {/* Restaurant: mobile gets iOS-style translucent topbar, desktop keeps DarkTopbar */}
+              <div className="lg:hidden">
+                <MobileRestaurantTopbar
+                  onMenuToggle={() => setDrawerOpen(true)}
+                />
+              </div>
+              <div className="hidden lg:block">
+                <DarkTopbar onMenuToggle={() => setDrawerOpen(true)} />
+              </div>
+            </>
+          ) : (
+            <DarkTopbar onMenuToggle={() => setDrawerOpen(true)} />
+          )}
           <main
-            className="flex-1 w-full cq-shell lg:pb-6"
+            className={cn(
+              "flex-1 w-full cq-shell lg:pb-6",
+              role === "restaurant" && "bg-[color:var(--ios-grouped-bg)] lg:bg-transparent"
+            )}
             style={{
               paddingBottom:
-                "max(80px, calc(80px + env(safe-area-inset-bottom, 0px)))",
+                "max(92px, calc(92px + env(safe-area-inset-bottom, 0px)))",
             }}
           >
             <div
-              className="w-full py-6 mx-auto"
+              className={cn(
+                "w-full mx-auto",
+                role === "restaurant"
+                  ? "lg:py-6 py-1"
+                  : "py-6"
+              )}
               style={{
-                paddingLeft: "var(--page-gutter, 16px)",
-                paddingRight: "var(--page-gutter, 16px)",
+                paddingLeft:
+                  role === "restaurant"
+                    ? "var(--page-gutter, 0px)"
+                    : "var(--page-gutter, 16px)",
+                paddingRight:
+                  role === "restaurant"
+                    ? "var(--page-gutter, 0px)"
+                    : "var(--page-gutter, 16px)",
                 maxWidth: "var(--page-max-width, 100%)",
               }}
             >
@@ -91,9 +120,9 @@ export function DashboardShell({
           companyName={companyName}
         />
 
-        {/* Mobile bottom nav — restaurant gets cart badge wrapper */}
+        {/* Mobile bottom nav — restaurant gets floating-pill variant with cart badge */}
         {role === "restaurant" ? (
-          <DarkMobileNavWithCart items={mobileNavItems} />
+          <FloatingPillNavWithCart items={mobileNavItems} />
         ) : (
           <DarkMobileNav items={mobileNavItems} />
         )}

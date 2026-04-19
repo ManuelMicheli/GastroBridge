@@ -23,6 +23,7 @@ import { KpiGrid, type Delta } from "./_awwwards/kpi-grid";
 import { SavingsAlert } from "./_awwwards/savings-alert";
 import { SectionFrame } from "./_awwwards/section-frame";
 import { RecentOrdersLog } from "./_awwwards/recent-orders-log";
+import { RestaurantDashboardMobile } from "./restaurant-dashboard-mobile";
 
 type OrderRow = {
   id: string;
@@ -99,9 +100,20 @@ export function RestaurantDashboard({
   }, []);
 
   return (
-    <div className="space-y-6">
-      {/* Block 1 — Hero identity strip */}
-      <HeroStrip
+    <>
+      {/* Mobile-first dashboard — iOS-style grouped lists.
+          Desktop tree below renders on lg+ viewports. */}
+      <div className="lg:hidden">
+        <RestaurantDashboardMobile
+          companyName={companyName}
+          kpi={kpi}
+          recentOrders={recentOrders}
+        />
+      </div>
+      <div className="hidden lg:block">
+        <div className="space-y-6">
+          {/* Block 1 — Hero identity strip */}
+          <HeroStrip
         companyName={companyName}
         subtitle="Ecco il riepilogo della tua attività di questo mese."
       />
@@ -167,21 +179,23 @@ export function RestaurantDashboard({
         </SectionFrame>
       </div>
 
-      {/* Shared keyframes for stagger reveal — MUST be global so
-          `className="animate-[fadeInUp_...]"` utilities can reference the
-          raw keyframe name (styled-jsx scoped mode renames it). */}
-      <style jsx global>{`
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translate3d(0, 6px, 0);
-          }
-          to {
-            opacity: 1;
-            transform: translate3d(0, 0, 0);
-          }
-        }
-      `}</style>
-    </div>
+          {/* Shared keyframes for stagger reveal — MUST be global so
+              `className="animate-[fadeInUp_...]"` utilities can reference the
+              raw keyframe name (styled-jsx scoped mode renames it). */}
+          <style jsx global>{`
+            @keyframes fadeInUp {
+              from {
+                opacity: 0;
+                transform: translate3d(0, 6px, 0);
+              }
+              to {
+                opacity: 1;
+                transform: translate3d(0, 0, 0);
+              }
+            }
+          `}</style>
+        </div>
+      </div>
+    </>
   );
 }

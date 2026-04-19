@@ -607,17 +607,18 @@ body {
   --caption-color: var(--color-brand-depth);
 
   /* =========================================
-     Fluid typography (mobile-first responsive)
-     Scales smoothly 320→1440px viewport.
+     Fluid typography — mobile-tuned (Apple-app editorial)
+     Floor rebalanced 320–430px: display serif stays legible
+     without crushing small viewports. Clamps scale to 1440px.
      Body/caption/mono stay fixed (readability anchor).
      ========================================= */
-  --text-display-2xl: clamp(32px, 4.5vw + 16px, 64px);
-  --text-display-2xl--line-height: 1.08;
-  --text-display-xl: clamp(28px, 3vw + 16px, 44px);
-  --text-display-xl--line-height: 1.12;
-  --text-display-lg: clamp(22px, 2vw + 14px, 32px);
-  --text-display-lg--line-height: 1.18;
-  --text-title-lg: clamp(18px, 1vw + 14px, 22px);
+  --text-display-2xl: clamp(28px, 7vw + 6px, 56px);
+  --text-display-2xl--line-height: 1.06;
+  --text-display-xl: clamp(24px, 6vw + 4px, 42px);
+  --text-display-xl--line-height: 1.08;
+  --text-display-lg: clamp(22px, 4vw + 6px, 32px);
+  --text-display-lg--line-height: 1.12;
+  --text-title-lg: clamp(17px, 1vw + 14px, 20px);
   --text-title-md: clamp(15px, 0.5vw + 13px, 17px);
 
   /* =========================================
@@ -631,6 +632,23 @@ body {
   /* Safe-area insets (iOS notch / home indicator) */
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
+
+  /* =========================================
+     iOS Apple-app surface + chrome tokens (restaurant — light)
+     Grouped card-stack lists, translucent chrome, pill CTA shadow.
+     ========================================= */
+  --ios-grouped-bg:    #F2EFE7;
+  --ios-surface:       #FDFBF5;
+  --ios-separator:     rgba(0, 0, 0, 0.08);
+  --ios-separator-strong: rgba(0, 0, 0, 0.12);
+  --ios-fill-quinary:  rgba(118, 118, 128, 0.12);
+  --ios-fill-quaternary: rgba(118, 118, 128, 0.18);
+  --ios-chrome-bg:     rgba(242, 239, 231, 0.82);
+  --ios-chrome-blur:   blur(20px) saturate(180%);
+  --ios-chev-muted:    rgba(184, 170, 152, 1);
+  --sticky-cta-shadow: 0 6px 16px rgba(185, 28, 60, 0.28);
+  --pill-nav-ring:     rgba(185, 28, 60, 0.08);
+  --pill-nav-shadow:   0 12px 30px rgba(27, 16, 18, 0.12);
 
   /* =========================================
      Status tone palette (badges, dots)
@@ -716,18 +734,34 @@ body {
   --caption-color: var(--color-brand-depth);
 
   /* =========================================
-     Fluid typography (mobile-first responsive)
-     Scales smoothly 320→1440px viewport.
-     Body/caption/mono stay fixed (readability anchor).
+     Fluid typography — mobile-tuned (Apple-app editorial, dark)
+     Same dial as light scope.
      ========================================= */
-  --text-display-2xl: clamp(32px, 4.5vw + 16px, 64px);
-  --text-display-2xl--line-height: 1.08;
-  --text-display-xl: clamp(28px, 3vw + 16px, 44px);
-  --text-display-xl--line-height: 1.12;
-  --text-display-lg: clamp(22px, 2vw + 14px, 32px);
-  --text-display-lg--line-height: 1.18;
-  --text-title-lg: clamp(18px, 1vw + 14px, 22px);
+  --text-display-2xl: clamp(28px, 7vw + 6px, 56px);
+  --text-display-2xl--line-height: 1.06;
+  --text-display-xl: clamp(24px, 6vw + 4px, 42px);
+  --text-display-xl--line-height: 1.08;
+  --text-display-lg: clamp(22px, 4vw + 6px, 32px);
+  --text-display-lg--line-height: 1.12;
+  --text-title-lg: clamp(17px, 1vw + 14px, 20px);
   --text-title-md: clamp(15px, 0.5vw + 13px, 17px);
+
+  /* =========================================
+     iOS Apple-app surface + chrome tokens (restaurant — dark)
+     Mirrors light scope with dark-tinted surfaces.
+     ========================================= */
+  --ios-grouped-bg:    #0F0D11;
+  --ios-surface:       #1A1619;
+  --ios-separator:     rgba(255, 255, 255, 0.08);
+  --ios-separator-strong: rgba(255, 255, 255, 0.14);
+  --ios-fill-quinary:  rgba(120, 120, 128, 0.22);
+  --ios-fill-quaternary: rgba(120, 120, 128, 0.32);
+  --ios-chrome-bg:     rgba(15, 13, 17, 0.78);
+  --ios-chrome-blur:   blur(20px) saturate(180%);
+  --ios-chev-muted:    rgba(142, 142, 147, 1);
+  --sticky-cta-shadow: 0 6px 18px rgba(232, 69, 96, 0.35);
+  --pill-nav-ring:     rgba(232, 69, 96, 0.14);
+  --pill-nav-shadow:   0 12px 30px rgba(0, 0, 0, 0.5);
 
   /* Status tone palette — dark mode (alpha-tinted bg, brightened fg) */
   --tone-neutral-bg:   rgba(244, 244, 245, 0.06);

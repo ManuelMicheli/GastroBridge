@@ -13,6 +13,7 @@
 import { BarChart3, ShoppingCart, Wallet, Receipt } from "lucide-react";
 import { KPICard } from "@/components/dashboard/cards/kpi-card";
 import { SectionFrame } from "@/components/dashboard/restaurant/_awwwards/section-frame";
+import { LargeTitle } from "@/components/ui/large-title";
 import { formatCurrency } from "@/lib/utils/formatters";
 import type { RestaurantAnalytics } from "@/lib/analytics/restaurant";
 import { PeriodSelector } from "./_components/period-selector";
@@ -36,9 +37,19 @@ export function AnalyticsContent({ data }: Props) {
   ) || 1;
 
   return (
-    <div className="space-y-6">
-      {/* ─── Header: terminal caption + display title + controls ─── */}
-      <header className="animate-[fadeInUp_220ms_ease-out_both]">
+    <div className="space-y-6 lg:px-0 px-0">
+      {/* Mobile editorial hero */}
+      <div className="lg:hidden">
+        <LargeTitle
+          eyebrow={`Analytics · ${data.period.label}`}
+          title="Spesa"
+          subtitle="Budget, varianza e prezzi prodotti"
+          actions={<PeriodSelector current={data.period.key} />}
+        />
+      </div>
+
+      {/* ─── Header: terminal caption + display title + controls (desktop) ─── */}
+      <header className="hidden lg:block animate-[fadeInUp_220ms_ease-out_both]">
         <div className="flex items-center gap-3">
           <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
             Analytics

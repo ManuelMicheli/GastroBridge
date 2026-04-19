@@ -38,6 +38,7 @@ import {
 import { SearchBarMini } from "./_components/search-bar-mini";
 import { SupplierList } from "./_components/supplier-list";
 import { SupplierDetailPane } from "./_components/supplier-detail-pane";
+import { SuppliersClientMobile } from "./suppliers-client-mobile";
 import type { ImportedCatalog } from "./page";
 
 type TabId = "connessi" | "importati";
@@ -287,7 +288,14 @@ export function SuppliersClient({
 
   // ============= TAB: connessi (split-view) =============
   return (
-    <div className="flex h-[calc(100vh-var(--chrome-top,64px))] flex-col">
+    <>
+      {/* Mobile Apple-app view */}
+      <div className="lg:hidden">
+        <SuppliersClientMobile relationships={relationships} />
+      </div>
+
+      {/* Desktop split view */}
+      <div className="hidden lg:flex h-[calc(100vh-var(--chrome-top,64px))] flex-col">
       <TabStrip
         tab={tab}
         onChange={setTab}
@@ -403,7 +411,8 @@ export function SuppliersClient({
       </div>
 
       <CheatsheetOverlay open={helpOpen} onClose={() => setHelpOpen(false)} />
-    </div>
+      </div>
+    </>
   );
 }
 

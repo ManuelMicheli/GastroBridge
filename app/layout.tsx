@@ -41,6 +41,16 @@ export const metadata: Metadata = {
     "confronto prezzi alimentari",
     "ordini ristorante",
   ],
+  manifest: "/manifest.webmanifest",
+  applicationName: "GastroBridge",
+  appleWebApp: {
+    capable: true,
+    title: "GastroBridge",
+    statusBarStyle: "default",
+  },
+  formatDetection: {
+    telephone: false,
+  },
   openGraph: {
     title: "GastroBridge — Tutti i tuoi fornitori. Un solo posto.",
     description:
@@ -49,6 +59,17 @@ export const metadata: Metadata = {
     locale: "it_IT",
     type: "website",
   },
+};
+
+export const viewport: import("next").Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#FDFBF5" },
+    { media: "(prefers-color-scheme: dark)", color: "#0F0D11" },
+  ],
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

@@ -16,6 +16,7 @@ import { CompareSupplierToggle } from "./_components/compare-supplier-toggle";
 import { CompareFilterBar } from "./_components/compare-filter-bar";
 import { ComparePivotTable } from "./_components/compare-pivot-table";
 import { CompareMobileList } from "./_components/compare-mobile-list";
+import { CompareSupplierStackMobile } from "./_components/compare-supplier-stack-mobile";
 
 type Props = {
   suppliers: SupplierCol[];
@@ -220,6 +221,13 @@ export function CompareClient({
         saving={saving}
         savingPct={savingPct}
         scoresByRow={scoresByRow}
+      />
+
+      <CompareSupplierStackMobile
+        suppliers={filteredSuppliers}
+        pivot={pivot}
+        saving={saving}
+        savingPct={savingPct}
       />
 
       <CompareMobileList

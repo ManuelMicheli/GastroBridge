@@ -6,6 +6,8 @@ import { Card } from "@/components/ui/card";
 import { OrderStatusBadge } from "@/components/ui/order-status-badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { SectionHeader } from "@/components/ui/section-header";
+import { LargeTitle } from "@/components/ui/large-title";
+import { GroupedList, GroupedListRow } from "@/components/ui/grouped-list";
 import { formatCurrency, formatDate } from "@/lib/utils/formatters";
 
 const TIMELINE_STEPS = [
@@ -110,7 +112,185 @@ export default async function OrderDetailPage({
   const isDraft = order.status === "draft";
 
   return (
-    <div>
+    <>
+      {/* Mobile Apple-app view */}
+      <div className="lg:hidden pb-4">
+        <LargeTitle
+          eyebrow={formatDate(order.created_at)}
+          title={
+            <span className="font-mono">
+              ORD-{id.slice(-4).toUpperCase()}
+            </span>
+          }
+          subtitle={
+            <span className="inline-flex items-center gap-2">
+              <OrderStatusBadge
+                status={order.status}
+                size="xs"
+                celebrate={
+                  order.status === "delivered" ||
+                  order.status === "completed"
+                }
+              />
+              <span className="text-[color:var(--text-muted-light)]">·</span>
+              <span
+                className="font-serif text-[color:var(--color-brand-primary)]"
+                style={{ fontFamily: "Georgia, serif" }}
+              >
+                {formatCurrency(order.total)}
+              </span>
+            </span>
+          }
+        />
+
+        {!isDraft && !isCancelled && (
+          <GroupedList className="mt-2" label="Stato ordine">
+            {TIMELINE_STEPS.map((step, i) => {
+              const isDone = i <= currentStep;
+              const isActive = i === currentStep;
+              return (
+                <GroupedListRow
+                  key={`m-${step.key}`}
+                  compact
+                  leading={
+                    <div
+                      className="relative flex h-[14px] w-[14px] items-center justify-center"
+                      aria-hidden
+                    >
+                      <span
+                        className="block h-[14px] w-[14px] rounded-full"
+                        style={{
+                          background: isDone
+                            ? "var(--color-brand-primary)"
+                            : "rgba(139,42,48,0.15)",
+                          boxShadow: isActive
+                            ? "0 0 0 4px rgba(139,42,48,0.22)"
+                            : undefined,
+                        }}
+                      />
+                    </div>
+                  }
+                  title={
+                    <span
+                      className={
+                        isActive
+                          ? "font-semibold"
+                          : isDone
+                            ? ""
+                            : "text-[color:var(--text-muted-light)]"
+                      }
+                    >
+                      {step.label}
+                    </span>
+                  }
+                />
+              );
+            })}
+          </GroupedList>
+        )}
+
+        {(isDraft || isCancelled) && (
+          <div className="mx-[10px] mt-3 rounded-xl bg-[color:var(--ios-surface)] px-4 py-3 text-[13px] text-[color:var(--text-muted-light)]">
+            {isDraft
+              ? "Ordine in bozza — non ancora inviato ai fornitori."
+              : "Ordine annullato."}
+          </div>
+        )}
+
+        {hasMarketplaceSplits &&
+          (splits ?? []).map((split) => {
+            const supplier = split.suppliers as unknown as
+              | { company_name: string }
+              | null;
+            const splitItems = (items ?? []).filter(
+              (i) => i.supplier_id === split.supplier_id,
+            );
+            return (
+              <GroupedList
+                key={`m-split-${split.id}`}
+                className="mt-2"
+                label={
+                  <span>
+                    {supplier?.company_name ?? "Fornitore"} ·{" "}
+                    {formatCurrency(split.subtotal)}
+                  </span>
+                }
+                labelAction={<OrderStatusBadge status={split.status} size="xs" />}
+              >
+                {splitItems.map((item) => {
+                  const product = item.products as unknown as
+                    | { name: string; unit: string }
+                    | null;
+                  return (
+                    <GroupedListRow
+                      key={`m-it-${item.id}`}
+                      title={product?.name ?? "—"}
+                      subtitle={
+                        <span className="font-mono">
+                          × {item.quantity}
+                        </span>
+                      }
+                      trailing={
+                        <span
+                          className="font-serif text-[13px] text-[color:var(--color-brand-primary)]"
+                          style={{ fontFamily: "Georgia, serif" }}
+                        >
+                          {formatCurrency(item.subtotal)}
+                        </span>
+                      }
+                    />
+                  );
+                })}
+              </GroupedList>
+            );
+          })}
+
+        {!hasMarketplaceSplits &&
+          catalogDetail &&
+          catalogDetail.suppliers.length > 0 &&
+          catalogDetail.suppliers.map((s, idx) => (
+            <GroupedList
+              key={`m-cat-${idx}`}
+              className="mt-2"
+              label={
+                <span>
+                  {s.supplierName} · {s.subtotalLabel}
+                </span>
+              }
+            >
+              {s.items.map((it, i) => (
+                <GroupedListRow
+                  key={`m-ci-${i}`}
+                  title={it.name}
+                  subtitle={
+                    <span className="font-mono">× {it.qty}</span>
+                  }
+                  trailing={
+                    <span className="font-mono text-[13px] text-[color:var(--color-brand-primary)]">
+                      {it.price}
+                    </span>
+                  }
+                />
+              ))}
+            </GroupedList>
+          ))}
+
+        {/* Total footer */}
+        <div className="mx-[10px] mt-3 flex items-baseline justify-between rounded-xl bg-[color:var(--ios-surface)] px-4 py-3 shadow-[0_0.5px_0_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.03)]">
+          <span className="text-[11px] font-medium uppercase tracking-[0.14em] text-[color:var(--caption-color)]">
+            Totale ordine
+          </span>
+          <span
+            className="font-serif text-[20px] font-medium text-[color:var(--color-brand-primary)]"
+            style={{ fontFamily: "Georgia, serif" }}
+          >
+            {formatCurrency(order.total)}
+          </span>
+        </div>
+      </div>
+
+      {/* Desktop view */}
+      <div className="hidden lg:block">
       <div className="mb-4">
         <Link
           href="/ordini"
@@ -283,6 +463,7 @@ export default async function OrderDetailPage({
           <span className="font-mono text-forest">{formatCurrency(order.total)}</span>
         </div>
       </Card>
-    </div>
+      </div>
+    </>
   );
 }
