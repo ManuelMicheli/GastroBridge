@@ -17,14 +17,18 @@ export default async function SupplierMessagesIndexPage() {
   await markSectionSeen("supplier_messages");
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] min-h-0 overflow-hidden">
-      <ConversationList
-        conversations={conversations}
-        viewpoint="supplier"
-        activeRelationshipId={null}
-        baseHref="/supplier/messaggi"
-      />
-      <MessagesEmptyState />
+    <div className="flex h-[calc(100vh-var(--chrome-top,80px))] lg:h-[calc(100vh-4rem)] min-h-0 overflow-hidden">
+      <div className="flex-1 lg:flex-none lg:w-auto">
+        <ConversationList
+          conversations={conversations}
+          viewpoint="supplier"
+          activeRelationshipId={null}
+          baseHref="/supplier/messaggi"
+        />
+      </div>
+      <div className="hidden lg:flex flex-1">
+        <MessagesEmptyState />
+      </div>
     </div>
   );
 }

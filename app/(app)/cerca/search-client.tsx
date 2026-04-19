@@ -13,7 +13,6 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BookMarked, Filter, Keyboard } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
-import { LargeTitle } from "@/components/ui/large-title";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   rankOffers,
@@ -280,16 +279,20 @@ export function SearchPageClient({
 
   return (
     <div className="flex h-[calc(100vh-var(--chrome-top,64px))] flex-col">
-      {/* Mobile editorial hero */}
-      <div className="lg:hidden">
-        <LargeTitle
-          eyebrow={`${suppliers.length} cataloghi attivi`}
-          title="Cerca prodotti"
-          subtitle="Confronta prezzi tra fornitori"
-        />
-        <div className="mt-2 px-3">
-          <TabSwitch tab={tab} onChange={setTab} />
-        </div>
+      {/* Mobile compact tab strip — sits directly above search bar */}
+      <div className="flex items-center justify-between gap-2 px-3 pt-2 pb-1 lg:hidden">
+        <TabSwitch tab={tab} onChange={setTab} />
+        {tab === "ricerca" && (
+          <button
+            onClick={() => setFacetsOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle px-2.5 py-1.5 text-[12px] text-text-secondary"
+          >
+            <Filter className="h-3.5 w-3.5" />
+            {hasActiveFacets(facets) && (
+              <span className="inline-flex h-1.5 w-1.5 rounded-full bg-accent-green" />
+            )}
+          </button>
+        )}
       </div>
 
       {/* Header row: title + tabs (desktop) */}
@@ -310,7 +313,9 @@ export function SearchPageClient({
         </div>
       </div>
 
-      <ActiveFiltersBar prefs={prefs} />
+      <div className="hidden lg:block">
+        <ActiveFiltersBar prefs={prefs} />
+      </div>
 
       {tab === "ricerca" ? (
         <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_420px]">
@@ -330,21 +335,6 @@ export function SearchPageClient({
               isDeferring={isDeferring}
               listboxId="search-results-listbox"
             />
-
-            {/* Mobile filter trigger */}
-            <div className="flex items-center justify-between border-b border-border-subtle px-4 py-2 lg:hidden">
-              <button
-                onClick={() => setFacetsOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle px-3 py-1.5 text-[12px] text-text-secondary"
-              >
-                <Filter className="h-3.5 w-3.5" /> Filtri
-                {hasActiveFacets(facets) && (
-                  <span className="ml-1 inline-flex h-4 min-w-[16px] items-center justify-center rounded-sm bg-accent-green/15 px-1 font-mono text-[9px] text-accent-green">
-                    ●
-                  </span>
-                )}
-              </button>
-            </div>
 
             <ResultsList
               groups={filtered}

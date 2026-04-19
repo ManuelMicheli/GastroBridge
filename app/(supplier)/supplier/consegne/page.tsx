@@ -13,6 +13,7 @@ import {
 import { hasPermission } from "@/lib/supplier/permissions";
 import type { SupplierRole } from "@/types/database";
 import { Truck, Calendar } from "lucide-react";
+import { LargeTitle } from "@/components/ui/large-title";
 
 export const metadata: Metadata = { title: "Consegne del giorno" };
 
@@ -147,7 +148,41 @@ export default async function SupplierConsegnePage({
         ]}
       />
 
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+      {/* Mobile hero */}
+      <div className="lg:hidden">
+        <LargeTitle
+          eyebrow={<span className="capitalize">{formatItalianDate(date)}</span>}
+          title="Consegne"
+          subtitle="Pianificazione giornaliera"
+        />
+        <div className="mx-3 mt-3 flex items-center justify-between gap-2 rounded-lg bg-[color:var(--ios-fill-quinary)] p-1">
+          <Link
+            href={`/supplier/consegne?date=${previousDay(date)}${
+              driverParam ? `&driver=${driverParam}` : ""
+            }`}
+            className="flex-1 rounded-md py-2 text-center text-[12px] font-medium active:bg-white/60"
+          >
+            ←
+          </Link>
+          <Link
+            href={`/supplier/consegne?date=${todayRomeISO()}`}
+            className="flex-1 rounded-md py-2 text-center text-[12px] font-semibold text-[color:var(--color-brand-primary)] active:bg-white/60"
+          >
+            Oggi
+          </Link>
+          <Link
+            href={`/supplier/consegne?date=${nextDay(date)}${
+              driverParam ? `&driver=${driverParam}` : ""
+            }`}
+            className="flex-1 rounded-md py-2 text-center text-[12px] font-medium active:bg-white/60"
+          >
+            →
+          </Link>
+        </div>
+      </div>
+
+      {/* Desktop header */}
+      <div className="hidden lg:flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
           <h1 className="font-display text-3xl text-text-primary">
             Consegne<span className="text-brand-primary">.</span>

@@ -42,17 +42,26 @@ export function ResultRow({
         className={`block h-6 w-0.5 shrink-0 rounded-sm ${priceCls.replace("text-", "bg-")}`}
         aria-hidden
       />
-      <span className="min-w-0 flex-1 truncate text-[14px] text-text-primary">
-        {highlight(group.productName, query)}
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5 lg:flex-row lg:items-center lg:gap-3">
+        <span className="min-w-0 truncate text-[14px] text-text-primary">
+          {highlight(group.productName, query)}
+        </span>
+        <span className="flex items-center gap-2 font-mono text-[11px] text-text-tertiary lg:hidden">
+          <span>/ {group.unit}</span>
+          <span aria-hidden>·</span>
+          <span>{group.offers.length} offerte</span>
+        </span>
       </span>
-      <span className="shrink-0 font-mono text-[11px] text-text-tertiary">
+      <span className="hidden shrink-0 font-mono text-[11px] text-text-tertiary lg:inline">
         / {group.unit}
       </span>
       <span className={`shrink-0 font-mono text-[14px] font-medium tabular-nums ${priceCls}`}>
         {best ? `€ ${best.price.toFixed(2)}` : "—"}
       </span>
-      <Sparkline offers={group.offers} />
-      <span className="w-6 shrink-0 text-right font-mono text-[11px] text-text-tertiary">
+      <span className="hidden lg:block">
+        <Sparkline offers={group.offers} />
+      </span>
+      <span className="hidden w-6 shrink-0 text-right font-mono text-[11px] text-text-tertiary lg:inline">
         {group.offers.length}
       </span>
       <ChevronRight className="h-4 w-4 shrink-0 text-text-tertiary" />

@@ -133,8 +133,8 @@ export function ChatThread({
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-cream">
-      {/* Header */}
-      <header className="flex items-center gap-3 border-b border-sage-muted/30 bg-white/70 backdrop-blur px-5 py-3 shrink-0">
+      {/* Header — desktop only; mobile uses page-level back bar */}
+      <header className="hidden lg:flex items-center gap-3 border-b border-sage-muted/30 bg-white/70 backdrop-blur px-5 py-3 shrink-0">
         <div
           className="flex h-10 w-10 items-center justify-center rounded-full bg-forest text-white text-sm font-bold shadow-sm"
           aria-hidden
@@ -221,7 +221,8 @@ export function ChatThread({
             onKeyDown={handleKey}
             rows={1}
             placeholder={`Scrivi un messaggio a ${counterpartyName}…`}
-            className="flex-1 resize-none rounded-2xl border border-sage-muted/40 bg-cream px-4 py-2.5 text-sm text-charcoal placeholder:text-sage focus:outline-none focus:border-forest focus:ring-2 focus:ring-forest/20 max-h-40"
+            className="flex-1 resize-none rounded-2xl border border-sage-muted/40 bg-cream px-4 py-2.5 text-[16px] lg:text-sm text-charcoal placeholder:text-sage focus:outline-none focus:border-forest focus:ring-2 focus:ring-forest/20 max-h-40"
+            style={{ minHeight: 44 }}
           />
           <button
             onClick={handleSend}
@@ -232,7 +233,7 @@ export function ChatThread({
             <Send className="h-4 w-4" />
           </button>
         </div>
-        <p className="mt-1.5 pl-4 text-[10px] text-sage">
+        <p className="hidden lg:block mt-1.5 pl-4 text-[10px] text-sage">
           Invio: <kbd className="font-mono bg-sage-muted/30 rounded px-1">Enter</kbd> — a capo: <kbd className="font-mono bg-sage-muted/30 rounded px-1">Shift</kbd>+<kbd className="font-mono bg-sage-muted/30 rounded px-1">Enter</kbd>
         </p>
       </div>

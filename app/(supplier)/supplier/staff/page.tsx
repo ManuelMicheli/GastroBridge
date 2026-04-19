@@ -11,6 +11,7 @@ import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
 import { StaffClient } from "./staff-client";
 import type { SupplierRole } from "@/types/database";
 import { UserPlus, Users } from "lucide-react";
+import { LargeTitle } from "@/components/ui/large-title";
 
 export const metadata: Metadata = { title: "Staff" };
 
@@ -114,7 +115,26 @@ async function StaffPageInner({ supplierId }: { supplierId: string }) {
         ]}
       />
       <div>
-        <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
+        {/* Mobile hero */}
+        <div className="lg:hidden">
+          <LargeTitle
+            eyebrow="Team fornitore"
+            title="Staff"
+            subtitle="Membri, ruoli e inviti"
+            actions={
+              <Link
+                href="/supplier/staff/nuovo"
+                className="flex h-9 items-center gap-1 rounded-lg bg-[color:var(--color-brand-primary)] px-3 text-[13px] font-semibold text-[color:var(--color-brand-on-primary)] active:opacity-90"
+                aria-label="Invita membro"
+              >
+                <UserPlus className="h-3.5 w-3.5" /> Invita
+              </Link>
+            }
+          />
+        </div>
+
+        {/* Desktop header */}
+        <div className="hidden lg:flex items-center justify-between mb-6 gap-4 flex-wrap">
           <div>
             <h1 className="font-display text-3xl text-text-primary">
               Staff<span className="text-brand-primary">.</span>

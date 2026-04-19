@@ -20,6 +20,7 @@ import { isPhase1Enabled } from "@/lib/supplier/feature-flags";
 import { hasPermission } from "@/lib/supplier/permissions";
 import type { DdtCausale, SupplierRole } from "@/types/database";
 import { DdtBookClient, type DdtBookRow } from "./ddt-book-client";
+import { LargeTitle } from "@/components/ui/large-title";
 
 export const metadata: Metadata = { title: "Libro DDT" };
 
@@ -201,7 +202,22 @@ export default async function SupplierDdtBookPage({
   return (
     <FeatureFlagGate enabled={phase1Enabled} fallback={notEnabled}>
       <div className="space-y-6">
-        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+        <div className="lg:hidden">
+          <LargeTitle
+            eyebrow="Archivio documenti"
+            title="DDT"
+            subtitle="Documenti di trasporto emessi"
+            actions={
+              <Link
+                href="/supplier/ddt/templates"
+                className="text-[12px] font-semibold text-[color:var(--color-brand-primary)]"
+              >
+                Template →
+              </Link>
+            }
+          />
+        </div>
+        <div className="hidden lg:flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div>
             <h1 className="font-display text-3xl text-text-primary">
               DDT<span className="text-brand-primary">.</span>

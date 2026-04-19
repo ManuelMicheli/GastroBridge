@@ -13,6 +13,7 @@ import {
   updatePriceList,
 } from "@/lib/supplier/pricing/actions";
 import { formatDate } from "@/lib/utils/formatters";
+import { LargeTitle } from "@/components/ui/large-title";
 import type { Database } from "@/types/database";
 
 type PriceListRow = Database["public"]["Tables"]["price_lists"]["Row"];
@@ -105,7 +106,26 @@ export function ListiniClient({ initialLists }: Props) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      {/* Mobile hero */}
+      <div className="lg:hidden">
+        <LargeTitle
+          eyebrow={`${initialLists.length} listini configurati`}
+          title="Listini"
+          subtitle="Assegna prezzi ai clienti specifici"
+          actions={
+            <Link
+              href="/supplier/listini/nuovo"
+              className="flex h-9 items-center gap-1 rounded-lg bg-[color:var(--color-brand-primary)] px-3 text-[13px] font-semibold text-[color:var(--color-brand-on-primary)] active:opacity-90"
+              aria-label="Nuovo listino"
+            >
+              <Plus className="h-3.5 w-3.5" /> Nuovo
+            </Link>
+          }
+        />
+      </div>
+
+      {/* Desktop header */}
+      <div className="hidden lg:flex items-center justify-between mb-6">
         <div>
           <h1 className="font-display text-3xl text-text-primary">
             Listini<span className="text-brand-primary">.</span>

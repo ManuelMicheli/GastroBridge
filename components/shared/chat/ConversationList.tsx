@@ -28,20 +28,26 @@ export function ConversationList({
   }, [q, conversations, viewpoint]);
 
   return (
-    <aside className="w-80 max-w-full shrink-0 border-r border-sage-muted/30 bg-white/60 h-full flex flex-col">
-      <div className="px-5 py-5 border-b border-sage-muted/30">
-        <h2 className="font-display text-xl text-charcoal">Messaggi</h2>
-        <p className="mt-0.5 text-xs text-sage">
+    <aside className="w-full lg:w-80 max-w-full shrink-0 lg:border-r border-sage-muted/30 bg-white/60 h-full flex flex-col">
+      <div className="px-5 py-5 lg:border-b border-sage-muted/30">
+        <h2
+          className="font-serif text-[26px] lg:text-xl font-medium tracking-[-0.02em] text-[color:var(--color-text-primary)]"
+          style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+        >
+          Messaggi
+        </h2>
+        <p className="mt-0.5 text-[12px] lg:text-xs text-[color:var(--text-muted-light,#6B6B6B)]">
           {viewpoint === "restaurant" ? "I tuoi fornitori" : "I tuoi clienti"}
         </p>
         <div className="mt-3 relative">
-          <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-sage pointer-events-none" />
+          <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-[color:var(--ios-chev-muted)] pointer-events-none" />
           <input
             type="text"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Cerca…"
             className="w-full rounded-lg border border-sage-muted/40 bg-cream pl-8 pr-3 py-2 text-sm text-charcoal placeholder:text-sage focus:outline-none focus:border-forest focus:ring-2 focus:ring-forest/20"
+            style={{ fontSize: "16px" }}
           />
         </div>
       </div>

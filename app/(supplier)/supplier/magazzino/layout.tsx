@@ -61,20 +61,24 @@ export default async function SupplierMagazzinoLayout({
   }
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-col gap-4 border-b border-smoke/30 pb-4 md:flex-row md:items-center md:justify-between">
-        <nav className="flex flex-wrap items-center gap-1" aria-label="Sezioni magazzino">
+    <div className="space-y-4 lg:space-y-6">
+      <header className="flex flex-col gap-3 lg:gap-4 border-b border-[color:var(--ios-separator,rgba(0,0,0,0.08))] pb-3 lg:pb-4 md:flex-row md:items-center md:justify-between">
+        <nav
+          className="flex items-center gap-1 overflow-x-auto lg:flex-wrap [-webkit-overflow-scrolling:touch] px-3 lg:px-0 -mx-3 lg:mx-0"
+          aria-label="Sezioni magazzino"
+          style={{ scrollbarWidth: "none" }}
+        >
           {SUBNAV.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className="rounded-md px-3 py-1.5 text-sm font-medium text-sage transition-colors hover:bg-carbon hover:text-charcoal aria-[current=page]:bg-accent-green/10 aria-[current=page]:text-accent-green"
+              className="shrink-0 rounded-md px-3 py-2 text-[13px] lg:text-sm font-medium text-sage transition-colors hover:bg-carbon hover:text-charcoal aria-[current=page]:bg-accent-green/10 aria-[current=page]:text-accent-green"
             >
               {item.label}
             </Link>
           ))}
         </nav>
-        <div className="flex items-center justify-end">
+        <div className="flex items-center justify-end px-3 lg:px-0">
           <WarehouseSwitcher warehouses={warehouses} />
         </div>
       </header>

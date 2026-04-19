@@ -139,34 +139,34 @@ export function TypicalOrderPanel({
   };
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5 px-4 py-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+    <div className="mx-auto max-w-5xl space-y-4 px-3 py-4 lg:space-y-5 lg:px-4 lg:py-6">
+      <header className="space-y-3 lg:flex lg:flex-wrap lg:items-center lg:justify-between lg:gap-3 lg:space-y-0">
+        <div className="rounded-xl border border-border-subtle bg-surface-card px-4 py-3 lg:border-0 lg:bg-transparent lg:p-0">
           <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
             Ordine tipico · {lines.length} righe
           </p>
-          <p className="font-mono text-[18px] tabular-nums text-text-primary">
+          <p className="font-mono text-[20px] tabular-nums text-text-primary lg:text-[18px]">
             basket ottimale <span className="text-accent-green">€ {basketOptimal.toFixed(2)}</span>
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-3 gap-2 lg:flex lg:flex-wrap">
           <button
             onClick={() => setImportOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle px-3 py-2 text-[13px] hover:bg-surface-hover"
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border-subtle px-3 py-2 text-[13px] hover:bg-surface-hover"
           >
             <Upload className="h-3.5 w-3.5" /> importa
           </button>
           <button
             onClick={exportCsv}
             disabled={lines.length === 0}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle px-3 py-2 text-[13px] hover:bg-surface-hover disabled:opacity-40"
+            className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border-subtle px-3 py-2 text-[13px] hover:bg-surface-hover disabled:opacity-40"
           >
             <Download className="h-3.5 w-3.5" /> export
           </button>
           {lines.length > 0 && (
             <button
               onClick={() => setLines([])}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle px-3 py-2 text-[13px] text-red-400 hover:bg-red-500/10"
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border-subtle px-3 py-2 text-[13px] text-red-400 hover:bg-red-500/10"
             >
               svuota
             </button>
@@ -232,10 +232,10 @@ export function TypicalOrderPanel({
             </div>
           )}
 
-          <div className="flex justify-end">
+          <div className="lg:flex lg:justify-end">
             <Link
               href="/cerca/ordine"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-accent-green px-4 py-2.5 text-[13px] font-medium text-surface-base"
+              className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg bg-accent-green px-4 py-3 text-[14px] font-medium text-surface-base lg:w-auto lg:py-2.5 lg:text-[13px]"
             >
               <ShoppingBasket className="h-4 w-4" /> Carrello ottimale
             </Link>
