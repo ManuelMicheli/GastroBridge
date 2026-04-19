@@ -33,7 +33,7 @@ export function PulseDot({
     <span
       role="status"
       aria-label={label ?? `${variant} indicator`}
-      className={cn("inline-flex items-center gap-2", className)}
+      className={cn("inline-flex items-center gap-3", className)}
     >
       <span
         className={cn(

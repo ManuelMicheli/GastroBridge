@@ -14,7 +14,7 @@ export function LiveStatus({ count, label, variant = "live", className }: Props)
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface-muted px-3 py-1",
+        "inline-flex items-center gap-3 rounded-full border border-border-subtle bg-surface-muted px-3 py-1",
         className,
       )}
     >
