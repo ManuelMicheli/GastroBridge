@@ -26,7 +26,7 @@ const toneClasses: Record<NonNullable<SwipeAction["tone"]>, string> = {
     "bg-[color:var(--color-brand-primary)] text-[color:var(--color-brand-on-primary)]",
   destructive: "bg-[#C93737] text-white",
   success: "bg-[#1A8F50] text-white",
-  neutral: "bg-[color:var(--ios-fill-quaternary)] text-[color:var(--color-text-primary)] dark:text-white",
+  neutral: "bg-[color:var(--ios-fill-quaternary)] text-[color:var(--color-text-primary)]",
 };
 
 /**

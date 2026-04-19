@@ -31,7 +31,7 @@ export function LargeTitle({
       )}
       <div className="mt-1 flex items-end justify-between gap-3">
         <h1
-          className="font-serif text-[length:var(--text-display-lg)] font-medium leading-[var(--text-display-lg--line-height)] tracking-[-0.022em] text-[color:var(--color-text-primary)] dark:text-white"
+          className="font-serif text-[length:var(--text-display-lg)] font-medium leading-[var(--text-display-lg--line-height)] tracking-[-0.022em] text-[color:var(--color-text-primary)]"
           style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
           tabIndex={-1}
         >
@@ -40,7 +40,7 @@ export function LargeTitle({
         {actions && <div className="flex-shrink-0 pb-1">{actions}</div>}
       </div>
       {subtitle && (
-        <p className="mt-0.5 text-[13px] leading-snug text-[color:var(--text-muted-light)] dark:text-white/60">
+        <p className="mt-0.5 text-[13px] leading-snug text-[color:var(--color-text-secondary,#6B6B6B)]">
           {subtitle}
         </p>
       )}

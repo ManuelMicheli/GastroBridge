@@ -67,8 +67,8 @@ export function SegmentedControl<T extends string>({
               "relative flex-1 rounded-md px-2 py-1.5 text-[12px] font-medium transition",
               "min-h-[32px]",
               active
-                ? "bg-[color:var(--ios-surface)] text-[color:var(--color-text-primary)] shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:text-white dark:shadow-[0_1px_3px_rgba(0,0,0,0.4)]"
-                : "text-[color:var(--text-muted-light)] dark:text-white/70"
+                ? "bg-[color:var(--ios-surface)] text-[color:var(--color-text-primary)] shadow-[0_1px_3px_rgba(0,0,0,0.06)]"
+                : "text-[color:var(--color-text-secondary,#6B6B6B)]"
             )}
           >
             {opt.label}

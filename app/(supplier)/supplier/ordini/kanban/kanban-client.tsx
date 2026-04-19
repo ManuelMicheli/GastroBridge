@@ -372,7 +372,7 @@ export function KanbanClient({
             Kanban · vista desktop
           </div>
           <p
-            className="mt-2 font-serif text-[17px] font-medium leading-snug text-[color:var(--color-text-primary)] dark:text-white"
+            className="mt-2 font-serif text-[17px] font-medium leading-snug text-[color:var(--color-text-primary)]"
             style={{ fontFamily: "Georgia, serif" }}
           >
             Il trascinamento kanban funziona solo su schermo grande.

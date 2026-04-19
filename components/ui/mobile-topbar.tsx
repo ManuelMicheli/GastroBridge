@@ -45,7 +45,7 @@ export function MobileTopbar({
           {leading}
           {title && (
             <h1
-              className="truncate font-serif text-[16px] font-medium tracking-[-0.012em] text-[color:var(--color-text-primary)] dark:text-white"
+              className="truncate font-serif text-[16px] font-medium tracking-[-0.012em] text-[color:var(--color-text-primary)]"
               style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
             >
               {title}
@@ -112,7 +112,7 @@ export function TopbarHamburger({
       type="button"
       onClick={onClick}
       aria-label={ariaLabel}
-      className="flex h-10 w-10 items-center justify-center rounded-lg transition active:bg-black/5 dark:active:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-brand-primary)]"
+      className="flex h-10 w-10 items-center justify-center rounded-lg text-[color:var(--color-text-primary)] transition active:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-brand-primary)]"
     >
       <span className="flex w-5 flex-col gap-[3px]">
         <span className="h-[1.5px] rounded-full bg-current" />

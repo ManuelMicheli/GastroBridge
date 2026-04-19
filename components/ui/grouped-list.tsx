@@ -96,11 +96,11 @@ export function GroupedListRow({
         </div>
       )}
       <div className="min-w-0 flex-1">
-        <div className="truncate text-[14px] font-medium leading-tight text-[color:var(--color-text-primary)] dark:text-white">
+        <div className="truncate text-[14px] font-medium leading-tight text-[color:var(--color-text-primary)]">
           {title}
         </div>
         {subtitle && (
-          <div className="mt-0.5 truncate text-[11px] text-[color:var(--text-muted-light)] dark:text-white/60">
+          <div className="mt-0.5 truncate text-[11px] text-[color:var(--color-text-secondary,#6B6B6B)]">
             {subtitle}
           </div>
         )}

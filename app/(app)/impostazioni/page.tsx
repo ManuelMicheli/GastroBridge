@@ -160,7 +160,7 @@ export default async function SettingsPage() {
           </div>
           <div className="min-w-0 flex-1">
             <div
-              className="truncate font-serif text-[18px] font-medium tracking-[-0.015em] text-[color:var(--color-text-primary)] dark:text-white"
+              className="truncate font-serif text-[18px] font-medium tracking-[-0.015em] text-[color:var(--color-text-primary)]"
               style={{ fontFamily: "Georgia, serif" }}
             >
               {companyName}
