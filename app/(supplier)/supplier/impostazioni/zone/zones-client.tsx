@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { ZoneEditorDialog } from "@/components/supplier/delivery/zone-editor";
 import { deleteZone } from "@/lib/supplier/delivery-zones/actions";
 import type { Database } from "@/types/database";
+import { LargeTitle } from "@/components/ui/large-title";
 
 type ZoneRow = Database["public"]["Tables"]["delivery_zones"]["Row"];
 type WarehouseRow = Database["public"]["Tables"]["warehouses"]["Row"];
@@ -88,7 +89,28 @@ export function ZonesClient({ supplierId, initialZones, warehouses }: Props) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      {/* Mobile hero */}
+      <div className="lg:hidden">
+        <LargeTitle
+          eyebrow={`${initialZones.length} zone configurate`}
+          title="Zone di Consegna"
+          subtitle="Province, giorni e slot orari"
+          actions={
+            <button
+              type="button"
+              onClick={openNew}
+              disabled={pending}
+              className="flex h-9 items-center gap-1 rounded-lg bg-[color:var(--color-brand-primary)] px-3 text-[13px] font-semibold text-[color:var(--color-brand-on-primary)] active:opacity-90 disabled:opacity-40"
+              aria-label="Nuova zona"
+            >
+              <Plus className="h-3.5 w-3.5" /> Nuova
+            </button>
+          }
+        />
+      </div>
+
+      {/* Desktop header */}
+      <div className="hidden lg:flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-charcoal">
             Zone di Consegna

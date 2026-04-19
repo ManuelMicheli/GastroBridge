@@ -24,6 +24,7 @@ import { createClient as createBrowserClient } from "@/lib/supabase/client";
 import { updateSupplierProfile } from "@/lib/supplier/profile/actions";
 import type { EditableSupplierProfile } from "@/lib/supplier/profile/actions";
 import type { SupplierProfileInput } from "@/lib/supplier/profile/schemas";
+import { LargeTitle } from "@/components/ui/large-title";
 
 const CERT_OPTIONS = [
   "BIO",
@@ -209,13 +210,25 @@ export function ProfileClient({ supplierId, initialProfile }: Props) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[1fr_minmax(0,420px)] gap-6">
-      <div className="space-y-6">
+      <div className="space-y-4 lg:space-y-6">
         <header>
-          <h1 className="text-2xl font-bold text-charcoal">Profilo pubblico</h1>
-          <p className="text-sm text-sage mt-1">
-            Cura come ti vedono i ristoratori. Logo, copertina, descrizione e
-            certificazioni aumentano la fiducia e gli ordini.
-          </p>
+          {/* Mobile hero */}
+          <div className="lg:hidden">
+            <LargeTitle
+              eyebrow="Brand fornitore"
+              title="Profilo pubblico"
+              subtitle="Logo, copertina, descrizione e certificazioni"
+            />
+          </div>
+
+          {/* Desktop header */}
+          <div className="hidden lg:block">
+            <h1 className="text-2xl font-bold text-charcoal">Profilo pubblico</h1>
+            <p className="text-sm text-sage mt-1">
+              Cura come ti vedono i ristoratori. Logo, copertina, descrizione e
+              certificazioni aumentano la fiducia e gli ordini.
+            </p>
+          </div>
 
           <Card className="mt-4">
             <div className="flex items-center justify-between mb-2">

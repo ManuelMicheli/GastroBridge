@@ -46,14 +46,14 @@ export default async function SupplierMessagesThreadPage({
         />
       </div>
 
-      {/* Mobile: back bar to conversation list */}
-      <div className="lg:hidden sticky top-0 z-20 flex items-center gap-2 border-b border-[color:var(--ios-separator)] bg-[color:var(--ios-chrome-bg)] px-2 py-2 [backdrop-filter:var(--ios-chrome-blur)] [-webkit-backdrop-filter:var(--ios-chrome-blur)]">
+      {/* Mobile: WhatsApp-style back bar — arrow + avatar + name */}
+      <div className="lg:hidden sticky top-0 z-20 flex items-center gap-2 border-b border-[color:var(--ios-separator)] bg-[color:var(--ios-chrome-bg)] px-1.5 py-2 [backdrop-filter:var(--ios-chrome-blur)] [-webkit-backdrop-filter:var(--ios-chrome-blur)]">
         <Link
           href="/supplier/messaggi"
-          className="flex h-10 items-center gap-1 rounded-lg pr-2 text-[color:var(--color-brand-primary)] transition active:bg-[color:var(--color-brand-primary-subtle)]"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[color:var(--color-brand-primary)] transition active:bg-[color:var(--color-brand-primary-subtle)] shrink-0"
           aria-label="Torna a conversazioni"
         >
-          <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden="true">
+          <svg viewBox="0 0 16 16" className="h-5 w-5" aria-hidden="true">
             <path
               d="M10 3L5 8l5 5"
               fill="none"
@@ -63,17 +63,21 @@ export default async function SupplierMessagesThreadPage({
               strokeLinejoin="round"
             />
           </svg>
-          <span className="text-[15px] font-normal">Messaggi</span>
         </Link>
-        <div className="min-w-0 flex-1 text-center">
-          <div
-            className="truncate font-serif text-[15px] font-medium text-[color:var(--color-text-primary)]"
-            style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-          >
+        <div
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-[color:var(--color-brand-primary)] text-white text-[13px] font-semibold shrink-0 shadow-sm"
+          aria-hidden
+        >
+          {context.restaurantName.slice(0, 2).toUpperCase()}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[15px] font-semibold leading-tight text-[color:var(--color-text-primary)]">
             {context.restaurantName}
           </div>
+          <div className="truncate text-[11px] leading-tight text-[color:var(--color-text-tertiary,#8e8e93)]">
+            Cliente
+          </div>
         </div>
-        <div className="w-[72px]" aria-hidden="true" />
       </div>
 
       <section className="flex-1 min-w-0 h-full min-h-0 flex flex-col">

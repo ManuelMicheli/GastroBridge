@@ -21,6 +21,7 @@ import {
   setPrimaryWarehouse,
 } from "@/lib/supplier/warehouses/actions";
 import type { Database } from "@/types/database";
+import { LargeTitle } from "@/components/ui/large-title";
 
 type WarehouseRow = Database["public"]["Tables"]["warehouses"]["Row"];
 
@@ -91,7 +92,27 @@ export function WarehousesClient({ supplierId, initialWarehouses }: Props) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      {/* Mobile hero */}
+      <div className="lg:hidden">
+        <LargeTitle
+          eyebrow={`${initialWarehouses.length} sedi configurate`}
+          title="Sedi / Magazzini"
+          subtitle="Esattamente una principale"
+          actions={
+            <button
+              type="button"
+              onClick={openNew}
+              className="flex h-9 items-center gap-1 rounded-lg bg-[color:var(--color-brand-primary)] px-3 text-[13px] font-semibold text-[color:var(--color-brand-on-primary)] active:opacity-90"
+              aria-label="Nuova sede"
+            >
+              <Plus className="h-3.5 w-3.5" /> Nuova
+            </button>
+          }
+        />
+      </div>
+
+      {/* Desktop header */}
+      <div className="hidden lg:flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-charcoal">Sedi / Magazzini</h1>
           <p className="text-sm text-sage mt-1">

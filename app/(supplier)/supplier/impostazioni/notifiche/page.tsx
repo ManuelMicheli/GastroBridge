@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/server";
 import { PushSubscriptionManager } from "@/components/supplier/notifications/push-subscription-manager";
 import { RealtimeLivePrefs } from "@/components/supplier/notifications/live-prefs";
+import { LargeTitle } from "@/components/ui/large-title";
 
 export const metadata: Metadata = { title: "Notifiche — Impostazioni Fornitore" };
 
@@ -112,20 +113,32 @@ export default async function SupplierNotificationsSettingsPage() {
   ];
 
   return (
-    <div className="space-y-6">
-      <Link
-        href="/supplier/impostazioni"
-        className="inline-flex items-center gap-1 text-sm text-sage hover:text-forest"
-      >
-        <ChevronLeft className="h-4 w-4" />
-        Torna a Impostazioni
-      </Link>
+    <div className="space-y-4 lg:space-y-6">
+      {/* Mobile hero */}
+      <div className="lg:hidden">
+        <LargeTitle
+          eyebrow="Impostazioni"
+          title="Notifiche"
+          subtitle="Canali per ordini e aggiornamenti"
+        />
+      </div>
 
-      <div>
-        <h1 className="text-2xl font-bold text-charcoal">Notifiche</h1>
-        <p className="text-sm text-sage mt-1">
-          Gestisci i canali di notifica per nuovi ordini e aggiornamenti.
-        </p>
+      {/* Desktop header */}
+      <div className="hidden lg:block space-y-6">
+        <Link
+          href="/supplier/impostazioni"
+          className="inline-flex items-center gap-1 text-sm text-sage hover:text-forest"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Torna a Impostazioni
+        </Link>
+
+        <div>
+          <h1 className="text-2xl font-bold text-charcoal">Notifiche</h1>
+          <p className="text-sm text-sage mt-1">
+            Gestisci i canali di notifica per nuovi ordini e aggiornamenti.
+          </p>
+        </div>
       </div>
 
       <Card>

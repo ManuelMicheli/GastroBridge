@@ -442,17 +442,50 @@ export function OrderDetailClient({
         ]}
       />
 
-      {/* Back link */}
+      {/* Back link — desktop only; mobile uses MobileSupplierTopbar back */}
       <Link
         href="/supplier/ordini"
-        className="inline-flex items-center gap-2 text-sm text-sage hover:text-charcoal transition-colors"
+        className="hidden lg:inline-flex items-center gap-2 text-sm text-sage hover:text-charcoal transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />
         Torna agli ordini
       </Link>
 
-      {/* Header */}
-      <Card>
+      {/* Mobile editorial hero */}
+      <div className="lg:hidden">
+        <div className="px-4 pt-3 pb-1">
+          <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-[color:var(--caption-color)]">
+            Ordine #{splitId.slice(0, 8)}
+            {orderCreatedAt ? ` · ${formatDate(orderCreatedAt)}` : ""}
+          </div>
+          <h1
+            className="mt-2 font-serif text-[length:var(--text-display-lg)] font-medium leading-[1.04] tracking-[-0.022em] text-[color:var(--color-text-primary)]"
+            style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+          >
+            {restaurantName}
+          </h1>
+          <div className="mt-2 flex items-center gap-2">
+            <Badge variant={WORKFLOW_VARIANT[workflowState] ?? "default"}>
+              {WORKFLOW_LABELS[workflowState] ?? workflowState}
+            </Badge>
+            <span className="text-[color:var(--text-muted-light,#6B6B6B)]">·</span>
+            <span
+              className="font-serif text-[18px] font-medium text-[color:var(--color-brand-primary)]"
+              style={{ fontFamily: "Georgia, serif" }}
+            >
+              {formatCurrency(subtotal)}
+            </span>
+          </div>
+          {expectedDeliveryDate && (
+            <p className="mt-1 text-[12px] text-[color:var(--text-muted-light,#6B6B6B)]">
+              Consegna prevista {formatDate(expectedDeliveryDate)}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Header Card — desktop only */}
+      <Card className="hidden lg:block">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <p className="text-xs uppercase tracking-wider text-sage">

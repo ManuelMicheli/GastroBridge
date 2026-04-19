@@ -30,15 +30,14 @@ export function ChatThread({
   const [draft, setDraft] = useState("");
   const [pending, startTransition] = useTransition();
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Initial scroll + when new messages arrive, keep anchored to bottom if user is near bottom.
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
   }, [messages.length]);
 
-  // Mark thread as read on mount + whenever new messages appear (debounced a bit).
   useEffect(() => {
     let cancelled = false;
     const t = window.setTimeout(() => {
@@ -51,7 +50,6 @@ export function ChatThread({
     };
   }, [relationshipId, orderSplitId, messages.length]);
 
-  // Realtime: subscribe to inserts on partnership_messages for this relationship.
   useEffect(() => {
     const supabase = createClient();
     const channel = supabase
@@ -66,7 +64,6 @@ export function ChatThread({
         },
         (payload) => {
           const row = payload.new as PartnershipMessageRow;
-          // Enforce scope: only show messages matching our orderSplitId filter.
           const matchScope =
             orderSplitId == null
               ? row.order_split_id == null
@@ -87,6 +84,13 @@ export function ChatThread({
 
   const groups = useMemo(() => groupByDay(messages), [messages]);
 
+  function autosize() {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
+  }
+
   function handleSend() {
     const body = draft.trim();
     if (!body) return;
@@ -103,6 +107,7 @@ export function ChatThread({
     };
     setMessages((prev) => [...prev, optimistic]);
     setDraft("");
+    requestAnimationFrame(autosize);
     startTransition(async () => {
       const res = await sendMessage({
         relationship_id: relationshipId,
@@ -110,12 +115,10 @@ export function ChatThread({
         order_split_id:  orderSplitId ?? null,
       });
       if (!res.ok) {
-        // rollback optimistic + restore draft
         setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
         setDraft(body);
         return;
       }
-      // Replace optimistic with persisted row.
       setMessages((prev) => {
         const withoutOpt = prev.filter((m) => m.id !== optimistic.id);
         if (withoutOpt.some((m) => m.id === res.data.id)) return withoutOpt;
@@ -132,33 +135,41 @@ export function ChatThread({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-cream">
-      {/* Header — desktop only; mobile uses page-level back bar */}
-      <header className="hidden lg:flex items-center gap-3 border-b border-sage-muted/30 bg-white/70 backdrop-blur px-5 py-3 shrink-0">
+    <div className="flex h-full min-h-0 flex-col bg-[color:var(--color-surface-muted,#faf7ef)] lg:bg-cream">
+      <header className="hidden lg:flex items-center gap-3 border-b border-[color:var(--ios-separator)] bg-white/70 backdrop-blur px-5 py-3 shrink-0">
         <div
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-forest text-white text-sm font-bold shadow-sm"
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--color-brand-primary)] text-white text-sm font-semibold shadow-sm"
           aria-hidden
         >
           {counterpartyName.slice(0, 2).toUpperCase()}
         </div>
         <div className="min-w-0">
-          <h2 className="font-semibold text-charcoal truncate">{counterpartyName}</h2>
-          <p className="text-xs text-sage truncate">
+          <h2 className="font-semibold text-[color:var(--color-text-primary)] truncate">
+            {counterpartyName}
+          </h2>
+          <p className="text-xs text-[color:var(--color-text-tertiary,#8e8e93)] truncate">
             {orderSplitId ? "Chat su ordine specifico" : "Chat globale"}
           </p>
         </div>
       </header>
 
-      {/* Scrollable message area */}
-      <div ref={scrollerRef} className="flex-1 min-h-0 overflow-y-auto px-5 py-6 space-y-6">
+      <div
+        ref={scrollerRef}
+        className="flex-1 min-h-0 overflow-y-auto px-3 py-4 lg:px-5 lg:py-6 space-y-5 lg:space-y-6 [overscroll-behavior:contain]"
+      >
         {groups.length === 0 ? (
           <div className="h-full flex items-center justify-center text-center">
             <div className="max-w-sm">
-              <div className="mx-auto h-12 w-12 rounded-full bg-sage-muted/30 flex items-center justify-center mb-3" aria-hidden>
-                <Send className="h-5 w-5 text-sage" />
+              <div
+                className="mx-auto h-14 w-14 rounded-full bg-[color:var(--color-brand-primary-subtle)] flex items-center justify-center mb-3"
+                aria-hidden
+              >
+                <Send className="h-5 w-5 text-[color:var(--color-brand-primary)]" />
               </div>
-              <p className="text-sm font-medium text-charcoal">Inizia la conversazione</p>
-              <p className="text-xs text-sage mt-1">
+              <p className="text-sm font-medium text-[color:var(--color-text-primary)]">
+                Inizia la conversazione
+              </p>
+              <p className="text-xs text-[color:var(--color-text-tertiary,#8e8e93)] mt-1">
                 I messaggi inviati qui sono visibili solo a te e a {counterpartyName}.
               </p>
             </div>
@@ -166,29 +177,51 @@ export function ChatThread({
         ) : (
           groups.map((g) => (
             <section key={g.day} className="space-y-2">
-              <div className="flex items-center gap-3">
-                <div className="h-px flex-1 bg-sage-muted/30" />
-                <span className="text-[10px] uppercase tracking-wider text-sage">
+              <div className="flex justify-center">
+                <span className="inline-flex items-center rounded-full bg-[color:var(--ios-fill-tertiary,rgba(120,120,128,0.12))] px-3 py-1 text-[11px] font-medium text-[color:var(--color-text-tertiary,#6b6b6b)] uppercase tracking-wide">
                   {formatRelativeTime(g.day)}
                 </span>
-                <div className="h-px flex-1 bg-sage-muted/30" />
               </div>
-              <ul className="space-y-2">
-                {g.items.map((m) => {
+              <ul className="space-y-1.5">
+                {g.items.map((m, i) => {
                   const mine = m.sender_profile === currentUserId;
+                  const prev = g.items[i - 1];
+                  const next = g.items[i + 1];
+                  const samePrev = prev && (prev.sender_profile === currentUserId) === mine;
+                  const sameNext = next && (next.sender_profile === currentUserId) === mine;
+                  const cornerMine = [
+                    "rounded-2xl",
+                    samePrev ? "rounded-tr-md" : "",
+                    sameNext ? "rounded-br-md" : "rounded-br-sm",
+                  ].join(" ");
+                  const cornerTheirs = [
+                    "rounded-2xl",
+                    samePrev ? "rounded-tl-md" : "",
+                    sameNext ? "rounded-bl-md" : "rounded-bl-sm",
+                  ].join(" ");
                   return (
                     <li key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                       <div
                         className={[
-                          "max-w-[72%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed shadow-sm",
+                          "max-w-[78%] lg:max-w-[72%] px-3.5 py-2 text-[15px] lg:text-sm leading-[1.35] shadow-sm",
                           mine
-                            ? "bg-forest text-white rounded-br-sm"
-                            : "bg-white text-charcoal rounded-bl-sm border border-sage-muted/30",
+                            ? `bg-[color:var(--color-brand-primary)] text-white ${cornerMine}`
+                            : `bg-white text-[color:var(--color-text-primary)] border border-[color:var(--ios-separator)] ${cornerTheirs}`,
                         ].join(" ")}
                       >
                         {m.body && <p className="whitespace-pre-wrap break-words">{m.body}</p>}
-                        <div className={`mt-1 flex items-center gap-1 text-[10px] ${mine ? "text-white/70 justify-end" : "text-sage"}`}>
-                          <time dateTime={m.created_at} title={formatDateTime(m.created_at)}>
+                        <div
+                          className={`mt-1 flex items-center gap-1 text-[10.5px] ${
+                            mine
+                              ? "text-white/75 justify-end"
+                              : "text-[color:var(--color-text-tertiary,#8e8e93)]"
+                          }`}
+                        >
+                          <time
+                            dateTime={m.created_at}
+                            title={formatDateTime(m.created_at)}
+                            className="tabular-nums"
+                          >
                             {new Date(m.created_at).toLocaleTimeString("it-IT", {
                               hour: "2-digit",
                               minute: "2-digit",
@@ -212,29 +245,46 @@ export function ChatThread({
         )}
       </div>
 
-      {/* Composer */}
-      <div className="border-t border-sage-muted/30 bg-white/80 backdrop-blur px-3 py-3 shrink-0">
+      <div
+        className="border-t border-[color:var(--ios-separator)] bg-[color:var(--ios-chrome-bg,rgba(255,255,255,0.85))] [backdrop-filter:saturate(1.6)_blur(18px)] [-webkit-backdrop-filter:saturate(1.6)_blur(18px)] px-2.5 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] lg:px-3 lg:py-3 shrink-0"
+      >
         <div className="flex items-end gap-2">
           <textarea
+            ref={textareaRef}
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              autosize();
+            }}
             onKeyDown={handleKey}
             rows={1}
-            placeholder={`Scrivi un messaggio a ${counterpartyName}…`}
-            className="flex-1 resize-none rounded-2xl border border-sage-muted/40 bg-cream px-4 py-2.5 text-[16px] lg:text-sm text-charcoal placeholder:text-sage focus:outline-none focus:border-forest focus:ring-2 focus:ring-forest/20 max-h-40"
-            style={{ minHeight: 44 }}
+            placeholder={`Messaggio…`}
+            className="flex-1 resize-none rounded-[22px] border border-[color:var(--ios-separator)] bg-[color:var(--color-surface-card,#fff)] px-4 py-2.5 text-[16px] lg:text-sm text-[color:var(--color-text-primary)] placeholder:text-[color:var(--color-text-tertiary,#8e8e93)] focus:outline-none focus:border-[color:var(--color-brand-primary)] focus:ring-2 focus:ring-[color:var(--color-brand-primary-subtle)] max-h-[140px]"
+            style={{ minHeight: 40 }}
+            aria-label={`Messaggio per ${counterpartyName}`}
           />
           <button
             onClick={handleSend}
             disabled={pending || draft.trim().length === 0}
             aria-label="Invia messaggio"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-forest text-white shadow-sm disabled:opacity-40 transition-transform active:scale-95"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[color:var(--color-brand-primary)] text-white shadow-sm disabled:opacity-40 disabled:scale-95 transition-transform active:scale-90"
           >
             <Send className="h-4 w-4" />
           </button>
         </div>
-        <p className="hidden lg:block mt-1.5 pl-4 text-[10px] text-sage">
-          Invio: <kbd className="font-mono bg-sage-muted/30 rounded px-1">Enter</kbd> — a capo: <kbd className="font-mono bg-sage-muted/30 rounded px-1">Shift</kbd>+<kbd className="font-mono bg-sage-muted/30 rounded px-1">Enter</kbd>
+        <p className="hidden lg:block mt-1.5 pl-4 text-[10px] text-[color:var(--color-text-tertiary,#8e8e93)]">
+          Invio:{" "}
+          <kbd className="font-mono bg-[color:var(--ios-fill-tertiary,rgba(120,120,128,0.12))] rounded px-1">
+            Enter
+          </kbd>{" "}
+          — a capo:{" "}
+          <kbd className="font-mono bg-[color:var(--ios-fill-tertiary,rgba(120,120,128,0.12))] rounded px-1">
+            Shift
+          </kbd>
+          +
+          <kbd className="font-mono bg-[color:var(--ios-fill-tertiary,rgba(120,120,128,0.12))] rounded px-1">
+            Enter
+          </kbd>
         </p>
       </div>
     </div>
