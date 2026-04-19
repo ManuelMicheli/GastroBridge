@@ -91,7 +91,7 @@ export function SuppliersClientMobile({
           actions={
             <Link
               href="/fornitori/cerca"
-              className="rounded-lg bg-[color:var(--color-brand-primary-subtle)] p-2 text-[color:var(--color-brand-primary)] transition active:bg-[color:var(--color-brand-primary)]/20"
+              className="rounded-lg p-2 text-[color:var(--color-brand-primary)] transition active:bg-black/5"
               aria-label="Cerca nuovi fornitori"
             >
               <svg viewBox="0 0 16 16" className="h-4 w-4" fill="none">
