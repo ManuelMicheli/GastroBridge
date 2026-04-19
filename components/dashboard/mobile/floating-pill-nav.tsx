@@ -57,7 +57,7 @@ export function FloatingPillNav({ items }: Props) {
                 "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-brand-primary)]",
                 isActive
                   ? "text-[color:var(--color-brand-primary)]"
-                  : "text-[color:var(--text-muted-light)] dark:text-white/60"
+                  : "text-[color:var(--text-muted-light,#6B6B6B)]"
               )}
               aria-current={isActive ? "page" : undefined}
             >
