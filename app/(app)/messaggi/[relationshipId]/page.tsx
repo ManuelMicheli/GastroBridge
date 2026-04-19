@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import {
   listConversationsForCurrentUser,
@@ -34,14 +35,48 @@ export default async function MessagesThreadPage({
   await markSectionSeen("restaurant_messages");
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] min-h-0 overflow-hidden">
-      <ConversationList
-        conversations={conversations}
-        viewpoint="restaurant"
-        activeRelationshipId={relationshipId}
-        baseHref="/messaggi"
-      />
-      <section className="flex-1 min-w-0 h-full min-h-0">
+    <div className="flex h-[calc(100vh-var(--chrome-top,80px))] lg:h-[calc(100vh-4rem)] min-h-0 overflow-hidden">
+      {/* Sidebar: hidden on mobile */}
+      <div className="hidden lg:block">
+        <ConversationList
+          conversations={conversations}
+          viewpoint="restaurant"
+          activeRelationshipId={relationshipId}
+          baseHref="/messaggi"
+        />
+      </div>
+
+      {/* Mobile back bar */}
+      <div className="lg:hidden sticky top-0 z-20 flex items-center gap-2 border-b border-[color:var(--ios-separator)] bg-[color:var(--ios-chrome-bg)] px-2 py-2 [backdrop-filter:var(--ios-chrome-blur)] [-webkit-backdrop-filter:var(--ios-chrome-blur)]">
+        <Link
+          href="/messaggi"
+          className="flex h-10 items-center gap-1 rounded-lg pr-2 text-[color:var(--color-brand-primary)] transition active:bg-[color:var(--color-brand-primary-subtle)]"
+          aria-label="Torna a conversazioni"
+        >
+          <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden="true">
+            <path
+              d="M10 3L5 8l5 5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span className="text-[15px] font-normal">Messaggi</span>
+        </Link>
+        <div className="min-w-0 flex-1 text-center">
+          <div
+            className="truncate font-serif text-[15px] font-medium text-[color:var(--color-text-primary)]"
+            style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+          >
+            {context.supplierName}
+          </div>
+        </div>
+        <div className="w-[72px]" aria-hidden="true" />
+      </div>
+
+      <section className="flex-1 min-w-0 h-full min-h-0 flex flex-col">
         <ChatThread
           relationshipId={relationshipId}
           orderSplitId={null}
@@ -51,7 +86,11 @@ export default async function MessagesThreadPage({
           initialMessages={messages}
         />
       </section>
-      <ContextPanel context={context} viewpoint="restaurant" />
+
+      {/* Context panel: desktop only */}
+      <div className="hidden lg:block">
+        <ContextPanel context={context} viewpoint="restaurant" />
+      </div>
     </div>
   );
 }

@@ -10,6 +10,7 @@ import { Plus, MapPin, Phone, Users, Pencil, Trash2, Star } from "lucide-react";
 import { LocationFormDialog } from "@/components/settings/location-form-dialog";
 import { deleteLocation, setPrimaryLocation } from "@/lib/restaurants/actions";
 import type { RestaurantRow } from "@/lib/restaurants/types";
+import { LargeTitle } from "@/components/ui/large-title";
 
 const CUISINE_LABELS: Record<string, string> = {
   italiana: "Italiana",
@@ -67,7 +68,27 @@ export function SediClient({ initialLocations }: { initialLocations: RestaurantR
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      {/* Mobile hero */}
+      <div className="lg:hidden">
+        <LargeTitle
+          eyebrow={`${initialLocations.length} sedi configurate`}
+          title="Sedi"
+          subtitle="Ristoranti e punti vendita"
+          actions={
+            <button
+              type="button"
+              onClick={openNew}
+              className="flex h-9 items-center gap-1 rounded-lg bg-[color:var(--color-brand-primary)] px-3 text-[13px] font-semibold text-[color:var(--color-brand-on-primary)] active:opacity-90"
+              aria-label="Nuova sede"
+            >
+              <Plus className="h-3.5 w-3.5" /> Nuova
+            </button>
+          }
+        />
+      </div>
+
+      {/* Desktop header */}
+      <div className="hidden lg:flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-charcoal">Sedi</h1>
         <Button size="sm" onClick={openNew}>
           <Plus className="h-4 w-4" /> Nuova Sede

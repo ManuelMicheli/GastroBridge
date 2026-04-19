@@ -73,28 +73,47 @@ export const CatalogGalleryHeader = forwardRef<HTMLInputElement, Props>(
       <header className="space-y-4 border-b border-border-subtle pb-4">
         {/* Top row: title, stats, actions */}
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0">
-            <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-text-tertiary">
-              Cataloghi fornitori
-              <span className="mx-2 text-border-subtle">·</span>
-              <span className="tabular-nums text-text-secondary">
-                {catalogCount} listini
-              </span>
-              {updatedTodayCount > 0 && (
-                <>
-                  <span className="mx-2 text-border-subtle">·</span>
-                  <span className="tabular-nums text-accent-green">
-                    {updatedTodayCount} aggiornat{updatedTodayCount === 1 ? "o" : "i"} oggi
-                  </span>
-                </>
-              )}
-            </p>
-            <h1 className="mt-1 text-2xl font-semibold text-text-primary">
-              Listini e prezzi
-            </h1>
-            <p className="mt-1 text-sm text-text-secondary">
-              Inserisci i listini dei tuoi fornitori e confrontali.
-            </p>
+          <div className="min-w-0 w-full lg:w-auto">
+            {/* Mobile editorial hero */}
+            <div className="lg:hidden">
+              <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-[color:var(--caption-color)]">
+                Cataloghi fornitori · {catalogCount} listini
+              </div>
+              <h1
+                className="mt-2 font-serif text-[length:var(--text-display-lg)] font-medium leading-[1.04] tracking-[-0.022em] text-[color:var(--color-text-primary)]"
+                style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
+              >
+                Listini e prezzi
+              </h1>
+              <p className="mt-1 text-[13px] text-[color:var(--text-muted-light,#6B6B6B)]">
+                Inserisci i listini dei tuoi fornitori e confrontali
+              </p>
+            </div>
+
+            {/* Desktop header */}
+            <div className="hidden lg:block">
+              <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-text-tertiary">
+                Cataloghi fornitori
+                <span className="mx-2 text-border-subtle">·</span>
+                <span className="tabular-nums text-text-secondary">
+                  {catalogCount} listini
+                </span>
+                {updatedTodayCount > 0 && (
+                  <>
+                    <span className="mx-2 text-border-subtle">·</span>
+                    <span className="tabular-nums text-accent-green">
+                      {updatedTodayCount} aggiornat{updatedTodayCount === 1 ? "o" : "i"} oggi
+                    </span>
+                  </>
+                )}
+              </p>
+              <h1 className="mt-1 text-2xl font-semibold text-text-primary">
+                Listini e prezzi
+              </h1>
+              <p className="mt-1 text-sm text-text-secondary">
+                Inserisci i listini dei tuoi fornitori e confrontali.
+              </p>
+            </div>
           </div>
 
           <div className="flex flex-col items-end gap-2">

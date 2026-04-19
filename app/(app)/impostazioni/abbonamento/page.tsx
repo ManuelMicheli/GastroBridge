@@ -4,14 +4,28 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RESTAURANT_PLANS } from "@/lib/utils/constants";
 import { Check } from "lucide-react";
+import { LargeTitle } from "@/components/ui/large-title";
 
 export const metadata: Metadata = { title: "Abbonamento" };
 
 export default function SubscriptionPage() {
   return (
     <div>
-      <h1 className="text-2xl font-bold text-charcoal mb-6">Il tuo Abbonamento</h1>
+      {/* Mobile hero */}
+      <div className="lg:hidden">
+        <LargeTitle
+          eyebrow="Impostazioni"
+          title="Abbonamento"
+          subtitle="Piano e fatturazione"
+        />
+      </div>
 
+      {/* Desktop header */}
+      <h1 className="hidden lg:block text-2xl font-bold text-charcoal mb-6">
+        Il tuo Abbonamento
+      </h1>
+
+      <div className="px-3 lg:px-0 mt-3 lg:mt-0">
       <Card className="mb-8">
         <div className="flex items-center justify-between">
           <div>
@@ -53,6 +67,7 @@ export default function SubscriptionPage() {
             </Button>
           </Card>
         ))}
+      </div>
       </div>
     </div>
   );

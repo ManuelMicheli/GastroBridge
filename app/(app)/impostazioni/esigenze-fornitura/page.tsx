@@ -4,6 +4,7 @@ import { ChevronLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getPreferences } from "@/lib/restaurants/preferences";
 import { PreferencesClient } from "./preferences-client";
+import { LargeTitle } from "@/components/ui/large-title";
 
 export const metadata: Metadata = { title: "Esigenze di fornitura" };
 
@@ -64,31 +65,45 @@ export default async function SupplyPreferencesPage() {
 
   return (
     <div>
-      <Link
-        href="/impostazioni"
-        className="inline-flex items-center gap-1 text-sm text-sage hover:text-charcoal mb-4"
-      >
-        <ChevronLeft className="h-4 w-4" /> Impostazioni
-      </Link>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-charcoal">
-          Esigenze di fornitura
-        </h1>
-        <p className="text-sage mt-1">
-          Configura le tue priorità: ti aiuteremo a trovare i fornitori migliori
-          per <span className="font-semibold">{primary.name}</span>.
-        </p>
+      {/* Mobile hero */}
+      <div className="lg:hidden">
+        <LargeTitle
+          eyebrow="Impostazioni"
+          title="Esigenze di fornitura"
+          subtitle={`Priorità per ${primary.name}`}
+        />
       </div>
 
-      {prefs.ok ? (
-        <PreferencesClient
-          restaurantId={primary.id}
-          initialGlobal={prefs.data.global}
-          initialByCategory={prefs.data.byCategory}
-        />
-      ) : (
-        <p className="text-red-600">Errore caricamento: {prefs.error}</p>
-      )}
+      {/* Desktop header */}
+      <div className="hidden lg:block">
+        <Link
+          href="/impostazioni"
+          className="inline-flex items-center gap-1 text-sm text-sage hover:text-charcoal mb-4"
+        >
+          <ChevronLeft className="h-4 w-4" /> Impostazioni
+        </Link>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-charcoal">
+            Esigenze di fornitura
+          </h1>
+          <p className="text-sage mt-1">
+            Configura le tue priorità: ti aiuteremo a trovare i fornitori migliori
+            per <span className="font-semibold">{primary.name}</span>.
+          </p>
+        </div>
+      </div>
+
+      <div className="px-3 lg:px-0 mt-3 lg:mt-0">
+        {prefs.ok ? (
+          <PreferencesClient
+            restaurantId={primary.id}
+            initialGlobal={prefs.data.global}
+            initialByCategory={prefs.data.byCategory}
+          />
+        ) : (
+          <p className="text-red-600">Errore caricamento: {prefs.error}</p>
+        )}
+      </div>
     </div>
   );
 }
