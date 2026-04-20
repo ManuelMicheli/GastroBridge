@@ -23,8 +23,10 @@ import {
 import { ActiveFiltersBar } from "@/components/shared/scoring/active-filters-bar";
 import { ExclusionList, type ExcludedItem } from "@/components/shared/scoring/exclusion-list";
 import { toast } from "sonner";
+import { useCart } from "@/lib/hooks/useCart";
+import type { UnitType } from "@/types/database";
 
-import type { CatalogItemLite, Group, OrderLine, SupplierLite } from "./_lib/types";
+import type { CatalogItemLite, Group, OrderLine, RankedOffer, SupplierLite } from "./_lib/types";
 import { buildIndex, searchGroups } from "./_lib/product-index";
 import {
   applyFacets,
@@ -64,14 +66,38 @@ export function SearchPageClient({
   suppliers,
   items,
   preferences,
+  connectedSupplierIds = [],
 }: {
   suppliers: SupplierLite[];
   items: CatalogItemLite[];
   preferences: Preferences | null;
+  connectedSupplierIds?: string[];
 }) {
   const router = useRouter();
   const sp = useSearchParams();
   const prefs = preferences ?? defaultPrefs;
+  const { addItem } = useCart();
+  const connectedSet = useMemo(() => new Set(connectedSupplierIds), [connectedSupplierIds]);
+
+  const addOfferToCart = useCallback(
+    (group: Group, offer: RankedOffer, qty: number) => {
+      const isReal = connectedSet.has(offer.supplier.id);
+      addItem({
+        productId: isReal ? offer.itemId : `catalog_${offer.itemId}`,
+        supplierId: offer.supplier.id,
+        supplierName: offer.supplier.supplier_name,
+        name: `${group.productName} (${group.unit})`,
+        brand: null,
+        unit: (group.unit || "pz") as UnitType,
+        unitPrice: offer.price,
+        quantity: qty,
+        imageUrl: null,
+        minQuantity: 1,
+      });
+      toast.success(`"${group.productName}" aggiunto al carrello`);
+    },
+    [addItem, connectedSet],
+  );
 
   const initial = useMemo(() => readUrlState(new URLSearchParams(sp.toString())), []); // eslint-disable-line react-hooks/exhaustive-deps
   const [tab, setTab] = useState<Tab>(initial.tab);
@@ -228,14 +254,10 @@ export function SearchPageClient({
   }, [selectedKey, query]);
   const addSelected = useCallback(() => {
     if (!selectedGroup) return;
-    setPendingAdd({
-      key: selectedGroup.key,
-      productName: selectedGroup.productName,
-      unit: selectedGroup.unit,
-      qty: 1,
-    });
-    toast.success(`"${selectedGroup.productName}" aggiunto all'ordine tipico`);
-  }, [selectedGroup]);
+    const best = selectedGroup.offers[0];
+    if (!best) return;
+    addOfferToCart(selectedGroup, best, 1);
+  }, [selectedGroup, addOfferToCart]);
 
   useSearchKeyboard(
     {
@@ -358,10 +380,7 @@ export function SearchPageClient({
             <DetailPane
               group={selectedGroup}
               onClose={() => setSelectedKey(null)}
-              onAddToTypical={(line) => {
-                setPendingAdd(line);
-                toast.success(`"${line.productName}" aggiunto all'ordine tipico`);
-              }}
+              onAddToCart={addOfferToCart}
             />
           </div>
 
@@ -385,10 +404,7 @@ export function SearchPageClient({
                 <DetailPane
                   group={selectedGroup}
                   onClose={() => setSelectedKey(null)}
-                  onAddToTypical={(line) => {
-                    setPendingAdd(line);
-                    toast.success(`"${line.productName}" aggiunto all'ordine tipico`);
-                  }}
+                  onAddToCart={addOfferToCart}
                 />
               </div>
             </div>

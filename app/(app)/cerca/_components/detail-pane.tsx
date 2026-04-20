@@ -6,21 +6,23 @@ import { X } from "lucide-react";
 import { BestOfferCard } from "./best-offer-card";
 import { OfferList } from "./offer-list";
 import { ScoreBreakdownInline } from "./score-breakdown-inline";
-import type { Group, OrderLine, RankedOffer } from "../_lib/types";
+import type { Group, RankedOffer } from "../_lib/types";
 
 export function DetailPane({
   group,
   onClose,
-  onAddToTypical,
+  onAddToCart,
 }: {
   group: Group | null;
   onClose: () => void;
-  onAddToTypical: (line: OrderLine) => void;
+  onAddToCart: (group: Group, offer: RankedOffer, qty: number) => void;
 }) {
   const [selectedOffer, setSelectedOffer] = useState<RankedOffer | null>(null);
+  const [qty, setQty] = useState(1);
 
   useEffect(() => {
     setSelectedOffer(group?.offers[0] ?? null);
+    setQty(1);
   }, [group?.key]);
 
   if (!group) {
@@ -38,12 +40,9 @@ export function DetailPane({
   }
 
   const add = () => {
-    onAddToTypical({
-      key: group.key,
-      productName: group.productName,
-      unit: group.unit,
-      qty: 1,
-    });
+    const best = group.offers[0];
+    if (!best) return;
+    onAddToCart(group, best, qty);
   };
 
   return (
@@ -70,7 +69,12 @@ export function DetailPane({
         </button>
       </header>
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <BestOfferCard group={group} onAddToTypical={add} />
+        <BestOfferCard
+          group={group}
+          qty={qty}
+          onQtyChange={setQty}
+          onAddToCart={add}
+        />
         <OfferList
           group={group}
           selectedOfferId={selectedOffer?.itemId ?? null}

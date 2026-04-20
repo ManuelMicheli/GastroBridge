@@ -84,11 +84,14 @@ export default async function SearchPage() {
   const suppliers: SupplierLite[] = [...connectedSuppliers, ...manualSuppliers];
   const items: CatalogItemLite[] = [...connectedItems, ...manualItems];
 
+  const connectedSupplierIds = connectedSuppliers.map((s) => s.id);
+
   return (
     <SearchPageClient
       suppliers={suppliers}
       items={items}
       preferences={preferences}
+      connectedSupplierIds={connectedSupplierIds}
     />
   );
 }
