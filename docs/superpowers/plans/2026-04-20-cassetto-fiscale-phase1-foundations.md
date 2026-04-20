@@ -540,7 +540,7 @@ LEFT JOIN LATERAL (
   FROM orders o
   JOIN order_items oi ON oi.order_id = o.id
   WHERE o.restaurant_id = d.restaurant_id
-    AND o.status IN ('delivered','shipped')
+    AND o.status IN ('delivered','shipping')
     AND DATE(o.created_at) = d.business_day
 ) s ON TRUE;
 
