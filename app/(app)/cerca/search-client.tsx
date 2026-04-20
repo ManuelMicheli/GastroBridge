@@ -41,8 +41,10 @@ import { SearchBar } from "./_components/search-bar";
 import { ResultsList, type SortMode } from "./_components/results-list";
 import { DetailPane } from "./_components/detail-pane";
 import { TypicalOrderPanel } from "./_components/typical-order-panel";
+import { UsualOrderPanel } from "./_components/usual-order-panel";
 import { MobileDrawer } from "./_components/mobile-drawer";
 import { CheatsheetOverlay } from "./_components/cheatsheet-overlay";
+import type { UsualOrderItem } from "./_lib/usual-order";
 
 export type { SupplierLite, CatalogItemLite };
 
@@ -67,11 +69,13 @@ export function SearchPageClient({
   items,
   preferences,
   connectedSupplierIds = [],
+  usualOrder = [],
 }: {
   suppliers: SupplierLite[];
   items: CatalogItemLite[];
   preferences: Preferences | null;
   connectedSupplierIds?: string[];
+  usualOrder?: UsualOrderItem[];
 }) {
   const router = useRouter();
   const sp = useSearchParams();
@@ -339,7 +343,7 @@ export function SearchPageClient({
         <ActiveFiltersBar prefs={prefs} />
       </div>
 
-      {tab === "ricerca" ? (
+      {tab === "ricerca" && (
         <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_420px]">
           {/* Facet panel: desktop */}
           <div className="hidden lg:block">
@@ -410,7 +414,9 @@ export function SearchPageClient({
             </div>
           )}
         </div>
-      ) : (
+      )}
+
+      {tab === "ordine" && (
         <div className="min-h-0 flex-1 overflow-y-auto">
           <TypicalOrderPanel
             groups={groups}
@@ -421,15 +427,26 @@ export function SearchPageClient({
         </div>
       )}
 
+      {tab === "solito" && (
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <UsualOrderPanel items={usualOrder} />
+        </div>
+      )}
+
       <CheatsheetOverlay open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
   );
 }
 
 function TabSwitch({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) {
+  const labels: Record<Tab, string> = {
+    ricerca: "Ricerca",
+    ordine: "Ordine tipico",
+    solito: "Solito",
+  };
   return (
     <div className="inline-flex rounded-lg border border-border-subtle bg-surface-card p-0.5">
-      {(["ricerca", "ordine"] as const).map((t) => (
+      {(["ricerca", "ordine", "solito"] as const).map((t) => (
         <button
           key={t}
           onClick={() => onChange(t)}
@@ -439,7 +456,7 @@ function TabSwitch({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) 
               : "text-text-tertiary hover:text-text-primary"
           }`}
         >
-          {t === "ricerca" ? "Ricerca" : "Ordine tipico"}
+          {labels[t]}
         </button>
       ))}
     </div>

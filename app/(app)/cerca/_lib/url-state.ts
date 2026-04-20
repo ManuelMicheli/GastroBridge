@@ -1,7 +1,7 @@
 // app/(app)/cerca/_lib/url-state.ts
 import type { FacetState } from "./facets";
 
-export type Tab = "ricerca" | "ordine";
+export type Tab = "ricerca" | "ordine" | "solito";
 
 export type UrlState = {
   tab: Tab;
@@ -20,7 +20,8 @@ const encodeSet = (s: Set<string>): string =>
 
 export function readUrlState(sp: URLSearchParams): UrlState {
   const tabRaw = sp.get("tab");
-  const tab: Tab = tabRaw === "ordine" ? "ordine" : "ricerca";
+  const tab: Tab =
+    tabRaw === "ordine" ? "ordine" : tabRaw === "solito" ? "solito" : "ricerca";
 
   const minN = Number(sp.get("min"));
   const maxN = Number(sp.get("max"));

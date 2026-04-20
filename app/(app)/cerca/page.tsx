@@ -5,6 +5,7 @@ import { getPreferences } from "@/lib/restaurants/preferences";
 import { bundleToScoringPrefs } from "@/lib/scoring";
 import type { Preferences } from "@/lib/scoring";
 import { loadConnectedSupplierCatalogs } from "@/lib/catalogs/connected-suppliers";
+import { loadUsualOrder } from "./_lib/usual-order";
 import { SearchPageClient, type SupplierLite, type CatalogItemLite } from "./search-client";
 
 export const metadata: Metadata = { title: "Cerca Prodotti" };
@@ -18,6 +19,7 @@ export default async function SearchPage() {
   const userId = user?.id ?? "";
 
   let preferences: Preferences | null = null;
+  let restaurantIds: string[] = [];
   if (user) {
     const { data: restaurants } = await supabase
       .from("restaurants")
@@ -26,6 +28,7 @@ export default async function SearchPage() {
       .order("is_primary", { ascending: false })
       .order("created_at", { ascending: true })
       .returns<{ id: string }[]>();
+    restaurantIds = (restaurants ?? []).map((r) => r.id);
     const primary = restaurants?.[0];
     if (primary) {
       const prefResult = await getPreferences(primary.id);
@@ -86,12 +89,15 @@ export default async function SearchPage() {
 
   const connectedSupplierIds = connectedSuppliers.map((s) => s.id);
 
+  const usualOrder = await loadUsualOrder(supabase as any, restaurantIds);
+
   return (
     <SearchPageClient
       suppliers={suppliers}
       items={items}
       preferences={preferences}
       connectedSupplierIds={connectedSupplierIds}
+      usualOrder={usualOrder}
     />
   );
 }
