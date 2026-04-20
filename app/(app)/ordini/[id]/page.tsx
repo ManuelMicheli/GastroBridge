@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Check, Clock, Package, Truck } from "lucide-react";
+import { ArrowLeft, Check, Clock, Download, Package, Truck } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { OrderStatusBadge } from "@/components/ui/order-status-badge";
 import { PageHeader } from "@/components/ui/page-header";
@@ -109,6 +109,50 @@ export default async function OrderDetailPage({
     ? parseCatalogOrderNotes(order.notes)
     : null;
 
+  // PDF export descriptors. `kind=supplier` uses supplier UUID route;
+  // `kind=catalog` uses parsed-index route for catalog-only orders.
+  type PdfEntry =
+    | { kind: "supplier"; key: string; name: string; href: string }
+    | { kind: "catalog"; key: string; name: string; href: string };
+  const pdfSuppliers: PdfEntry[] = (() => {
+    if (hasMarketplaceSplits) {
+      return (splits ?? []).map((s): PdfEntry => ({
+        kind: "supplier",
+        key: s.supplier_id,
+        name:
+          (s.suppliers as unknown as { company_name: string } | null)
+            ?.company_name ?? "Fornitore",
+        href: `/api/ordini/${id}/suppliers/${s.supplier_id}/pdf`,
+      }));
+    }
+    if ((items ?? []).length > 0) {
+      const seen = new Map<string, string>();
+      for (const it of items ?? []) {
+        if (!seen.has(it.supplier_id)) {
+          const name =
+            (it.suppliers as unknown as { company_name: string } | null)
+              ?.company_name ?? "Fornitore";
+          seen.set(it.supplier_id, name);
+        }
+      }
+      return Array.from(seen, ([sid, name]): PdfEntry => ({
+        kind: "supplier",
+        key: sid,
+        name,
+        href: `/api/ordini/${id}/suppliers/${sid}/pdf`,
+      }));
+    }
+    if (catalogDetail && catalogDetail.suppliers.length > 0) {
+      return catalogDetail.suppliers.map((s, i): PdfEntry => ({
+        kind: "catalog",
+        key: `cat-${i}`,
+        name: s.supplierName,
+        href: `/api/ordini/${id}/catalog/${i}/pdf`,
+      }));
+    }
+    return [];
+  })();
+
   // Restaurant-facing status follows what suppliers have done with their
   // splits, not the stale `orders.status` value (supplier actions only touch
   // `order_splits.status`).
@@ -212,6 +256,31 @@ export default async function OrderDetailPage({
           </div>
         )}
 
+        {pdfSuppliers.length > 0 && (
+          <GroupedList className="mt-2" label="Esporta PDF">
+            {pdfSuppliers.map((s) => (
+              <GroupedListRow
+                key={`m-pdf-${s.key}`}
+                as="a"
+                href={s.href}
+                leading={
+                  <Download
+                    className="h-4 w-4 text-[color:var(--color-brand-primary)]"
+                    aria-hidden
+                  />
+                }
+                title={
+                  <span className="text-[color:var(--color-brand-primary)]">
+                    PDF per {s.name}
+                  </span>
+                }
+                subtitle="Scarica ordine per inviarlo al fornitore"
+                showChevron
+              />
+            ))}
+          </GroupedList>
+        )}
+
         {hasMarketplaceSplits &&
           (splits ?? []).map((split) => {
             const supplier = split.suppliers as unknown as
@@ -256,6 +325,22 @@ export default async function OrderDetailPage({
                     />
                   );
                 })}
+                <GroupedListRow
+                  as="a"
+                  href={`/api/ordini/${id}/suppliers/${split.supplier_id}/pdf`}
+                  leading={
+                    <Download
+                      className="h-4 w-4 text-[color:var(--color-brand-primary)]"
+                      aria-hidden
+                    />
+                  }
+                  title={
+                    <span className="text-[color:var(--color-brand-primary)]">
+                      Scarica PDF
+                    </span>
+                  }
+                  showChevron
+                />
               </GroupedList>
             );
           })}
@@ -287,6 +372,22 @@ export default async function OrderDetailPage({
                   }
                 />
               ))}
+              <GroupedListRow
+                as="a"
+                href={`/api/ordini/${id}/catalog/${idx}/pdf`}
+                leading={
+                  <Download
+                    className="h-4 w-4 text-[color:var(--color-brand-primary)]"
+                    aria-hidden
+                  />
+                }
+                title={
+                  <span className="text-[color:var(--color-brand-primary)]">
+                    Scarica PDF
+                  </span>
+                }
+                showChevron
+              />
             </GroupedList>
           ))}
 
@@ -408,6 +509,29 @@ export default async function OrderDetailPage({
         </Card>
       )}
 
+      {pdfSuppliers.length > 0 && (
+        <Card className="mb-6">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="font-bold text-charcoal">Esporta PDF</h3>
+            <span className="text-xs text-text-tertiary">
+              Un PDF per fornitore
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {pdfSuppliers.map((s) => (
+              <a
+                key={`d-pdf-${s.key}`}
+                href={s.href}
+                className="inline-flex items-center gap-2 rounded-md border border-[color:var(--color-brand-primary)] px-3 py-2 text-sm font-medium text-[color:var(--color-brand-primary)] transition-colors hover:bg-[color:var(--color-brand-primary-subtle)]"
+              >
+                <Download className="h-4 w-4" aria-hidden />
+                PDF per {s.name}
+              </a>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {catalogDetail?.header && (
         <SectionHeader title={catalogDetail.header} />
       )}
@@ -437,6 +561,15 @@ export default async function OrderDetailPage({
               <span>Subtotale</span>
               <span className="font-mono">{formatCurrency(split.subtotal)}</span>
             </div>
+            <div className="mt-3 flex justify-end">
+              <a
+                href={`/api/ordini/${id}/suppliers/${split.supplier_id}/pdf`}
+                className="inline-flex items-center gap-2 rounded-md border border-[color:var(--color-brand-primary)] px-3 py-2 text-sm font-medium text-[color:var(--color-brand-primary)] transition-colors hover:bg-[color:var(--color-brand-primary-subtle)]"
+              >
+                <Download className="h-4 w-4" aria-hidden />
+                Scarica PDF
+              </a>
+            </div>
           </Card>
         );
       })}
@@ -459,6 +592,15 @@ export default async function OrderDetailPage({
                   <span className="font-mono text-sage">{item.price}</span>
                 </div>
               ))}
+            </div>
+            <div className="mt-3 flex justify-end">
+              <a
+                href={`/api/ordini/${id}/catalog/${idx}/pdf`}
+                className="inline-flex items-center gap-2 rounded-md border border-[color:var(--color-brand-primary)] px-3 py-2 text-sm font-medium text-[color:var(--color-brand-primary)] transition-colors hover:bg-[color:var(--color-brand-primary-subtle)]"
+              >
+                <Download className="h-4 w-4" aria-hidden />
+                Scarica PDF
+              </a>
             </div>
           </Card>
         ))
