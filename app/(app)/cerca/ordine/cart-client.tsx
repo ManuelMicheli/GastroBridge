@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Download, Printer, ShoppingCart, AlertTriangle, Plus } from "lucide-react";
@@ -294,196 +294,288 @@ export function OptimalCartClient({
   };
 
   if (!hydrated) {
-    return <div className="p-6 text-text-tertiary">Caricamento ordine…</div>;
+    return (
+      <div className="mx-auto max-w-[760px] px-4 py-16 text-center font-mono text-[11px] uppercase tracking-[0.15em] text-text-tertiary">
+        Caricamento ordine…
+      </div>
+    );
   }
 
   if (suppliers.length === 0) {
     return (
-      <div className="p-6 max-w-3xl space-y-4">
-        <h1 className="text-2xl font-semibold text-text-primary">Carrello ottimale</h1>
-        <div className="rounded-xl border border-dashed border-border-subtle p-12 text-center">
-          <ShoppingCart className="mx-auto h-8 w-8 text-text-tertiary" />
-          <p className="mt-3 text-text-secondary">Devi prima creare almeno un catalogo fornitore.</p>
-          <Link href="/cataloghi" className="mt-4 inline-flex px-4 py-2 rounded-lg bg-accent-green text-surface-base font-medium">
+      <div className="mx-auto max-w-[760px] px-4 py-8">
+        <Link href="/cerca" className="inline-flex items-center gap-1 text-sm text-text-secondary hover:text-text-primary">
+          <ArrowLeft className="h-4 w-4" /> Torna a Cerca
+        </Link>
+        <article className="mt-4 rounded-xl border border-border-subtle bg-surface-card px-6 py-12 text-center font-mono">
+          <p className="text-[12px] uppercase tracking-[0.2em] text-text-primary font-semibold">
+            CARRELLO OTTIMALE
+          </p>
+          <p aria-hidden="true" className="mt-1 text-[11px] tracking-[0.05em] text-text-tertiary select-none">
+            ──────────────────
+          </p>
+          <ShoppingCart className="mx-auto mt-5 h-6 w-6 text-text-tertiary" />
+          <p className="mt-3 text-[12px] text-text-secondary">
+            Devi prima creare almeno un catalogo fornitore.
+          </p>
+          <Link
+            href="/cataloghi"
+            className="mt-5 inline-flex rounded-lg bg-accent-green px-4 py-2 font-mono text-[11px] uppercase tracking-[0.15em] text-surface-base hover:brightness-110"
+          >
             Vai ai cataloghi
           </Link>
-        </div>
+        </article>
       </div>
     );
   }
 
   if (order.length === 0) {
     return (
-      <div className="p-6 max-w-3xl space-y-4">
+      <div className="mx-auto max-w-[760px] px-4 py-8">
         <Link href="/cerca" className="inline-flex items-center gap-1 text-sm text-text-secondary hover:text-text-primary">
           <ArrowLeft className="h-4 w-4" /> Torna a Cerca
         </Link>
-        <h1 className="text-2xl font-semibold text-text-primary">Carrello ottimale</h1>
-        <div className="rounded-xl border border-dashed border-border-subtle p-12 text-center">
-          <ShoppingCart className="mx-auto h-8 w-8 text-text-tertiary" />
-          <p className="mt-3 text-text-secondary">Il tuo ordine tipico è vuoto.</p>
-          <Link href="/cerca" className="mt-4 inline-flex px-4 py-2 rounded-lg bg-accent-green text-surface-base font-medium">
+        <article className="mt-4 rounded-xl border border-border-subtle bg-surface-card px-6 py-12 text-center font-mono">
+          <p className="text-[12px] uppercase tracking-[0.2em] text-text-primary font-semibold">
+            CARRELLO OTTIMALE
+          </p>
+          <p aria-hidden="true" className="mt-1 text-[11px] tracking-[0.05em] text-text-tertiary select-none">
+            ──────────────────
+          </p>
+          <ShoppingCart className="mx-auto mt-5 h-6 w-6 text-text-tertiary" />
+          <p className="mt-3 text-[12px] text-text-secondary">
+            Il tuo ordine tipico è vuoto.
+          </p>
+          <Link
+            href="/cerca"
+            className="mt-5 inline-flex rounded-lg bg-accent-green px-4 py-2 font-mono text-[11px] uppercase tracking-[0.15em] text-surface-base hover:brightness-110"
+          >
             Compila l&apos;ordine tipico
           </Link>
-        </div>
+        </article>
       </div>
     );
   }
 
+  const totalArticles = buckets.reduce((s, b) => s + b.picks.length, 0);
+
   return (
-    <div className="p-6 space-y-6 print:p-0">
-      <div className="print:hidden">
-        <Link href="/cerca" className="inline-flex items-center gap-1 text-sm text-text-secondary hover:text-text-primary">
+    <div className="mx-auto max-w-[760px] px-4 py-8 print:py-0 print:max-w-none">
+      <div className="print:hidden mb-5">
+        <Link
+          href="/cerca"
+          className="inline-flex items-center gap-1 text-sm text-text-secondary hover:text-text-primary"
+        >
           <ArrowLeft className="h-4 w-4" /> Torna a Cerca
         </Link>
       </div>
 
-      <header className="flex items-start justify-between gap-4 flex-wrap">
-        <div>
-          <h1 className="text-2xl font-semibold text-text-primary">Carrello ottimale</h1>
-          <p className="text-sm text-text-secondary mt-1">
-            Per ogni prodotto è stato scelto il fornitore con il punteggio più alto secondo le tue preferenze. Ordini separati per fornitore.
+      <article className="rounded-xl border border-border-subtle bg-surface-card overflow-hidden print:border-0 print:rounded-none">
+        {/* Header */}
+        <header className="px-6 pt-6 pb-5 text-center font-mono">
+          <p className="text-[12px] uppercase tracking-[0.2em] text-text-primary font-semibold">
+            CARRELLO OTTIMALE
           </p>
-        </div>
-        <div className="flex gap-2 print:hidden">
-          <button
-            onClick={() => window.print()}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border-subtle text-text-primary hover:bg-surface-hover"
+          <p
+            aria-hidden="true"
+            className="mt-1 text-[11px] tracking-[0.05em] text-text-tertiary select-none"
           >
-            <Printer className="h-4 w-4" /> Stampa
-          </button>
-          <button
-            onClick={exportCsv}
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-border-subtle text-text-primary hover:bg-surface-hover"
-          >
-            <Download className="h-4 w-4" /> Esporta CSV
-          </button>
-        </div>
-      </header>
+            ──────────────────
+          </p>
+          <p className="mx-auto mt-2 max-w-[56ch] text-[11px] leading-relaxed text-text-tertiary">
+            Selezione automatica del fornitore con punteggio più alto per ogni prodotto dell&apos;ordine tipico.
+          </p>
+          <div className="mt-4 flex items-center justify-center gap-2 print:hidden">
+            <button
+              onClick={() => window.print()}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border-subtle px-2.5 py-1.5 text-[11px] uppercase tracking-[0.1em] text-text-secondary transition hover:bg-surface-hover hover:text-text-primary"
+            >
+              <Printer className="h-3.5 w-3.5" /> Stampa
+            </button>
+            <button
+              onClick={exportCsv}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border-subtle px-2.5 py-1.5 text-[11px] uppercase tracking-[0.1em] text-text-secondary transition hover:bg-surface-hover hover:text-text-primary"
+            >
+              <Download className="h-3.5 w-3.5" /> CSV
+            </button>
+          </div>
+        </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-        <SummaryStat label="Fornitori coinvolti" value={buckets.length.toString()} />
-        <SummaryStat label="Articoli totali" value={buckets.reduce((s, b) => s + b.picks.length, 0).toString()} />
-        <SummaryStat label="Totale carrello" value={`€ ${grandTotal.toFixed(2)}`} highlight />
-      </div>
+        <div aria-hidden="true" className="border-t border-dashed border-border-subtle" />
 
-      {savingsVsAverage > 0 && (
-        <div className="rounded-xl border border-accent-green/30 bg-accent-green/5 px-4 py-2 text-sm text-accent-green">
-          Risparmio vs media: <span className="font-semibold">€ {savingsVsAverage.toFixed(2)}</span>
-          {" "}rispetto a un&apos;offerta media per ciascun prodotto.
-        </div>
-      )}
+        {/* Summary stats */}
+        <section className="grid grid-cols-3 divide-x divide-dashed divide-border-subtle">
+          <Stat label="Fornitori" value={buckets.length.toString()} />
+          <Stat label="Articoli" value={totalArticles.toString()} />
+          <Stat label="Totale" value={`€ ${grandTotal.toFixed(2)}`} highlight />
+        </section>
 
-      {missing.length > 0 && (
-        <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-4">
-          <h3 className="text-sm font-medium text-yellow-400 inline-flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4" /> {missing.length} prodotti non disponibili nei cataloghi
-          </h3>
-          <ul className="mt-2 text-sm text-text-secondary space-y-1">
-            {missing.map((m, i) => (
-              <li key={i}>• {m.productName} ({m.unit}) × {m.qty}</li>
-            ))}
-          </ul>
-        </div>
-      )}
+        {savingsVsAverage > 0 && (
+          <div className="border-t border-dashed border-border-subtle bg-accent-green/5 px-6 py-2 text-center font-mono text-[11px] tracking-[0.05em] text-accent-green">
+            Risparmio vs media · <span className="font-semibold tabular-nums">€ {savingsVsAverage.toFixed(2)}</span>
+          </div>
+        )}
 
-      <div className="space-y-4">
-        {buckets.map((b) => (
-          <article
-            key={b.supplier.id}
-            className="rounded-xl bg-surface-card border border-border-subtle p-4 print:break-inside-avoid"
-          >
-            <header className="flex items-baseline justify-between gap-3 flex-wrap pb-3 border-b border-border-subtle">
-              <div>
-                <h2 className="text-lg font-semibold text-text-primary">
-                  <Link href={`/cataloghi/${b.supplier.id}`} className="hover:underline">
-                    {b.supplier.supplier_name}
-                  </Link>
-                </h2>
-                <p className="text-xs text-text-tertiary">{b.picks.length} articoli</p>
+        {missing.length > 0 && (
+          <section className="border-t border-dashed border-border-subtle px-6 py-4">
+            <p className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.12em] text-yellow-500">
+              <AlertTriangle className="h-3.5 w-3.5" /> {missing.length} non trovati
+            </p>
+            <ul className="mt-2 space-y-1 font-mono text-[11px] text-text-tertiary">
+              {missing.map((m, i) => (
+                <li key={i} className="flex items-baseline justify-between gap-2">
+                  <span className="truncate text-text-secondary">
+                    {m.productName} <span className="text-text-tertiary">({m.unit})</span>
+                  </span>
+                  <span className="shrink-0 tabular-nums">× {m.qty}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <div aria-hidden="true" className="border-t border-dashed border-border-subtle" />
+
+        {/* Supplier buckets */}
+        {buckets.map((b, bi) => (
+          <Fragment key={b.supplier.id}>
+            <section className="px-6 py-5 print:break-inside-avoid">
+              <header className="flex items-baseline justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="truncate text-[13px] font-semibold text-text-primary">
+                    <Link href={`/cataloghi/${b.supplier.id}`} className="transition hover:text-accent-green">
+                      {b.supplier.supplier_name}
+                    </Link>
+                  </h2>
+                  <p className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-text-tertiary">
+                    {b.picks.length} {b.picks.length === 1 ? "articolo" : "articoli"}
+                  </p>
+                </div>
+                <span className="font-mono text-[13px] font-semibold tabular-nums text-accent-green">
+                  € {b.subtotal.toFixed(2)}
+                </span>
+              </header>
+
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full table-fixed font-mono text-[11px]">
+                  <colgroup>
+                    <col className="w-[46%]" />
+                    <col className="w-[10%]" />
+                    <col className="w-[14%]" />
+                    <col className="w-[14%]" />
+                    <col className="w-[16%]" />
+                  </colgroup>
+                  <thead>
+                    <tr className="text-[10px] uppercase tracking-[0.12em] text-text-tertiary">
+                      <th className="py-2 pr-2 text-left font-medium">Prodotto</th>
+                      <th className="py-2 px-1 text-right font-medium">Q.tà</th>
+                      <th className="py-2 px-1 text-left font-medium">Unità</th>
+                      <th className="py-2 px-1 text-right font-medium">Prezzo</th>
+                      <th className="py-2 pl-1 text-right font-medium">Totale</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {b.picks.map((p, i) => (
+                      <tr key={i} className="border-t border-dashed border-border-subtle align-top">
+                        <td className="py-2 pr-2 text-text-primary">
+                          <span className="block truncate" title={p.productName}>
+                            {p.productName}
+                          </span>
+                          {p.fallback && (
+                            <span className="mt-1 inline-flex items-center gap-1 rounded-full border border-yellow-500/30 bg-yellow-500/10 px-1.5 py-0.5 text-[9px] uppercase tracking-[0.08em] text-yellow-500">
+                              <AlertTriangle className="h-2.5 w-2.5" /> vincoli
+                            </span>
+                          )}
+                          {p.alternatives.length > 0 && (
+                            <select
+                              value=""
+                              onChange={(e) => {
+                                const altId = e.target.value;
+                                if (!altId) return;
+                                setOverrides((prev) => ({ ...prev, [p.lineKey]: altId }));
+                              }}
+                              className="mt-1 block w-full max-w-[220px] truncate rounded border border-border-subtle bg-surface-base px-1.5 py-0.5 text-[10px] text-text-secondary print:hidden"
+                            >
+                              <option value="">Cambia fornitore…</option>
+                              {p.alternatives.map((a) => (
+                                <option key={a.itemId} value={a.itemId}>
+                                  {a.supplierName} — € {a.price.toFixed(2)}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </td>
+                        <td className="py-2 px-1 text-right tabular-nums text-text-primary">
+                          {p.qty}
+                        </td>
+                        <td className="py-2 px-1 truncate text-text-secondary" title={p.unit}>
+                          {p.unit}
+                        </td>
+                        <td className={`py-2 px-1 text-right tabular-nums ${scoreColorClass(p.scored.score)}`}>
+                          <details className="relative inline-block print:hidden">
+                            <summary className="cursor-pointer list-none">€ {p.price.toFixed(2)}</summary>
+                            <div className="absolute right-0 top-full z-10 mt-1">
+                              <BreakdownTooltip breakdown={p.scored.breakdown} />
+                            </div>
+                          </details>
+                          <span className="hidden print:inline">€ {p.price.toFixed(2)}</span>
+                        </td>
+                        <td className={`py-2 pl-1 text-right font-semibold tabular-nums ${scoreColorClass(p.scored.score)}`}>
+                          € {p.lineTotal.toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              <span className="text-lg font-semibold text-accent-green tabular-nums">
-                € {b.subtotal.toFixed(2)}
-              </span>
-            </header>
-            <table className="w-full text-sm mt-2">
-              <thead className="text-text-tertiary">
-                <tr>
-                  <th className="text-left px-2 py-1 font-medium">Prodotto</th>
-                  <th className="text-right px-2 py-1 font-medium">Q.tà</th>
-                  <th className="text-left px-2 py-1 font-medium">Unità</th>
-                  <th className="text-right px-2 py-1 font-medium">Prezzo</th>
-                  <th className="text-right px-2 py-1 font-medium">Totale</th>
-                  <th className="text-left px-2 py-1 font-medium print:hidden">Alternative</th>
-                </tr>
-              </thead>
-              <tbody>
-                {b.picks.map((p, i) => (
-                  <tr key={i} className="border-t border-border-subtle align-top">
-                    <td className="px-2 py-1.5 text-text-primary" title={p.productName}>
-                      {p.productName}
-                      {p.fallback && (
-                        <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-yellow-500/10 border border-yellow-500/30 px-2 py-0.5 text-[10px] text-yellow-500">
-                          <AlertTriangle className="h-3 w-3" /> vincoli non rispettati
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-2 py-1.5 text-right tabular-nums text-text-primary">{p.qty}</td>
-                    <td className="px-2 py-1.5 text-text-secondary" title={p.unit}>{p.unit}</td>
-                    <td className={`px-2 py-1.5 text-right tabular-nums font-medium ${scoreColorClass(p.scored.score)}`}>
-                      <details className="relative print:hidden inline-block">
-                        <summary className="list-none cursor-pointer">€ {p.price.toFixed(2)}</summary>
-                        <div className="absolute right-0 top-full mt-1 z-10">
-                          <BreakdownTooltip breakdown={p.scored.breakdown} />
-                        </div>
-                      </details>
-                      <span className="hidden print:inline">€ {p.price.toFixed(2)}</span>
-                    </td>
-                    <td className={`px-2 py-1.5 text-right tabular-nums font-medium ${scoreColorClass(p.scored.score)}`}>€ {p.lineTotal.toFixed(2)}</td>
-                    <td className="px-2 py-1.5 print:hidden">
-                      {p.alternatives.length > 0 ? (
-                        <select
-                          value=""
-                          onChange={(e) => {
-                            const altId = e.target.value;
-                            if (!altId) return;
-                            setOverrides((prev) => ({ ...prev, [p.lineKey]: altId }));
-                          }}
-                          className="rounded border border-border-subtle bg-surface-base px-2 py-1 text-xs text-text-primary"
-                        >
-                          <option value="">Cambia fornitore…</option>
-                          {p.alternatives.map((a) => (
-                            <option key={a.itemId} value={a.itemId}>
-                              {a.supplierName} — € {a.price.toFixed(2)}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <span className="text-xs text-text-tertiary">—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </article>
+            </section>
+            {bi < buckets.length - 1 && (
+              <div aria-hidden="true" className="border-t border-dashed border-border-subtle" />
+            )}
+          </Fragment>
         ))}
-      </div>
 
-      <footer className="rounded-xl bg-surface-card border border-accent-green/30 p-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-text-primary font-medium">Totale carrello ottimale</span>
-          <span className="text-2xl font-bold text-accent-green tabular-nums">€ {grandTotal.toFixed(2)}</span>
-        </div>
-        <button
-          onClick={addAllToCart}
-          disabled={addingToCart || buckets.length === 0}
-          className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg bg-accent-green text-surface-base font-semibold disabled:opacity-50 print:hidden"
-        >
-          <Plus className="h-5 w-5" />
-          {addingToCart ? "Aggiungo..." : "Aggiungi al carrello e procedi all'ordine"}
-        </button>
-      </footer>
+        <div aria-hidden="true" className="border-t border-dashed border-border-subtle" />
+
+        {/* Footer / totals + CTA */}
+        <section className="px-6 py-5 font-mono text-[12px]">
+          <div className="space-y-1">
+            <div className="flex items-center justify-between gap-2 text-[11px]">
+              <span className="text-text-secondary">articoli</span>
+              <span className="tabular-nums text-text-primary">{totalArticles}</span>
+            </div>
+            <div className="flex items-center justify-between gap-2 text-[11px]">
+              <span className="text-text-secondary">fornitori</span>
+              <span className="tabular-nums text-text-primary">{buckets.length}</span>
+            </div>
+          </div>
+
+          <p
+            aria-hidden="true"
+            className="mt-3 text-[11px] tracking-[0.05em] text-text-tertiary select-none"
+          >
+            ──────────────────
+          </p>
+
+          <div className="mt-3 flex items-center justify-between gap-2 text-[13px]">
+            <span className="uppercase tracking-[0.15em] text-text-primary font-semibold">
+              TOTALE
+            </span>
+            <span className="font-semibold tabular-nums text-accent-green">
+              € {grandTotal.toFixed(2)}
+            </span>
+          </div>
+
+          <button
+            onClick={addAllToCart}
+            disabled={addingToCart || buckets.length === 0}
+            className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-accent-green px-4 py-3 font-mono text-[12px] uppercase tracking-[0.15em] text-surface-base transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 print:hidden"
+          >
+            <Plus className="h-4 w-4" />
+            {addingToCart ? "Aggiungo…" : "Aggiungi al carrello"}
+          </button>
+        </section>
+      </article>
     </div>
   );
 
@@ -518,13 +610,29 @@ export function OptimalCartClient({
   }
 }
 
-function SummaryStat({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
+function Stat({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+}) {
   return (
-    <div className={`rounded-xl border p-4 ${
-      highlight ? "border-accent-green/30 bg-accent-green/5" : "border-border-subtle bg-surface-card"
-    }`}>
-      <p className="text-xs uppercase tracking-wide text-text-tertiary">{label}</p>
-      <p className={`mt-1 text-2xl font-semibold tabular-nums ${highlight ? "text-accent-green" : "text-text-primary"}`}>
+    <div
+      className={`px-3 py-4 text-center font-mono ${
+        highlight ? "bg-accent-green/5" : ""
+      }`}
+    >
+      <p className="text-[10px] uppercase tracking-[0.15em] text-text-tertiary">
+        {label}
+      </p>
+      <p
+        className={`mt-1 text-[14px] tabular-nums ${
+          highlight ? "font-semibold text-accent-green" : "text-text-primary"
+        }`}
+      >
         {value}
       </p>
     </div>
