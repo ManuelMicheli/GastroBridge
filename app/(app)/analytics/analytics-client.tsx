@@ -1,12 +1,9 @@
 // app/(app)/analytics/analytics-client.tsx
 //
-// Awwwards-grade terminal-dense SHELL for the restaurant analytics page.
-// Every major block is wrapped in <SectionFrame> so the page reads like a
-// financial terminal: "─ LABEL ─" headers, mono tabular-nums numbers,
-// ASCII dividers, 40px dense rows. Sub-components (BudgetTracker,
-// VarianceCard, CategoryDonut, YoyTrendChart, ProductInsightsTable,
-// WeekdayHeatmap, PeriodSelector, ExportCsvButton, KPICard) are preserved
-// unchanged — only the shell + wrapper frames are re-skinned.
+// Awwwards-grade terminal-dense restaurant analytics shell.
+// Every block wraps in <SectionFrame> for "─ LABEL ─" header rules,
+// hairline dividers, mono tabular-nums, 40px dense rows — coherent
+// with /dashboard hero-strip + section-frame pattern.
 
 "use client";
 
@@ -31,24 +28,27 @@ type Props = {
 };
 
 export function AnalyticsContent({ data }: Props) {
-  const maxSupplier = data.supplierBreakdown.reduce(
-    (m, s) => Math.max(m, s.spending),
-    0,
-  ) || 1;
+  const maxSupplier =
+    data.supplierBreakdown.reduce((m, s) => Math.max(m, s.spending), 0) || 1;
 
   return (
-    <div className="space-y-6 lg:px-0 px-0">
-      {/* Mobile editorial hero */}
+    <div className="space-y-5 lg:space-y-6">
+      {/* ─── Mobile editorial hero ─── */}
       <div className="lg:hidden">
         <LargeTitle
           eyebrow={`Analytics · ${data.period.label}`}
           title="Spesa"
           subtitle="Budget, varianza e prezzi prodotti"
-          actions={<PeriodSelector current={data.period.key} />}
+          actions={
+            <div className="flex flex-wrap items-center gap-2">
+              <PeriodSelector current={data.period.key} />
+              <ExportCsvButton period={data.period.key} />
+            </div>
+          }
         />
       </div>
 
-      {/* ─── Header: terminal caption + display title + controls (desktop) ─── */}
+      {/* ─── Desktop: terminal caption + display title + controls ─── */}
       <header className="hidden lg:block animate-[fadeInUp_220ms_ease-out_both]">
         <div className="flex items-center gap-3">
           <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
@@ -57,7 +57,7 @@ export function AnalyticsContent({ data }: Props) {
             <span className="tabular-nums">Spesa</span>
           </span>
           <span aria-hidden className="h-px flex-1 bg-border-subtle" />
-          <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+          <span className="font-mono text-[10px] uppercase tracking-[0.08em] tabular-nums text-text-tertiary">
             {data.period.label}
           </span>
         </div>
@@ -75,9 +75,9 @@ export function AnalyticsContent({ data }: Props) {
             >
               Analytics Spesa
             </h1>
-            <p className="mt-1.5 text-text-secondary text-sm">
-              Strumento completo di gestione spesa: budget, varianza mese su
-              mese, prezzi prodotti.
+            <p className="mt-1.5 text-sm text-text-secondary">
+              Budget, varianza periodo su periodo e prezzi prodotti — in un
+              unico pannello.
             </p>
           </div>
 
@@ -91,33 +91,22 @@ export function AnalyticsContent({ data }: Props) {
         </div>
       </header>
 
-      {/* ─── Budget + Variance row ─── */}
-      <div
-        className="cq-section grid gap-4"
-        style={{
-          gridTemplateColumns:
-            "repeat(auto-fit, minmax(min(320px, 100%), 1fr))",
-        }}
+      {/* ─── KPI strip (header rule + card grid, no outer frame) ─── */}
+      <section
+        aria-label="KPI periodo"
+        className="animate-[fadeInUp_240ms_ease-out_both] [animation-delay:60ms]"
       >
-        <SectionFrame label="Budget · Mese">
-          <BudgetTracker budget={data.budget} />
-        </SectionFrame>
-        <SectionFrame label="Varianza · Mensile">
-          <VarianceCard
-            delta={data.variance.delta}
-            deltaPct={data.variance.deltaPct}
-            topByCategory={data.variance.topByCategory}
-            topBySupplier={data.variance.topBySupplier}
-            topByProduct={data.variance.topByProduct}
-            periodLabel={data.period.label}
-          />
-        </SectionFrame>
-      </div>
-
-      {/* ─── KPI grid ─── */}
-      <SectionFrame label="KPI · Periodo">
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+            KPI · Periodo
+          </span>
+          <span aria-hidden className="h-px flex-1 bg-border-subtle" />
+          <span className="font-mono text-[10px] uppercase tracking-[0.08em] tabular-nums text-text-tertiary">
+            {data.currentOrderCount > 0 ? `${data.currentOrderCount} ord.` : "—"}
+          </span>
+        </div>
         <div
-          className="cq-section grid gap-4"
+          className="cq-section mt-3 grid gap-3"
           style={{
             gridTemplateColumns:
               "repeat(auto-fit, minmax(min(220px, 100%), 1fr))",
@@ -151,29 +140,68 @@ export function AnalyticsContent({ data }: Props) {
             icon={BarChart3}
           />
         </div>
-      </SectionFrame>
+      </section>
 
-      {/* ─── Categorie + YoY row ─── */}
+      {/* ─── Budget + Variance row ─── */}
       <div
-        className="cq-section grid gap-4"
+        className="cq-section grid gap-4 animate-[fadeInUp_260ms_ease-out_both] [animation-delay:120ms]"
         style={{
           gridTemplateColumns:
             "repeat(auto-fit, minmax(min(320px, 100%), 1fr))",
         }}
       >
-        <SectionFrame label="Breakdown · Categorie">
+        <SectionFrame
+          label="Budget · Mese"
+          trailing={
+            data.budget.amount !== null
+              ? `${(data.budget.percentUsed ?? 0).toFixed(0)}%`
+              : "non impostato"
+          }
+        >
+          <BudgetTracker budget={data.budget} />
+        </SectionFrame>
+        <SectionFrame label="Varianza · vs Precedente">
+          <VarianceCard
+            delta={data.variance.delta}
+            deltaPct={data.variance.deltaPct}
+            topByCategory={data.variance.topByCategory}
+            topBySupplier={data.variance.topBySupplier}
+            topByProduct={data.variance.topByProduct}
+            periodLabel={data.period.label}
+          />
+        </SectionFrame>
+      </div>
+
+      {/* ─── Categorie + YoY row ─── */}
+      <div
+        className="cq-section grid gap-4 animate-[fadeInUp_280ms_ease-out_both] [animation-delay:180ms]"
+        style={{
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(min(320px, 100%), 1fr))",
+        }}
+      >
+        <SectionFrame
+          label="Breakdown · Categorie"
+          trailing={`${data.categoryBreakdown.length} cat.`}
+        >
           <CategoryDonut data={data.categoryBreakdown} />
         </SectionFrame>
-        <SectionFrame label="Trend · Yoy">
+        <SectionFrame label="Trend · 12 mesi YoY">
           <YoyTrendChart data={data.yearOverYear} />
         </SectionFrame>
       </div>
 
       {/* ─── Prodotti top + Fornitori classifica ─── */}
-      <div className="cq-section grid grid-cols-1 @[960px]:grid-cols-3 gap-4">
+      <div className="cq-section grid grid-cols-1 gap-4 @[960px]:grid-cols-3 animate-[fadeInUp_300ms_ease-out_both] [animation-delay:240ms]">
         <div className="@[960px]:col-span-2">
-          <SectionFrame label="Prodotti · Top">
-            <ProductInsightsTable rows={data.productInsights} />
+          <SectionFrame
+            label="Prodotti · Top"
+            trailing={`${data.productInsights.length} righe`}
+            padded={false}
+          >
+            <div className="px-4 pb-4 pt-1">
+              <ProductInsightsTable rows={data.productInsights} />
+            </div>
           </SectionFrame>
         </div>
         <SectionFrame
@@ -185,20 +213,20 @@ export function AnalyticsContent({ data }: Props) {
               Nessun fornitore
             </div>
           ) : (
-            <ul className="flex flex-col gap-2.5">
+            <ul className="flex flex-col gap-3">
               {data.supplierBreakdown.map((s) => (
                 <li key={s.name}>
                   <div className="flex items-baseline justify-between gap-2">
                     <span className="truncate text-[13px] text-text-primary">
                       {s.name}
                     </span>
-                    <span className="font-mono text-[13px] tabular-nums text-text-primary shrink-0">
+                    <span className="shrink-0 font-mono text-[13px] tabular-nums text-text-primary">
                       {formatCurrency(s.spending)}
                     </span>
                   </div>
-                  <div className="mt-1 h-1 bg-surface-elevated rounded-full overflow-hidden">
+                  <div className="mt-1 h-1 overflow-hidden rounded-full bg-surface-elevated">
                     <div
-                      className="h-full bg-accent-green rounded-full transition-all duration-700"
+                      className="h-full rounded-full bg-accent-green transition-[width] duration-700 ease-out"
                       style={{
                         width: `${(s.spending / maxSupplier) * 100}%`,
                       }}
@@ -215,30 +243,45 @@ export function AnalyticsContent({ data }: Props) {
       </div>
 
       {/* ─── Pattern settimanale ─── */}
-      <SectionFrame label="Pattern · Settimanale">
-        <WeekdayHeatmap cells={data.weekdayPattern} />
-      </SectionFrame>
+      <div className="animate-[fadeInUp_320ms_ease-out_both] [animation-delay:300ms]">
+        <SectionFrame label="Pattern · Settimanale">
+          <WeekdayHeatmap cells={data.weekdayPattern} />
+        </SectionFrame>
+      </div>
 
       {/* ─── Ordini recenti (dense log) ─── */}
-      <SectionFrame
-        label="Ordini · Recenti"
-        trailing={`${data.recentOrders.length}/8`}
-        padded={false}
-      >
-        <div className="py-2">
-          <AnalyticsRecentOrdersLog rows={data.recentOrders} />
-        </div>
-      </SectionFrame>
+      <div className="animate-[fadeInUp_340ms_ease-out_both] [animation-delay:360ms]">
+        <SectionFrame
+          label="Ordini · Recenti"
+          trailing={`${data.recentOrders.length}/8`}
+          padded={false}
+        >
+          <div className="py-2">
+            <AnalyticsRecentOrdersLog rows={data.recentOrders} />
+          </div>
+        </SectionFrame>
+      </div>
 
-      <style jsx>{`
+      <style jsx global>{`
         @keyframes fadeInUp {
           from {
             opacity: 0;
-            transform: translate3d(0, 4px, 0);
+            transform: translate3d(0, 6px, 0);
           }
           to {
             opacity: 1;
             transform: translate3d(0, 0, 0);
+          }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .animate-\\[fadeInUp_220ms_ease-out_both\\],
+          .animate-\\[fadeInUp_240ms_ease-out_both\\],
+          .animate-\\[fadeInUp_260ms_ease-out_both\\],
+          .animate-\\[fadeInUp_280ms_ease-out_both\\],
+          .animate-\\[fadeInUp_300ms_ease-out_both\\],
+          .animate-\\[fadeInUp_320ms_ease-out_both\\],
+          .animate-\\[fadeInUp_340ms_ease-out_both\\] {
+            animation: none !important;
           }
         }
       `}</style>

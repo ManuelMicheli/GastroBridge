@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "motion/react";
+import { useEffect, useState } from "react";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/formatters";
 import type { VarianceRow } from "@/lib/analytics/restaurant";
@@ -23,6 +22,58 @@ const TAB_LABELS: Record<Tab, string> = {
   product: "Prodotto",
 };
 
+const TAB_KEYS: Tab[] = ["category", "supplier", "product"];
+
+function VarianceRowBar({
+  row,
+  maxDeltaAbs,
+  index,
+}: {
+  row: VarianceRow;
+  maxDeltaAbs: number;
+  index: number;
+}) {
+  const isIncrease = row.delta > 0;
+  const target = Math.min(100, (Math.abs(row.delta) / maxDeltaAbs) * 100);
+  const barColor = isIncrease ? "bg-accent-red" : "bg-accent-green";
+  const textColor = isIncrease ? "text-accent-red" : "text-accent-green";
+
+  const [w, setW] = useState(0);
+  useEffect(() => {
+    const id = window.setTimeout(() => setW(target), 40 + index * 35);
+    return () => window.clearTimeout(id);
+  }, [target, index]);
+
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="truncate text-[13px] text-text-primary">{row.name}</span>
+        <div className="flex shrink-0 items-baseline gap-2">
+          <span className={`font-mono text-[13px] tabular-nums ${textColor}`}>
+            {isIncrease ? "+" : "−"}
+            {formatCurrency(Math.abs(row.delta))}
+          </span>
+          {row.deltaPct !== null && (
+            <span className={`font-mono text-[10px] tabular-nums ${textColor}`}>
+              ({isIncrease ? "+" : ""}
+              {row.deltaPct.toFixed(0)}%)
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="mt-1 h-1 overflow-hidden rounded-full bg-surface-elevated">
+        <div
+          className={`h-full rounded-full transition-[width] duration-700 ease-out ${barColor}`}
+          style={{ width: `${w}%` }}
+        />
+      </div>
+      <p className="mt-1 font-mono text-[10px] tabular-nums text-text-tertiary">
+        {formatCurrency(row.previous)} → {formatCurrency(row.current)}
+      </p>
+    </div>
+  );
+}
+
 export function VarianceCard({
   delta,
   deltaPct,
@@ -33,64 +84,83 @@ export function VarianceCard({
 }: Props) {
   const [tab, setTab] = useState<Tab>("category");
 
-  const rows = tab === "category" ? topByCategory : tab === "supplier" ? topBySupplier : topByProduct;
+  const rows =
+    tab === "category"
+      ? topByCategory
+      : tab === "supplier"
+      ? topBySupplier
+      : topByProduct;
   const hasData = rows.length > 0 && rows.some((r) => r.delta !== 0);
 
   const increase = delta > 0;
   const deltaAbs = Math.abs(delta);
-
+  const noComparison = deltaPct === null && delta === 0;
+  const deltaColor = increase ? "text-accent-red" : "text-accent-green";
   const maxDeltaAbs = rows.reduce((m, r) => Math.max(m, Math.abs(r.delta)), 0) || 1;
 
   return (
-    <div className="bg-surface-card border border-border-subtle rounded-2xl p-6 shadow-card-dark">
-      <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
-        <div>
-          <p className="text-xs font-medium text-text-tertiary uppercase tracking-wider">
-            Varianza vs periodo precedente
+    <div className="flex flex-col gap-4">
+      {/* Top: delta value */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+            Δ vs periodo precedente
           </p>
-          {deltaPct === null && delta === 0 ? (
-            <p className="text-2xl font-mono font-bold text-text-primary mt-1">
+          {noComparison ? (
+            <p className="mt-1 font-mono text-sm text-text-tertiary">
               Nessun dato periodo precedente
             </p>
           ) : (
-            <div className="flex items-baseline gap-2 mt-1">
+            <div className="mt-1 flex items-baseline gap-2">
               {increase ? (
-                <TrendingUp className="h-5 w-5 text-accent-red" />
+                <TrendingUp className={`h-4 w-4 ${deltaColor}`} />
               ) : (
-                <TrendingDown className="h-5 w-5 text-accent-green" />
+                <TrendingDown className={`h-4 w-4 ${deltaColor}`} />
               )}
-              <p
-                className={`text-2xl font-mono font-bold ${
-                  increase ? "text-accent-red" : "text-accent-green"
-                }`}
+              <span
+                className={`font-mono tabular-nums ${deltaColor}`}
+                style={{
+                  fontSize: "var(--text-display-lg)",
+                  lineHeight: "var(--text-display-lg--line-height)",
+                  letterSpacing: "var(--text-display-lg--letter-spacing)",
+                  fontWeight: 400,
+                }}
               >
                 {increase ? "+" : "−"}
                 {formatCurrency(deltaAbs)}
-              </p>
+              </span>
               {deltaPct !== null && (
-                <span className={`text-sm font-medium ${increase ? "text-accent-red" : "text-accent-green"}`}>
+                <span className={`font-mono text-xs tabular-nums ${deltaColor}`}>
                   ({increase ? "+" : ""}
                   {deltaPct.toFixed(1)}%)
                 </span>
               )}
             </div>
           )}
-          <p className="text-xs text-text-tertiary mt-1">
-            {increase ? "Stai spendendo più che nel periodo precedente" : "Stai risparmiando rispetto al periodo precedente"}
-            {" — "}
-            <span className="text-text-secondary">{periodLabel}</span>
+          <p className="mt-1 font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+            {increase ? "Spesa in aumento" : "Risparmio in corso"}
+            <span className="mx-1.5 text-border-subtle">·</span>
+            {periodLabel}
           </p>
         </div>
-        <div className="inline-flex gap-1 p-1 rounded-lg bg-surface-elevated border border-border-subtle">
-          {(Object.keys(TAB_LABELS) as Tab[]).map((t) => (
+
+        {/* Segmented tabs — terminal tight */}
+        <div
+          role="tablist"
+          aria-label="Raggruppa per"
+          className="inline-flex items-center rounded-lg border border-border-subtle bg-surface-card p-0.5"
+        >
+          {TAB_KEYS.map((t) => (
             <button
               key={t}
               type="button"
+              role="tab"
+              aria-selected={t === tab}
               onClick={() => setTab(t)}
-              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
+              className={`rounded-md px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.08em] transition-colors ${
                 t === tab
                   ? "bg-accent-green text-surface-base"
-                  : "text-text-secondary hover:text-text-primary"
+                  : "text-text-tertiary hover:text-text-primary hover:bg-surface-hover"
               }`}
             >
               {TAB_LABELS[t]}
@@ -99,62 +169,28 @@ export function VarianceCard({
         </div>
       </div>
 
-      <p className="text-xs text-text-tertiary mb-3">
-        Top 6 driver del delta per {TAB_LABELS[tab].toLowerCase()}
-      </p>
-
-      {!hasData ? (
-        <div className="h-32 flex items-center justify-center text-sm text-text-tertiary">
-          Nessun cambiamento significativo per {TAB_LABELS[tab].toLowerCase()}
-        </div>
-      ) : (
-        <div className="space-y-2.5">
-          {rows.map((row, i) => {
-            const isIncrease = row.delta > 0;
-            const widthPct = Math.min(100, (Math.abs(row.delta) / maxDeltaAbs) * 100);
-            const barColor = isIncrease ? "bg-accent-red" : "bg-accent-green";
-            return (
-              <motion.div
+      {/* Bottom: driver list */}
+      <div className="border-t border-border-subtle pt-3">
+        <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+          Top driver · {TAB_LABELS[tab]}
+        </p>
+        {!hasData ? (
+          <div className="flex h-24 items-center justify-center font-mono text-[11px] uppercase tracking-[0.1em] text-text-tertiary">
+            Nessun cambiamento significativo
+          </div>
+        ) : (
+          <div className="mt-3 flex flex-col gap-3">
+            {rows.map((row, i) => (
+              <VarianceRowBar
                 key={row.name}
-                initial={{ opacity: 0, x: -6 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.04 }}
-              >
-                <div className="flex items-baseline justify-between mb-1 gap-3">
-                  <span className="text-sm font-medium text-text-primary truncate">{row.name}</span>
-                  <div className="flex items-baseline gap-2 shrink-0">
-                    <span
-                      className={`text-sm font-mono font-bold ${
-                        isIncrease ? "text-accent-red" : "text-accent-green"
-                      }`}
-                    >
-                      {isIncrease ? "+" : "−"}
-                      {formatCurrency(Math.abs(row.delta))}
-                    </span>
-                    {row.deltaPct !== null && (
-                      <span className={`text-xs ${isIncrease ? "text-accent-red" : "text-accent-green"}`}>
-                        ({isIncrease ? "+" : ""}
-                        {row.deltaPct.toFixed(0)}%)
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="h-1.5 bg-surface-elevated rounded-full overflow-hidden">
-                  <motion.div
-                    className={`h-full rounded-full ${barColor}`}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${widthPct}%` }}
-                    transition={{ duration: 0.7, ease: "easeOut", delay: i * 0.04 }}
-                  />
-                </div>
-                <p className="text-[10px] text-text-tertiary mt-0.5 font-mono">
-                  {formatCurrency(row.previous)} → {formatCurrency(row.current)}
-                </p>
-              </motion.div>
-            );
-          })}
-        </div>
-      )}
+                row={row}
+                maxDeltaAbs={maxDeltaAbs}
+                index={i}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

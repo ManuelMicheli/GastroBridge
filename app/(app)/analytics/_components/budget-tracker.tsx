@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "motion/react";
+import { useEffect, useState } from "react";
 import { Target, TrendingUp, TrendingDown, AlertTriangle, Settings2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/formatters";
 import type { BudgetState } from "@/lib/analytics/restaurant";
@@ -13,24 +13,26 @@ type Props = {
 export function BudgetTracker({ budget }: Props) {
   if (budget.amount === null) {
     return (
-      <div className="bg-surface-card border border-dashed border-border-default rounded-2xl p-6 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-accent-green/10">
-            <Target className="h-6 w-6 text-accent-green" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-text-primary">Imposta un budget mensile</h3>
-            <p className="text-sm text-text-tertiary mt-0.5">
-              Definisci quanto puoi spendere e tieni sotto controllo i rincari in tempo reale.
+      <div className="flex flex-col items-start gap-4 rounded-lg border border-dashed border-border-default bg-surface-elevated/40 px-4 py-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-accent-green/10">
+            <Target className="h-4 w-4 text-accent-green" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-text-primary">
+              Imposta un budget mensile
+            </p>
+            <p className="mt-0.5 text-xs text-text-tertiary">
+              Definisci il tetto di spesa e monitora in tempo reale i rincari.
             </p>
           </div>
         </div>
         <Link
           href="/impostazioni/budget"
-          className="shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-accent-green text-surface-base text-sm font-semibold hover:opacity-90 transition-opacity"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-accent-green px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-surface-base transition-opacity hover:opacity-90"
         >
-          <Settings2 className="h-4 w-4" />
-          Imposta budget
+          <Settings2 className="h-3.5 w-3.5" />
+          Imposta
         </Link>
       </div>
     );
@@ -47,97 +49,118 @@ export function BudgetTracker({ budget }: Props) {
     : warning
     ? "bg-accent-orange"
     : "bg-accent-green";
+  const pctColor = overBudget
+    ? "text-accent-red"
+    : warning
+    ? "text-accent-orange"
+    : "text-accent-green";
+
+  const [animPct, setAnimPct] = useState(0);
+  useEffect(() => {
+    const id = window.setTimeout(() => setAnimPct(pctClamped), 40);
+    return () => window.clearTimeout(id);
+  }, [pctClamped]);
+
+  const avgDaily = budget.daysElapsed > 0 ? budget.spent / budget.daysElapsed : 0;
 
   return (
-    <div className="bg-surface-card border border-border-subtle rounded-2xl p-6 shadow-card-dark">
-      <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
-        <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-accent-green/10">
-            <Target className="h-5 w-5 text-accent-green" />
-          </div>
-          <div>
-            <h3 className="text-xs font-medium text-text-tertiary uppercase tracking-wider">
-              Budget mensile
-            </h3>
-            <p className="text-2xl font-mono font-bold text-text-primary">
-              {formatCurrency(budget.spent)}{" "}
-              <span className="text-base font-normal text-text-tertiary">
-                / {formatCurrency(budget.amount)}
-              </span>
-            </p>
-          </div>
+    <div className="flex flex-col gap-4">
+      {/* Top row: big number + edit link */}
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <div className="min-w-0">
+          <span
+            className="font-mono tabular-nums text-text-primary"
+            style={{
+              fontSize: "var(--text-display-lg)",
+              lineHeight: "var(--text-display-lg--line-height)",
+              letterSpacing: "var(--text-display-lg--letter-spacing)",
+              fontWeight: 400,
+            }}
+          >
+            {formatCurrency(budget.spent)}
+          </span>
+          <span className="ml-2 font-mono text-sm tabular-nums text-text-tertiary">
+            / {formatCurrency(budget.amount)}
+          </span>
         </div>
         <Link
           href="/impostazioni/budget"
-          className="text-xs text-text-tertiary hover:text-text-primary inline-flex items-center gap-1"
+          className="inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary transition-colors hover:text-text-primary"
         >
-          <Settings2 className="h-3.5 w-3.5" /> Modifica
+          <Settings2 className="h-3 w-3" />
+          Modifica
         </Link>
       </div>
 
-      <div className="mb-3">
-        <div className="h-3 bg-surface-elevated rounded-full overflow-hidden relative">
-          <motion.div
-            className={`h-full rounded-full ${barColor}`}
-            initial={{ width: 0 }}
-            animate={{ width: `${pctClamped}%` }}
-            transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+      {/* Progress bar */}
+      <div>
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-elevated">
+          <div
+            className={`h-full rounded-full transition-[width] duration-700 ease-out ${barColor}`}
+            style={{ width: `${animPct}%` }}
           />
         </div>
-        <div className="flex justify-between mt-1.5 text-xs">
-          <span className={`font-mono font-bold ${overBudget ? "text-accent-red" : warning ? "text-accent-orange" : "text-accent-green"}`}>
+        <div className="mt-2 flex items-baseline justify-between gap-2 font-mono text-[10px] uppercase tracking-[0.08em]">
+          <span className={`tabular-nums ${pctColor}`}>
             {pct.toFixed(1)}% utilizzato
           </span>
-          <span className="text-text-tertiary">
-            Giorno {budget.daysElapsed} di {budget.daysInMonth}
+          <span className="tabular-nums text-text-tertiary">
+            Giorno {budget.daysElapsed}/{budget.daysInMonth}
           </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-border-subtle">
-        <div>
-          <p className="text-xs text-text-tertiary mb-1">Proiezione fine mese</p>
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-mono font-bold text-text-primary">
-              {formatCurrency(budget.projected)}
+      {/* Bottom stats row — hairline divider */}
+      <div className="grid grid-cols-2 gap-6 border-t border-border-subtle pt-4">
+        <div className="flex flex-col gap-1">
+          <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+            Proiezione
+          </span>
+          <span className="font-mono text-[15px] tabular-nums text-text-primary">
+            {formatCurrency(budget.projected)}
+          </span>
+          {projectedOver ? (
+            <span className="inline-flex items-center gap-0.5 font-mono text-[10px] tabular-nums text-accent-red">
+              <TrendingUp className="h-3 w-3" />
+              +{formatCurrency(budget.projected - budget.amount)}
             </span>
-            {projectedOver ? (
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-accent-red">
-                <TrendingUp className="h-3.5 w-3.5" />
-                +{formatCurrency(budget.projected - budget.amount)}
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-xs font-medium text-accent-green">
-                <TrendingDown className="h-3.5 w-3.5" />
-                {formatCurrency(budget.amount - budget.projected)} residuo
-              </span>
-            )}
-          </div>
+          ) : (
+            <span className="inline-flex items-center gap-0.5 font-mono text-[10px] tabular-nums text-accent-green">
+              <TrendingDown className="h-3 w-3" />
+              {formatCurrency(budget.amount - budget.projected)} residuo
+            </span>
+          )}
         </div>
-        <div>
-          <p className="text-xs text-text-tertiary mb-1">Media giornaliera attuale</p>
-          <p className="text-lg font-mono font-bold text-text-primary">
-            {formatCurrency(budget.daysElapsed > 0 ? budget.spent / budget.daysElapsed : 0)}
-          </p>
+        <div className="flex flex-col gap-1">
+          <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+            Media/giorno
+          </span>
+          <span className="font-mono text-[15px] tabular-nums text-text-primary">
+            {formatCurrency(avgDaily)}
+          </span>
+          <span className="font-mono text-[10px] text-text-tertiary">
+            nel periodo
+          </span>
         </div>
       </div>
 
+      {/* Alert strip */}
       {overBudget && (
-        <div className="mt-4 p-3 rounded-lg bg-accent-red/10 border border-accent-red/30 flex items-start gap-2">
-          <AlertTriangle className="h-4 w-4 text-accent-red shrink-0 mt-0.5" />
-          <p className="text-xs text-text-primary">
-            Hai superato il budget mensile di{" "}
-            <strong className="font-mono">{formatCurrency(budget.spent - budget.amount)}</strong>.
+        <div className="flex items-start gap-2 rounded-md border border-accent-red/30 bg-accent-red/10 px-3 py-2">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent-red" />
+          <p className="font-mono text-[11px] tabular-nums text-text-primary">
+            Budget superato di{" "}
+            <strong>{formatCurrency(budget.spent - budget.amount)}</strong>.
           </p>
         </div>
       )}
       {!overBudget && projectedOver && (
-        <div className="mt-4 p-3 rounded-lg bg-accent-orange/10 border border-accent-orange/30 flex items-start gap-2">
-          <AlertTriangle className="h-4 w-4 text-accent-orange shrink-0 mt-0.5" />
-          <p className="text-xs text-text-primary">
+        <div className="flex items-start gap-2 rounded-md border border-accent-orange/30 bg-accent-orange/10 px-3 py-2">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent-orange" />
+          <p className="font-mono text-[11px] tabular-nums text-text-primary">
             Al ritmo attuale supererai il budget di{" "}
-            <strong className="font-mono">{formatCurrency(budget.projected - budget.amount)}</strong>{" "}
-            a fine mese.
+            <strong>{formatCurrency(budget.projected - budget.amount)}</strong> a
+            fine mese.
           </p>
         </div>
       )}

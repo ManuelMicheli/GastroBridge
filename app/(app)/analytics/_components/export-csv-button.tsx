@@ -38,10 +38,14 @@ export function ExportCsvButton({ period }: Props) {
       type="button"
       onClick={handleExport}
       disabled={pending}
-      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border-default hover:border-border-accent text-sm text-text-secondary hover:text-text-primary transition-colors disabled:opacity-60 disabled:cursor-wait"
+      className="inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-card px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-text-secondary transition-colors hover:border-border-accent hover:text-text-primary hover:bg-surface-hover disabled:cursor-wait disabled:opacity-60"
     >
-      {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-      Esporta CSV
+      {pending ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : (
+        <Download className="h-3.5 w-3.5" />
+      )}
+      Export CSV
     </button>
   );
 }

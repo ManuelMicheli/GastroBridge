@@ -8,7 +8,6 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from "recharts";
 import { formatCurrency } from "@/lib/utils/formatters";
 import type { YoyPoint } from "@/lib/analytics/restaurant";
@@ -24,22 +23,43 @@ type TooltipPayload = {
   color: string;
 };
 
-function YoyTooltip({ active, payload, label }: { active?: boolean; payload?: TooltipPayload[]; label?: string }) {
+function YoyTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: TooltipPayload[];
+  label?: string;
+}) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-surface-elevated border border-border-default rounded-lg px-3 py-2 shadow-elevated-dark">
-      <p className="text-xs text-text-tertiary mb-1">{label}</p>
-      {payload.map((p) => (
-        <div key={p.dataKey} className="flex items-center gap-2 text-xs">
-          <span className="h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
-          <span className="text-text-secondary">
-            {p.dataKey === "current" ? "Corrente" : "Anno prec."}
-          </span>
-          <span className="font-mono font-bold text-text-primary">
-            {p.value !== null && p.value !== undefined ? formatCurrency(p.value) : "—"}
-          </span>
-        </div>
-      ))}
+    <div className="rounded-lg border border-border-default bg-surface-elevated px-3 py-2 shadow-elevated-dark">
+      <p className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+        {label}
+      </p>
+      <div className="mt-1 flex flex-col gap-0.5">
+        {payload.map((p) => (
+          <div
+            key={p.dataKey}
+            className="flex items-center gap-2 font-mono text-[11px] tabular-nums"
+          >
+            <span
+              aria-hidden
+              className="h-1.5 w-1.5 rounded-full"
+              style={{ backgroundColor: p.color }}
+            />
+            <span className="text-text-secondary">
+              {p.dataKey === "current" ? "Corrente" : "Anno prec."}
+            </span>
+            <span className="text-text-primary">
+              {p.value !== null && p.value !== undefined
+                ? formatCurrency(p.value)
+                : "—"}
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -49,41 +69,75 @@ export function YoyTrendChart({ data }: Props) {
   const hasPrevious = data.some((d) => d.previous !== null && d.previous > 0);
 
   return (
-    <div className="bg-surface-card border border-border-subtle rounded-2xl p-5 shadow-card-dark">
-      <div className="flex items-start justify-between mb-4 gap-2">
-        <div>
-          <h3 className="font-semibold text-text-primary">Trend 12 mesi</h3>
-          <p className="text-xs text-text-tertiary mt-0.5">
-            {hasPrevious
-              ? "Con confronto anno precedente (YoY)"
-              : "Il confronto YoY appare quando esistono dati dell'anno precedente"}
-          </p>
-        </div>
+    <div className="flex flex-col gap-3">
+      {/* Custom compact legend — matches terminal style */}
+      <div className="flex items-center gap-4 font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+        <span className="inline-flex items-center gap-1.5">
+          <span
+            aria-hidden
+            className="h-0.5 w-4 rounded-full"
+            style={{ backgroundColor: "var(--color-accent-green)" }}
+          />
+          Corrente
+        </span>
+        {hasPrevious && (
+          <span className="inline-flex items-center gap-1.5">
+            <span
+              aria-hidden
+              className="h-0.5 w-4 rounded-full"
+              style={{
+                background:
+                  "repeating-linear-gradient(to right, #8A8A9A 0 3px, transparent 3px 6px)",
+              }}
+            />
+            Anno prec.
+          </span>
+        )}
+        {!hasPrevious && hasAnyData && (
+          <span className="text-text-tertiary/70">
+            confronto YoY non disponibile
+          </span>
+        )}
       </div>
+
       {!hasAnyData ? (
-        <div className="h-64 flex items-center justify-center text-sm text-text-tertiary">
+        <div className="flex h-56 items-center justify-center font-mono text-[11px] uppercase tracking-[0.1em] text-text-tertiary">
           Nessun dato nei 12 mesi
         </div>
       ) : (
-        <div className="h-64">
+        <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border-subtle)" vertical={false} />
+            <LineChart
+              data={data}
+              margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
+            >
+              <CartesianGrid
+                strokeDasharray="2 4"
+                stroke="var(--color-border-subtle)"
+                vertical={false}
+              />
               <XAxis
                 dataKey="label"
-                tick={{ fill: "var(--color-text-tertiary)", fontSize: 11 }}
+                tick={{
+                  fill: "var(--color-text-tertiary)",
+                  fontSize: 10,
+                  fontFamily: "var(--font-mono)",
+                }}
                 axisLine={{ stroke: "var(--color-border-subtle)" }}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fill: "var(--color-text-tertiary)", fontSize: 11 }}
+                tick={{
+                  fill: "var(--color-text-tertiary)",
+                  fontSize: 10,
+                  fontFamily: "var(--font-mono)",
+                }}
                 axisLine={false}
                 tickLine={false}
                 tickFormatter={(v) => `€${Math.round(v).toLocaleString("it-IT")}`}
-                width={70}
+                width={64}
               />
-              <Tooltip content={<YoyTooltip />} />
-              {hasPrevious && <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />}
+              <Tooltip content={<YoyTooltip />} cursor={{ stroke: "var(--color-border-default)" }} />
               {hasPrevious && (
                 <Line
                   type="monotone"
@@ -91,7 +145,7 @@ export function YoyTrendChart({ data }: Props) {
                   name="Anno precedente"
                   stroke="#8A8A9A"
                   strokeWidth={1.5}
-                  strokeDasharray="4 4"
+                  strokeDasharray="3 4"
                   dot={false}
                   isAnimationActive
                   connectNulls
@@ -101,10 +155,10 @@ export function YoyTrendChart({ data }: Props) {
                 type="monotone"
                 dataKey="current"
                 name="Corrente"
-                stroke="#2DD47A"
-                strokeWidth={2.5}
-                dot={{ r: 3, fill: "#2DD47A", strokeWidth: 0 }}
-                activeDot={{ r: 5 }}
+                stroke="var(--color-accent-green)"
+                strokeWidth={2}
+                dot={{ r: 2.5, fill: "var(--color-accent-green)", strokeWidth: 0 }}
+                activeDot={{ r: 4 }}
                 isAnimationActive
               />
             </LineChart>

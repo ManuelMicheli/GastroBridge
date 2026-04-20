@@ -4,6 +4,14 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useTransition } from "react";
 import { PERIOD_KEYS, PERIOD_LABELS, type PeriodKey } from "@/lib/analytics/period";
 
+const SHORT_LABELS: Record<PeriodKey, string> = {
+  current: "Corrente",
+  prev: "Scorso",
+  last3: "3M",
+  last12: "12M",
+  year: "YTD",
+};
+
 type Props = {
   current: PeriodKey;
 };
@@ -25,7 +33,9 @@ export function PeriodSelector({ current }: Props) {
 
   return (
     <div
-      className={`inline-flex flex-wrap gap-1 p-1 rounded-xl bg-surface-elevated border border-border-subtle ${
+      role="radiogroup"
+      aria-label="Periodo"
+      className={`inline-flex items-center rounded-lg border border-border-subtle bg-surface-card p-0.5 transition-opacity ${
         pending ? "opacity-60" : ""
       }`}
     >
@@ -35,15 +45,18 @@ export function PeriodSelector({ current }: Props) {
           <button
             key={key}
             type="button"
+            role="radio"
+            aria-checked={isActive}
             onClick={() => setPeriod(key)}
             disabled={pending}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+            title={PERIOD_LABELS[key]}
+            className={`rounded-md px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.08em] transition-colors ${
               isActive
-                ? "bg-accent-green text-surface-base shadow-sm"
-                : "text-text-secondary hover:text-text-primary hover:bg-surface-hover"
+                ? "bg-accent-green text-surface-base"
+                : "text-text-tertiary hover:text-text-primary hover:bg-surface-hover"
             }`}
           >
-            {PERIOD_LABELS[key]}
+            {SHORT_LABELS[key]}
           </button>
         );
       })}
