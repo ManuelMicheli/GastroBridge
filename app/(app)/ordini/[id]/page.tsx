@@ -9,6 +9,8 @@ import { SectionHeader } from "@/components/ui/section-header";
 import { LargeTitle } from "@/components/ui/large-title";
 import { GroupedList, GroupedListRow } from "@/components/ui/grouped-list";
 import { formatCurrency, formatDate } from "@/lib/utils/formatters";
+import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
+import { deriveOrderStatus } from "@/lib/orders/derive-order-status";
 
 const TIMELINE_STEPS = [
   { key: "submitted", label: "Inviato", icon: Check },
@@ -107,12 +109,25 @@ export default async function OrderDetailPage({
     ? parseCatalogOrderNotes(order.notes)
     : null;
 
-  const currentStep = getTimelinePosition(order.status);
-  const isCancelled = order.status === "cancelled";
-  const isDraft = order.status === "draft";
+  // Restaurant-facing status follows what suppliers have done with their
+  // splits, not the stale `orders.status` value (supplier actions only touch
+  // `order_splits.status`).
+  const effectiveStatus = deriveOrderStatus(
+    (splits ?? []).map((s) => s.status),
+    order.status,
+  );
+  const currentStep = getTimelinePosition(effectiveStatus);
+  const isCancelled = effectiveStatus === "cancelled";
+  const isDraft = effectiveStatus === "draft";
 
   return (
     <>
+      <RealtimeRefresh
+        subscriptions={[
+          { table: "order_splits", filter: `order_id=eq.${id}` },
+          { table: "orders", filter: `id=eq.${id}` },
+        ]}
+      />
       {/* Mobile Apple-app view */}
       <div className="lg:hidden pb-4">
         <LargeTitle
@@ -125,11 +140,11 @@ export default async function OrderDetailPage({
           subtitle={
             <span className="inline-flex items-center gap-2">
               <OrderStatusBadge
-                status={order.status}
+                status={effectiveStatus}
                 size="xs"
                 celebrate={
-                  order.status === "delivered" ||
-                  order.status === "completed"
+                  effectiveStatus === "delivered" ||
+                  effectiveStatus === "completed"
                 }
               />
               <span className="text-[color:var(--text-muted-light)]">·</span>
@@ -305,9 +320,9 @@ export default async function OrderDetailPage({
         subtitle={formatDate(order.created_at)}
         meta={
           <OrderStatusBadge
-            status={order.status}
+            status={effectiveStatus}
             size="md"
-            celebrate={order.status === "delivered" || order.status === "completed"}
+            celebrate={effectiveStatus === "delivered" || effectiveStatus === "completed"}
           />
         }
       />
