@@ -30,7 +30,6 @@ import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
 import { formatCurrency, formatDate, formatDateTime, formatRelativeTime } from "@/lib/utils/formatters";
 import {
   acceptOrderLines,
-  markPacked,
   markShipped,
   transitionToPreparing,
   type LineDecision,
@@ -404,16 +403,6 @@ export function OrderDetailClient({
     submitDecisions(payload);
   }
 
-  function handleMarkPacked() {
-    startActionTransition(async () => {
-      const res = await markPacked(splitId);
-      if (res.ok) {
-        toast.success("Ordine segnato come imballato");
-        router.refresh();
-      } else toast.error(res.error);
-    });
-  }
-
   function handleMarkShipped() {
     startActionTransition(async () => {
       const res = await markShipped(splitId);
@@ -515,15 +504,12 @@ export function OrderDetailClient({
             </p>
             <div className="flex gap-2">
               {canMarkPacked && (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={handleMarkPacked}
-                  isLoading={isActionPending}
-                >
-                  <Package className="h-4 w-4" />
-                  Segna impacchettato
-                </Button>
+                <Link href={`/supplier/ordini/${splitId}/preparazione`}>
+                  <Button size="sm" variant="secondary">
+                    <Package className="h-4 w-4" />
+                    Vai al picking
+                  </Button>
+                </Link>
               )}
               {canMarkShipped && (
                 <Button
