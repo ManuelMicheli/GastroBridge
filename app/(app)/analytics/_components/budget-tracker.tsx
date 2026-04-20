@@ -11,6 +11,15 @@ type Props = {
 };
 
 export function BudgetTracker({ budget }: Props) {
+  const pct = budget.percentUsed ?? 0;
+  const pctClamped = Math.min(pct, 100);
+
+  const [animPct, setAnimPct] = useState(0);
+  useEffect(() => {
+    const id = window.setTimeout(() => setAnimPct(pctClamped), 40);
+    return () => window.clearTimeout(id);
+  }, [pctClamped]);
+
   if (budget.amount === null) {
     return (
       <div className="flex flex-col items-start gap-4 rounded-lg border border-dashed border-border-default bg-surface-elevated/40 px-4 py-5 sm:flex-row sm:items-center sm:justify-between">
@@ -38,8 +47,6 @@ export function BudgetTracker({ budget }: Props) {
     );
   }
 
-  const pct = budget.percentUsed ?? 0;
-  const pctClamped = Math.min(pct, 100);
   const overBudget = pct > 100;
   const warning = pct >= 80 && pct <= 100;
   const projectedOver = budget.projected > budget.amount;
@@ -54,12 +61,6 @@ export function BudgetTracker({ budget }: Props) {
     : warning
     ? "text-accent-orange"
     : "text-accent-green";
-
-  const [animPct, setAnimPct] = useState(0);
-  useEffect(() => {
-    const id = window.setTimeout(() => setAnimPct(pctClamped), 40);
-    return () => window.clearTimeout(id);
-  }, [pctClamped]);
 
   const avgDaily = budget.daysElapsed > 0 ? budget.spent / budget.daysElapsed : 0;
 
