@@ -35,7 +35,7 @@ export default async function SupplierMessagesThreadPage({
   await markSectionSeen("supplier_messages");
 
   return (
-    <div className="flex h-[calc(100vh-var(--chrome-top,80px))] lg:h-[calc(100vh-4rem)] min-h-0 overflow-hidden">
+    <div className="flex flex-col lg:flex-row h-[calc(100vh-var(--chrome-top,80px))] lg:h-[calc(100vh-4rem)] min-h-0 overflow-hidden">
       {/* Sidebar: hidden on mobile (back button in ChatThread handles navigation) */}
       <div className="hidden lg:block">
         <ConversationList
@@ -47,7 +47,7 @@ export default async function SupplierMessagesThreadPage({
       </div>
 
       {/* Mobile: WhatsApp-style back bar — arrow + avatar + name */}
-      <div className="lg:hidden sticky top-0 z-20 flex items-center gap-2 border-b border-[color:var(--ios-separator)] bg-[color:var(--ios-chrome-bg)] px-1.5 py-2 [backdrop-filter:var(--ios-chrome-blur)] [-webkit-backdrop-filter:var(--ios-chrome-blur)]">
+      <div className="lg:hidden flex items-center gap-2 border-b border-[color:var(--ios-separator)] bg-[color:var(--ios-chrome-bg)] px-1.5 py-2 [backdrop-filter:var(--ios-chrome-blur)] [-webkit-backdrop-filter:var(--ios-chrome-blur)] shrink-0">
         <Link
           href="/supplier/messaggi"
           className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[color:var(--color-brand-primary)] transition active:bg-[color:var(--color-brand-primary-subtle)] shrink-0"
@@ -80,7 +80,7 @@ export default async function SupplierMessagesThreadPage({
         </div>
       </div>
 
-      <section className="flex-1 min-w-0 h-full min-h-0 flex flex-col">
+      <section className="flex-1 min-w-0 min-h-0 flex flex-col">
         <ChatThread
           relationshipId={relationshipId}
           orderSplitId={null}
