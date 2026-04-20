@@ -14,7 +14,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SpendTrendChart } from "./spend-trend-chart/SpendTrendChart";
 import type { SpendTrendPoint } from "./spend-trend-chart/types";
 import { HeroStrip } from "./_awwwards/hero-strip";
@@ -23,12 +23,19 @@ import { KpiGrid, type Delta } from "./_awwwards/kpi-grid";
 import { SavingsAlert } from "./_awwwards/savings-alert";
 import { SectionFrame } from "./_awwwards/section-frame";
 import { RecentOrdersLog } from "./_awwwards/recent-orders-log";
+import {
+  VatToggle,
+  readInitialVatMode,
+  persistVatMode,
+  type VatMode,
+} from "./_awwwards/vat-toggle";
 import { RestaurantDashboardMobile } from "./restaurant-dashboard-mobile";
 
 type OrderRow = {
   id: string;
   status: string;
   total: number;
+  totalGross: number;
   created_at: string;
   supplier_name: string;
   order_number: string;
@@ -40,11 +47,15 @@ type Props = {
     ordersThisMonth: number;
     prevMonthOrders: number;
     spending: number;
+    spendingGross: number;
     prevSpending: number;
+    prevSpendingGross: number;
     savings: number;
+    savingsGross: number;
     activeSuppliers: number;
   };
   spendPoints: SpendTrendPoint[];
+  spendPointsGross: SpendTrendPoint[];
   transactionsByDate: Record<string, number>;
   recentOrders: OrderRow[];
 };
@@ -75,19 +86,45 @@ export function RestaurantDashboard({
   companyName,
   kpi,
   spendPoints,
+  spendPointsGross,
   transactionsByDate,
   recentOrders,
 }: Props) {
-  const spendingDelta = formatDelta(kpi.spending, kpi.prevSpending);
+  // IVA toggle — default "net" on first render (matches SSR) then hydrates
+  // from localStorage in a commit-phase effect to avoid hydration mismatch.
+  const [vatMode, setVatMode] = useState<VatMode>("net");
+  useEffect(() => {
+    setVatMode(readInitialVatMode());
+  }, []);
+  const handleVatChange = (v: VatMode) => {
+    setVatMode(v);
+    persistVatMode(v);
+  };
+  const gross = vatMode === "gross";
+
+  const effSpending = gross ? kpi.spendingGross : kpi.spending;
+  const effPrevSpending = gross ? kpi.prevSpendingGross : kpi.prevSpending;
+  const effSavings = gross ? kpi.savingsGross : kpi.savings;
+  const effPoints = gross ? spendPointsGross : spendPoints;
+  const effRecentOrders = useMemo(
+    () =>
+      recentOrders.map((o) => ({
+        ...o,
+        total: gross ? o.totalGross : o.total,
+      })),
+    [recentOrders, gross],
+  );
+
+  const spendingDelta = formatDelta(effSpending, effPrevSpending);
   const ordersDelta = formatDelta(kpi.ordersThisMonth, kpi.prevMonthOrders);
 
   const avgOrder =
     kpi.ordersThisMonth > 0
-      ? Math.round(kpi.spending / kpi.ordersThisMonth)
+      ? Math.round(effSpending / kpi.ordersThisMonth)
       : 0;
   const prevAvgOrder =
     kpi.prevMonthOrders > 0
-      ? Math.round(kpi.prevSpending / kpi.prevMonthOrders)
+      ? Math.round(effPrevSpending / kpi.prevMonthOrders)
       : 0;
 
   // Live clock for the "AS OF HH:mm" caption in the KPI hero.
@@ -106,8 +143,17 @@ export function RestaurantDashboard({
       <div className="lg:hidden">
         <RestaurantDashboardMobile
           companyName={companyName}
-          kpi={kpi}
-          recentOrders={recentOrders}
+          kpi={{
+            ordersThisMonth: kpi.ordersThisMonth,
+            prevMonthOrders: kpi.prevMonthOrders,
+            spending: effSpending,
+            prevSpending: effPrevSpending,
+            savings: effSavings,
+            activeSuppliers: kpi.activeSuppliers,
+          }}
+          recentOrders={effRecentOrders}
+          vatMode={vatMode}
+          onVatModeChange={handleVatChange}
         />
       </div>
       <div className="hidden lg:block">
@@ -126,25 +172,30 @@ export function RestaurantDashboard({
       {/* Block 3 — KPI hero + savings alert (same frame) */}
       <div className="animate-[fadeInUp_260ms_ease-out_both] [animation-delay:120ms]">
         <SectionFrame
-          label="Spesa · Questo mese"
-          trailing={<span className="tabular-nums">AS OF {asOf}</span>}
+          label={`Spesa · Questo mese · ${gross ? "Con IVA" : "Senza IVA"}`}
+          trailing={
+            <span className="inline-flex items-center gap-3">
+              <VatToggle value={vatMode} onChange={handleVatChange} />
+              <span className="tabular-nums">AS OF {asOf}</span>
+            </span>
+          }
           padded={false}
         >
           <div className="px-4 pt-3 pb-4">
             <KpiGrid
-              spending={kpi.spending}
+              spending={effSpending}
               spendingDelta={spendingDelta}
               ordersThisMonth={kpi.ordersThisMonth}
               ordersDelta={ordersDelta}
               avgOrder={avgOrder}
               prevAvgOrder={prevAvgOrder}
-              savings={kpi.savings}
+              savings={effSavings}
               activeSuppliers={kpi.activeSuppliers}
               /* AS OF lives on the SectionFrame header above */
             />
           </div>
           <div className="border-t border-border-subtle px-4 py-3">
-            <SavingsAlert savings={kpi.savings} />
+            <SavingsAlert savings={effSavings} />
           </div>
         </SectionFrame>
       </div>
@@ -154,7 +205,7 @@ export function RestaurantDashboard({
           animations which break when placed inside another framed container). */}
       <div className="animate-[fadeInUp_280ms_ease-out_both] [animation-delay:180ms]">
         <SpendTrendChart
-          points={spendPoints}
+          points={effPoints}
           transactionsByDate={transactionsByDate}
         />
       </div>
@@ -174,7 +225,7 @@ export function RestaurantDashboard({
           padded={false}
         >
           <div className="py-2">
-            <RecentOrdersLog rows={recentOrders} />
+            <RecentOrdersLog rows={effRecentOrders} />
           </div>
         </SectionFrame>
       </div>

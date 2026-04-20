@@ -7,6 +7,7 @@ import { LargeTitle } from "@/components/ui/large-title";
 import { GroupedList, GroupedListRow } from "@/components/ui/grouped-list";
 import { OrderStatusBadge } from "@/components/ui/order-status-badge";
 import { PullToRefresh } from "@/components/ui/pull-to-refresh";
+import { VatToggle, type VatMode } from "./_awwwards/vat-toggle";
 
 type OrderRow = {
   id: string;
@@ -29,6 +30,8 @@ type Props = {
     activeSuppliers: number;
   };
   recentOrders: OrderRow[];
+  vatMode?: VatMode;
+  onVatModeChange?: (v: VatMode) => void;
 };
 
 function greetingByHour(): string {
@@ -81,6 +84,8 @@ export function RestaurantDashboardMobile({
   firstName,
   kpi,
   recentOrders,
+  vatMode,
+  onVatModeChange,
 }: Props) {
   const greeting = greetingByHour();
   const todayStr = useMemo(
@@ -130,13 +135,27 @@ export function RestaurantDashboardMobile({
           }
         />
 
+        {/* IVA toggle — sits just above the KPI grid so the user sees
+            immediately which view the totals reflect. */}
+        {vatMode && onVatModeChange ? (
+          <div className="mt-4 flex items-center justify-between px-[10px]">
+            <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-[color:var(--caption-color)]">
+              Vista IVA
+            </span>
+            <VatToggle value={vatMode} onChange={onVatModeChange} size="xs" />
+          </div>
+        ) : null}
+
         {/* KPI grid — edge-to-edge hairline */}
         <div
-          className="mt-5 grid grid-cols-2 gap-px border-t border-b border-[color:var(--ios-separator)] bg-[color:var(--ios-separator)]"
+          className="mt-3 grid grid-cols-2 gap-px border-t border-b border-[color:var(--ios-separator)] bg-[color:var(--ios-separator)]"
         >
           <div className="bg-[color:var(--ios-grouped-bg)] px-5 py-4">
             <div className="text-[9px] font-medium uppercase tracking-[0.14em] text-[color:var(--caption-color)]">
-              Speso mese
+              Speso mese{" "}
+              <span className="text-[color:var(--text-muted-light)] normal-case tracking-normal">
+                ({vatMode === "gross" ? "IVA incl." : "no IVA"})
+              </span>
             </div>
             <div
               className="mt-1 font-serif text-[22px] font-medium tracking-[-0.018em] text-[color:var(--color-brand-primary)]"
