@@ -79,10 +79,44 @@ export interface FiscalOverview {
   latestReceipts: ReceiptListRow[];
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function loose() {
+// Loosely-typed client shim (matches repo pattern in lib/orders/submit.ts
+// and lib/fiscal/credentials.ts). Hand-rolled Database types don't narrow
+// through from/.rpc overloads, so queries cast via this helper.
+type LooseClient = {
+  auth: { getUser: () => Promise<{ data: { user: { id: string } | null } }> };
+  from: (table: string) => LooseQuery;
+  rpc: (
+    fn: string,
+    args?: Record<string, unknown>,
+  ) => Promise<{ data: unknown; error: { message: string } | null }>;
+};
+type LooseQuery = {
+  select: (cols: string) => LooseQuery;
+  eq: (col: string, val: unknown) => LooseQuery;
+  gte: (col: string, val: unknown) => LooseQuery;
+  lte: (col: string, val: unknown) => LooseQuery;
+  in: (col: string, vals: unknown[]) => LooseQuery;
+  order: (col: string, opts?: { ascending?: boolean }) => LooseQuery;
+  limit: (n: number) => LooseQuery;
+  maybeSingle: () => Promise<{
+    data: unknown;
+    error: { message: string } | null;
+  }>;
+  single: () => Promise<{
+    data: unknown;
+    error: { message: string } | null;
+  }>;
+  then: <T>(
+    onFulfilled?: (value: {
+      data: unknown;
+      error: { message: string } | null;
+    }) => T,
+  ) => Promise<T>;
+};
+
+async function loose(): Promise<LooseClient> {
   const c = await createClient();
-  return c as any;
+  return c as unknown as LooseClient;
 }
 
 export async function getFiscalEnabled(restaurantId: string): Promise<boolean> {
@@ -92,7 +126,8 @@ export async function getFiscalEnabled(restaurantId: string): Promise<boolean> {
     .select("fiscal_enabled")
     .eq("restaurant_id", restaurantId)
     .maybeSingle();
-  return Boolean(data?.fiscal_enabled);
+  const row = data as { fiscal_enabled?: boolean } | null;
+  return Boolean(row?.fiscal_enabled);
 }
 
 export async function listIntegrations(
@@ -193,7 +228,10 @@ export async function getReceiptById(
     .eq("receipt_id", receiptId)
     .order("line_number", { ascending: true });
 
-  return { ...(data as Omit<ReceiptDetail, "items">), items: items ?? [] };
+  return {
+    ...(data as Omit<ReceiptDetail, "items">),
+    items: (items ?? []) as ReceiptDetail["items"],
+  };
 }
 
 export async function getFiscalOverview(
