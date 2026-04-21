@@ -76,11 +76,20 @@ export async function POST(request: Request) {
   const errors: Array<{ integration_id: string; error: string }> = [];
 
   for (const it of integrations) {
+    const startedAt = new Date().toISOString();
     try {
       const adapter = getAdapter(it.provider);
       const creds = await loadCredentials(it.id);
       if (!creds) {
         errors.push({ integration_id: it.id, error: "no credentials set" });
+        await supabase.from("fiscal_sync_logs").insert({
+          integration_id: it.id,
+          source: "pull",
+          started_at: startedAt,
+          ended_at: new Date().toISOString(),
+          errors: 1,
+          error_message: "no credentials set",
+        });
         continue;
       }
       const since = it.last_synced_at
@@ -121,14 +130,51 @@ export async function POST(request: Request) {
         })
         .eq("id", it.id);
 
+      await supabase.from("fiscal_sync_logs").insert({
+        integration_id: it.id,
+        source: "pull",
+        started_at: startedAt,
+        ended_at: new Date().toISOString(),
+        fetched: received.length,
+        inserted: received.length,
+      });
+
       synced += 1;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       errors.push({ integration_id: it.id, error: msg });
+
+      // Count consecutive failures in last 6 hours to decide whether
+      // to escalate from 'active' to 'error'.
+      const { data: recentErrors } = await supabase
+        .from("fiscal_sync_logs")
+        .select("id")
+        .eq("integration_id", it.id)
+        .eq("source", "pull")
+        .gte(
+          "started_at",
+          new Date(Date.now() - 6 * 3600 * 1000).toISOString(),
+        )
+        .gt("errors", 0);
+      const consecutive = Array.isArray(recentErrors)
+        ? recentErrors.length + 1
+        : 1;
+      const nextStatus = consecutive >= 3 ? "error" : it.last_synced_at ? "active" : "pending_auth";
+
       await supabase
         .from("fiscal_integrations")
-        .update({ status: "error", last_error: msg })
+        .update({ status: nextStatus, last_error: msg })
         .eq("id", it.id);
+
+      await supabase.from("fiscal_sync_logs").insert({
+        integration_id: it.id,
+        source: "pull",
+        started_at: startedAt,
+        ended_at: new Date().toISOString(),
+        errors: 1,
+        error_message: msg,
+        metadata: { consecutive_failures: consecutive },
+      });
     }
   }
 

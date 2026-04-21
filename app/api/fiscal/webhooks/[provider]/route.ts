@@ -61,6 +61,19 @@ export async function POST(
     return NextResponse.json({ error: "integration not active" }, { status: 403 });
   }
 
+  // Rate limit: 100 req/min per integration (fiscal_bump_webhook_counter).
+  const { data: rl } = await supabase.rpc("fiscal_bump_webhook_counter", {
+    _integration_id: integration.id,
+    _limit_per_minute: 100,
+  });
+  const rlRow = Array.isArray(rl) ? rl[0] : rl;
+  if (rlRow && rlRow.count_after > rlRow.limit_per_minute) {
+    return NextResponse.json(
+      { error: "rate limit exceeded" },
+      { status: 429, headers: { "Retry-After": "60" } },
+    );
+  }
+
   const adapter = getAdapter(provider);
   const secret = integration.webhook_secret ?? "";
   const headerBag: Record<string, string> = {};
@@ -100,6 +113,8 @@ export async function POST(
     payload: ev.payload as Record<string, unknown>,
   }));
 
+  const startedAt = new Date().toISOString();
+
   // Idempotent: dedupe on (integration_id, external_id, event_type)
   const { error: insErr } = await supabase
     .from("fiscal_raw_events")
@@ -109,6 +124,15 @@ export async function POST(
     });
 
   if (insErr) {
+    await supabase.from("fiscal_sync_logs").insert({
+      integration_id: integration.id,
+      source: "webhook",
+      started_at: startedAt,
+      ended_at: new Date().toISOString(),
+      fetched: rows.length,
+      errors: 1,
+      error_message: `insert raw_events: ${insErr.message}`,
+    });
     return NextResponse.json(
       { error: `insert raw_events: ${insErr.message}` },
       { status: 500 },
@@ -117,15 +141,32 @@ export async function POST(
 
   // Inline normalize. Bounded limit avoids long requests; leftover rows
   // catch-up via cron-triggered sync route.
+  let normalizedOk = true;
+  let normalizeErr: string | null = null;
   try {
     await processUnprocessedEvents(Math.min(rows.length * 2, 50));
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
+    normalizedOk = false;
+    normalizeErr = e instanceof Error ? e.message : String(e);
+  }
+
+  await supabase.from("fiscal_sync_logs").insert({
+    integration_id: integration.id,
+    source: "webhook",
+    started_at: startedAt,
+    ended_at: new Date().toISOString(),
+    fetched: rows.length,
+    inserted: rows.length,
+    normalized: normalizedOk ? rows.length : 0,
+    errors: normalizedOk ? 0 : 1,
+    error_message: normalizeErr,
+  });
+
+  if (!normalizedOk) {
     return NextResponse.json(
-      { accepted: rows.length, normalized: false, error: msg },
+      { accepted: rows.length, normalized: false, error: normalizeErr },
       { status: 202 },
     );
   }
-
   return NextResponse.json({ accepted: rows.length, normalized: true });
 }
