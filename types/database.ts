@@ -1981,6 +1981,14 @@ export interface Database {
         Args: { _restaurant_id: string };
         Returns: boolean;
       };
+      fiscal_encrypt_credentials: {
+        Args: { plaintext: Record<string, unknown> };
+        Returns: string;
+      };
+      fiscal_decrypt_credentials: {
+        Args: { ciphertext: string };
+        Returns: Record<string, unknown>;
+      };
       refresh_fiscal_aggregates: {
         Args: Record<string, never>;
         Returns: undefined;
