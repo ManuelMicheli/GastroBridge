@@ -56,8 +56,12 @@ function verifyState(state: string): string | null {
 export { signState };
 
 function redirectUri(request: Request, provider: string): string {
-  const u = new URL(request.url);
-  return `${u.origin}/api/fiscal/oauth/callback/${provider}`;
+  // Prefer configured public URL so it stays consistent with what's
+  // registered in the POS developer portal, regardless of dev proxies
+  // or localhost. Fall back to the request origin only if unset.
+  const env = process.env.NEXT_PUBLIC_APP_URL;
+  const origin = env ? env.replace(/\/$/, "") : new URL(request.url).origin;
+  return `${origin}/api/fiscal/oauth/callback/${provider}`;
 }
 
 export async function GET(
