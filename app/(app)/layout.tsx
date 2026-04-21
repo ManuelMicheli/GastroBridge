@@ -26,6 +26,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/carrello",     label: "Carrello",        iconName: "ShoppingCart" },
   { href: "/messaggi",     label: "Messaggi",        iconName: "MessageCircle" },
   { href: "/analytics",    label: "Analytics",       iconName: "BarChart3",     section: "Gestione" },
+  { href: "/finanze",      label: "Finanze",         iconName: "Receipt",       section: "Gestione" },
   { href: "/impostazioni", label: "Impostazioni",    iconName: "Settings",      section: "Gestione" },
 ];
 
