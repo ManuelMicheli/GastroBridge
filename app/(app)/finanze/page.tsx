@@ -1,21 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { KPICard } from "@/components/dashboard/cards/kpi-card";
-import { Euro, Receipt, Percent, Users } from "lucide-react";
 import {
   getFiscalOverview,
   getRestaurantsForCurrentUser,
 } from "@/lib/fiscal/queries";
 import {
   formatCents,
-  formatCentsCompact,
   formatDateTime,
-  formatPct,
   paymentLabel,
   providerLabel,
 } from "@/lib/fiscal/format";
 import { FoodCostChart } from "./_components/food-cost-chart";
 import { FinanzeEmpty } from "./_components/finanze-empty";
+import { FinanzeKpis } from "./_components/finanze-kpis";
 
 export const metadata: Metadata = { title: "Finanze" };
 
@@ -78,14 +75,7 @@ export default async function FinanzePage({
     );
   }
 
-  const now = new Date();
-  const cutoff = new Date(now);
-  cutoff.setDate(cutoff.getDate() - 30);
-  const prev30From = new Date(cutoff);
-  prev30From.setDate(prev30From.getDate() - 30);
-
   const last30 = overview.daily;
-  const prev30Daily: typeof overview.daily = [];
 
   const revenueLast30 = sum(last30.map((d) => d.revenue_cents));
   const receiptsLast30 = sum(last30.map((d) => d.receipts_count));
@@ -100,37 +90,13 @@ export default async function FinanzePage({
     <div className="p-4 lg:p-6 space-y-6">
       <Header restaurants={restaurants} selectedId={selectedId} />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard
-          label="Incasso 30gg"
-          value={formatCentsCompact(revenueLast30)}
-          numericValue={Math.round(revenueLast30 / 100)}
-          icon={Euro}
-        />
-        <KPICard
-          label="Food cost %"
-          value={formatPct(latestFoodCost)}
-          numericValue={latestFoodCost ?? undefined}
-          icon={Percent}
-          accentColor={
-            (latestFoodCost ?? 0) > 35
-              ? "var(--color-accent-orange)"
-              : "var(--color-accent-green)"
-          }
-        />
-        <KPICard
-          label="Scontrini 30gg"
-          value={receiptsLast30.toLocaleString("it-IT")}
-          numericValue={receiptsLast30}
-          icon={Receipt}
-        />
-        <KPICard
-          label="Coperti 30gg"
-          value={coversLast30.toLocaleString("it-IT")}
-          numericValue={coversLast30}
-          icon={Users}
-        />
-      </div>
+      <FinanzeKpis
+        revenueCents={revenueLast30}
+        foodCostPct={latestFoodCost}
+        receipts={receiptsLast30}
+        covers={coversLast30}
+      />
+
 
       <div className="bg-surface-card border border-border-subtle rounded-2xl p-5 lg:p-6">
         <div className="flex items-center justify-between mb-4">
