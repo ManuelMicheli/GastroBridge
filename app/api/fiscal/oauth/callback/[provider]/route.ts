@@ -7,11 +7,11 @@
 // FISCAL_OAUTH_STATE_SECRET to prevent CSRF).
 
 import { NextResponse } from "next/server";
-import { createHmac } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdapter } from "@/lib/fiscal/adapters/registry.ts";
 import { saveCredentials } from "@/lib/fiscal/credentials";
+import { verifyOAuthState } from "@/lib/fiscal/oauth-state";
 import type { FiscalProvider } from "@/lib/fiscal/types.ts";
 
 const ALLOWED_PROVIDERS: readonly FiscalProvider[] = [
@@ -28,32 +28,6 @@ const ALLOWED_PROVIDERS: readonly FiscalProvider[] = [
 function isFiscalProvider(p: string): p is FiscalProvider {
   return (ALLOWED_PROVIDERS as readonly string[]).includes(p);
 }
-
-function signState(integrationId: string): string {
-  const secret = process.env.FISCAL_OAUTH_STATE_SECRET;
-  if (!secret) throw new Error("FISCAL_OAUTH_STATE_SECRET not set");
-  const payload = Buffer.from(integrationId, "utf8").toString("base64url");
-  const sig = createHmac("sha256", secret).update(payload).digest("base64url");
-  return `${payload}.${sig}`;
-}
-
-function verifyState(state: string): string | null {
-  const secret = process.env.FISCAL_OAUTH_STATE_SECRET;
-  if (!secret) return null;
-  const [payload, sig] = state.split(".");
-  if (!payload || !sig) return null;
-  const expected = createHmac("sha256", secret)
-    .update(payload)
-    .digest("base64url");
-  if (expected !== sig) return null;
-  try {
-    return Buffer.from(payload, "base64url").toString("utf8");
-  } catch {
-    return null;
-  }
-}
-
-export { signState };
 
 function redirectUri(request: Request, provider: string): string {
   // Prefer configured public URL so it stays consistent with what's
@@ -87,7 +61,7 @@ export async function GET(
     return NextResponse.json({ error: "missing code or state" }, { status: 400 });
   }
 
-  const integrationId = verifyState(state);
+  const integrationId = verifyOAuthState(state);
   if (!integrationId) {
     return NextResponse.json({ error: "invalid state" }, { status: 400 });
   }
