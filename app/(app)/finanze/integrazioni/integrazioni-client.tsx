@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pause, Play, Trash2, AlertTriangle } from "lucide-react";
+import Link from "next/link";
+import { Plus, Pause, Play, Trash2, AlertTriangle, FileUp } from "lucide-react";
 import {
   createFiscalIntegration,
   deleteFiscalIntegration,
@@ -170,15 +171,27 @@ export function IntegrazioniClient({
               {integrations.length} totali
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setConnectProvider("tilby")}
-            disabled={!fiscalEnabled || pending}
-            className="inline-flex items-center gap-2 rounded-lg bg-accent-green px-3 py-1.5 text-xs font-medium text-surface-base disabled:opacity-50"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Aggiungi
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              href={`/finanze/integrazioni/csv?r=${restaurantId}`}
+              aria-disabled={!fiscalEnabled}
+              className={`inline-flex items-center gap-2 rounded-lg border border-border-subtle px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-text-primary hover:border-border-accent ${
+                !fiscalEnabled ? "opacity-50 pointer-events-none" : ""
+              }`}
+            >
+              <FileUp className="h-3.5 w-3.5" />
+              Import CSV
+            </Link>
+            <button
+              type="button"
+              onClick={() => setConnectProvider("tilby")}
+              disabled={!fiscalEnabled || pending}
+              className="inline-flex items-center gap-2 rounded-lg bg-accent-green px-3 py-1.5 text-xs font-medium text-surface-base disabled:opacity-50"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Aggiungi
+            </button>
+          </div>
         </div>
 
         {integrations.length === 0 ? (

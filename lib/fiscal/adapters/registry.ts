@@ -4,10 +4,12 @@ import type { PosAdapter } from "./types.ts";
 import { mockAdapter } from "./mock/index.ts";
 import { genericWebhookAdapter } from "./generic-webhook/index.ts";
 import { tilbyAdapter } from "./tilby/index.ts";
+import { csvUploadAdapter } from "./csv-upload/index.ts";
 
 const registry: Partial<Record<FiscalProvider, PosAdapter>> = {
   tilby: tilbyAdapter,
   generic_webhook: genericWebhookAdapter,
+  csv_upload: csvUploadAdapter,
 };
 
 export function getAdapter(provider: FiscalProvider): PosAdapter {
