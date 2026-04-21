@@ -158,13 +158,52 @@ export type NotificationEvent =
   | "order_delivered"
   | "stock_low"
   | "lot_expiring"
-  | "delivery_failed";
+  | "delivery_failed"
+  | "reorder_suggested";
 
 export type PromotionAppliesTo =
   | "all_catalog"
   | "categories"
   | "products"
   | "customers_segment";
+
+// ------------------------------------------------------------------
+// Cassetto Fiscale — Phase 1: new enums
+// ------------------------------------------------------------------
+export type FiscalProvider =
+  | "tilby"
+  | "cassa_in_cloud"
+  | "lightspeed"
+  | "scloby"
+  | "tcpos"
+  | "revo"
+  | "simphony"
+  | "hiopos"
+  | "generic_webhook"
+  | "csv_upload";
+
+export type FiscalIntegrationStatus =
+  | "pending_auth"
+  | "active"
+  | "paused"
+  | "error"
+  | "revoked";
+
+export type FiscalReceiptStatus =
+  | "issued"
+  | "voided"
+  | "refunded"
+  | "partial_refund";
+
+export type ReorderUrgency = "low" | "medium" | "high" | "critical";
+
+export type ReorderSuggestionState =
+  | "open"
+  | "acted"
+  | "dismissed"
+  | "expired";
+
+export type FiscalPosItemMappingSource = "user" | "auto_heuristic" | "ml";
 
 export interface Database {
   public: {
@@ -847,6 +886,7 @@ export interface Database {
           prefer_bio: boolean;
           prefer_km0: boolean;
           preset_profile: PresetProfile;
+          fiscal_enabled: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -864,6 +904,7 @@ export interface Database {
           prefer_bio?: boolean;
           prefer_km0?: boolean;
           preset_profile?: PresetProfile;
+          fiscal_enabled?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -881,6 +922,7 @@ export interface Database {
           prefer_bio?: boolean;
           prefer_km0?: boolean;
           preset_profile?: PresetProfile;
+          fiscal_enabled?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -1597,6 +1639,305 @@ export interface Database {
           last_used_at?: string | null;
         };
       };
+      // ------------------------------------------------------------
+      // Cassetto Fiscale — Phase 1
+      // ------------------------------------------------------------
+      fiscal_integrations: {
+        Row: {
+          id: string;
+          restaurant_id: string;
+          provider: FiscalProvider;
+          status: FiscalIntegrationStatus;
+          display_name: string | null;
+          credentials_encrypted: string | null;
+          config: Record<string, unknown>;
+          last_synced_at: string | null;
+          last_error: string | null;
+          webhook_secret: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          restaurant_id: string;
+          provider: FiscalProvider;
+          status?: FiscalIntegrationStatus;
+          display_name?: string | null;
+          credentials_encrypted?: string | null;
+          config?: Record<string, unknown>;
+          last_synced_at?: string | null;
+          last_error?: string | null;
+          webhook_secret?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          restaurant_id?: string;
+          provider?: FiscalProvider;
+          status?: FiscalIntegrationStatus;
+          display_name?: string | null;
+          credentials_encrypted?: string | null;
+          config?: Record<string, unknown>;
+          last_synced_at?: string | null;
+          last_error?: string | null;
+          webhook_secret?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      fiscal_raw_events: {
+        Row: {
+          id: number;
+          integration_id: string;
+          external_id: string;
+          event_type: string;
+          payload: Record<string, unknown>;
+          received_at: string;
+          processed_at: string | null;
+          process_error: string | null;
+        };
+        Insert: {
+          id?: number;
+          integration_id: string;
+          external_id: string;
+          event_type: string;
+          payload: Record<string, unknown>;
+          received_at?: string;
+          processed_at?: string | null;
+          process_error?: string | null;
+        };
+        Update: {
+          id?: number;
+          integration_id?: string;
+          external_id?: string;
+          event_type?: string;
+          payload?: Record<string, unknown>;
+          received_at?: string;
+          processed_at?: string | null;
+          process_error?: string | null;
+        };
+      };
+      fiscal_receipts: {
+        Row: {
+          id: string;
+          restaurant_id: string;
+          integration_id: string;
+          external_id: string;
+          issued_at: string;
+          business_day: string;
+          status: FiscalReceiptStatus;
+          subtotal_cents: number;
+          vat_cents: number;
+          total_cents: number;
+          payment_method: string | null;
+          operator_name: string | null;
+          table_ref: string | null;
+          covers: number | null;
+          metadata: Record<string, unknown>;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          restaurant_id: string;
+          integration_id: string;
+          external_id: string;
+          issued_at: string;
+          business_day: string;
+          status?: FiscalReceiptStatus;
+          subtotal_cents: number;
+          vat_cents: number;
+          total_cents: number;
+          payment_method?: string | null;
+          operator_name?: string | null;
+          table_ref?: string | null;
+          covers?: number | null;
+          metadata?: Record<string, unknown>;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          restaurant_id?: string;
+          integration_id?: string;
+          external_id?: string;
+          issued_at?: string;
+          business_day?: string;
+          status?: FiscalReceiptStatus;
+          subtotal_cents?: number;
+          vat_cents?: number;
+          total_cents?: number;
+          payment_method?: string | null;
+          operator_name?: string | null;
+          table_ref?: string | null;
+          covers?: number | null;
+          metadata?: Record<string, unknown>;
+          created_at?: string;
+        };
+      };
+      fiscal_receipt_items: {
+        Row: {
+          id: number;
+          receipt_id: string;
+          line_number: number;
+          pos_item_id: string | null;
+          name: string;
+          category: string | null;
+          quantity: number;
+          unit_price_cents: number;
+          subtotal_cents: number;
+          vat_rate: number | null;
+          discount_cents: number;
+          is_voided: boolean;
+        };
+        Insert: {
+          id?: number;
+          receipt_id: string;
+          line_number: number;
+          pos_item_id?: string | null;
+          name: string;
+          category?: string | null;
+          quantity: number;
+          unit_price_cents: number;
+          subtotal_cents: number;
+          vat_rate?: number | null;
+          discount_cents?: number;
+          is_voided?: boolean;
+        };
+        Update: {
+          id?: number;
+          receipt_id?: string;
+          line_number?: number;
+          pos_item_id?: string | null;
+          name?: string;
+          category?: string | null;
+          quantity?: number;
+          unit_price_cents?: number;
+          subtotal_cents?: number;
+          vat_rate?: number | null;
+          discount_cents?: number;
+          is_voided?: boolean;
+        };
+      };
+      fiscal_pos_items: {
+        Row: {
+          id: string;
+          integration_id: string;
+          pos_item_id: string;
+          name: string;
+          category: string | null;
+          first_seen_at: string;
+          last_seen_at: string;
+          total_sold_cents: number;
+          total_qty: number;
+        };
+        Insert: {
+          id?: string;
+          integration_id: string;
+          pos_item_id: string;
+          name: string;
+          category?: string | null;
+          first_seen_at?: string;
+          last_seen_at?: string;
+          total_sold_cents?: number;
+          total_qty?: number;
+        };
+        Update: {
+          id?: string;
+          integration_id?: string;
+          pos_item_id?: string;
+          name?: string;
+          category?: string | null;
+          first_seen_at?: string;
+          last_seen_at?: string;
+          total_sold_cents?: number;
+          total_qty?: number;
+        };
+      };
+      fiscal_pos_item_mappings: {
+        Row: {
+          id: string;
+          pos_item_id: string;
+          gb_product_id: string | null;
+          gb_category_id: string | null;
+          depletion_ratio: number;
+          source: FiscalPosItemMappingSource;
+          confidence: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          pos_item_id: string;
+          gb_product_id?: string | null;
+          gb_category_id?: string | null;
+          depletion_ratio?: number;
+          source?: FiscalPosItemMappingSource;
+          confidence?: number | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          pos_item_id?: string;
+          gb_product_id?: string | null;
+          gb_category_id?: string | null;
+          depletion_ratio?: number;
+          source?: FiscalPosItemMappingSource;
+          confidence?: number | null;
+          created_at?: string;
+        };
+      };
+      reorder_suggestions: {
+        Row: {
+          id: string;
+          restaurant_id: string;
+          product_id: string | null;
+          category_id: string | null;
+          suggested_qty: number | null;
+          suggested_unit: string | null;
+          estimated_coverage_days: number | null;
+          urgency: ReorderUrgency;
+          reason: string;
+          preferred_supplier_id: string | null;
+          snapshot: Record<string, unknown>;
+          state: ReorderSuggestionState;
+          acted_order_id: string | null;
+          created_at: string;
+          expires_at: string;
+        };
+        Insert: {
+          id?: string;
+          restaurant_id: string;
+          product_id?: string | null;
+          category_id?: string | null;
+          suggested_qty?: number | null;
+          suggested_unit?: string | null;
+          estimated_coverage_days?: number | null;
+          urgency: ReorderUrgency;
+          reason: string;
+          preferred_supplier_id?: string | null;
+          snapshot: Record<string, unknown>;
+          state?: ReorderSuggestionState;
+          acted_order_id?: string | null;
+          created_at?: string;
+          expires_at?: string;
+        };
+        Update: {
+          id?: string;
+          restaurant_id?: string;
+          product_id?: string | null;
+          category_id?: string | null;
+          suggested_qty?: number | null;
+          suggested_unit?: string | null;
+          estimated_coverage_days?: number | null;
+          urgency?: ReorderUrgency;
+          reason?: string;
+          preferred_supplier_id?: string | null;
+          snapshot?: Record<string, unknown>;
+          state?: ReorderSuggestionState;
+          acted_order_id?: string | null;
+          created_at?: string;
+          expires_at?: string;
+        };
+      };
     };
     Functions: {
       get_user_role: {
@@ -1632,6 +1973,27 @@ export interface Database {
         Args: { p_supplier_id: string; p_year: number };
         Returns: number;
       };
+      // Cassetto Fiscale
+      fiscal_owns_restaurant: {
+        Args: { _restaurant_id: string; _user_id: string };
+        Returns: boolean;
+      };
+      fiscal_is_enabled: {
+        Args: { _restaurant_id: string };
+        Returns: boolean;
+      };
+      fiscal_encrypt_credentials: {
+        Args: { plaintext: Record<string, unknown> };
+        Returns: string;
+      };
+      fiscal_decrypt_credentials: {
+        Args: { ciphertext: string };
+        Returns: Record<string, unknown>;
+      };
+      refresh_fiscal_aggregates: {
+        Args: Record<string, never>;
+        Returns: undefined;
+      };
     };
     Enums: {
       user_role: UserRole;
@@ -1653,6 +2015,11 @@ export interface Database {
       promotion_type: PromotionType;
       notification_channel: NotificationChannel;
       notification_event: NotificationEvent;
+      // Cassetto Fiscale
+      fiscal_provider: FiscalProvider;
+      fiscal_integration_status: FiscalIntegrationStatus;
+      fiscal_receipt_status: FiscalReceiptStatus;
+      reorder_urgency: ReorderUrgency;
     };
   };
 }

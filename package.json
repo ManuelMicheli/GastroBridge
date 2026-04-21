@@ -9,7 +9,8 @@
     "dev": "set NODE_OPTIONS=--max-http-header-size=65536&& next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:fiscal": "node --test --experimental-strip-types --experimental-transform-types"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
