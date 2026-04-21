@@ -158,7 +158,8 @@ export type NotificationEvent =
   | "order_delivered"
   | "stock_low"
   | "lot_expiring"
-  | "delivery_failed";
+  | "delivery_failed"
+  | "reorder_suggested";
 
 export type PromotionAppliesTo =
   | "all_catalog"
