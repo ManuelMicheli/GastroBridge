@@ -6,13 +6,15 @@ import { usePathname, useRouter } from "next/navigation";
 const EDGE_SWIPE_WIDTH = 20;
 const COMMIT_THRESHOLD_RATIO = 0.45;
 const COMMIT_VELOCITY = 0.6;
+const DESKTOP_MQ = "(min-width: 1024px)";
 
 /**
  * MobileRouteTransition — shared page-transition wrapper for restaurant
- * and supplier area templates. Provides:
- *   - fade-up enter on route change (respects reduced-motion)
- *   - scroll-top + h1 focus for a11y
- *   - edge-swipe-back gesture (touch-only, bordo sx 20px) → router.back()
+ * and supplier area templates.
+ *   - Mobile: fade-up enter on route change (respects reduced-motion)
+ *   - Mobile: edge-swipe-back gesture (touch-only) → router.back()
+ *   - Desktop: no enter animation — navigation is instant
+ *   - All: scroll-top + h1 focus for a11y on route change
  */
 export function MobileRouteTransition({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -40,15 +42,17 @@ export function MobileRouteTransition({ children }: { children: ReactNode }) {
         }
       });
 
+      const isDesktop = window.matchMedia(DESKTOP_MQ).matches;
       const reduced = window.matchMedia(
         "(prefers-reduced-motion: reduce)",
       ).matches;
-      if (reduced) return;
+      if (isDesktop || reduced) return;
+
       el.style.opacity = "0";
       el.style.transform = "translateY(4px)";
       requestAnimationFrame(() => {
         el.style.transition =
-          "opacity var(--duration-page, 240ms) var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)), transform var(--duration-page, 240ms) var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1))";
+          "opacity var(--duration-page, 180ms) var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1)), transform var(--duration-page, 180ms) var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1))";
         el.style.opacity = "1";
         el.style.transform = "translateY(0)";
       });
@@ -115,17 +119,16 @@ export function MobileRouteTransition({ children }: { children: ReactNode }) {
   return (
     <div
       ref={wrapperRef}
-      key={pathname}
       style={{
         opacity: 1,
         transform: `translate3d(${swipeOffset}px, 0, 0)`,
         transition:
           swipeOffset === 0 && !startRef.current
-            ? "transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), opacity var(--duration-page, 240ms) var(--ease-out-expo, cubic-bezier(0.16, 1, 0.3, 1))"
+            ? "transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)"
             : swipeOffset > 0 && !startRef.current
               ? "transform 160ms ease-out"
               : "none",
-        willChange: "opacity, transform",
+        willChange: swipeOffset !== 0 ? "transform" : undefined,
       }}
     >
       {children}

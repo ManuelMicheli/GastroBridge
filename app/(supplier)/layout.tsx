@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { createClient } from "@/lib/supabase/server";
+import { getCachedUser, getCachedProfile } from "@/lib/supabase/cached-user";
 import { SidebarProvider } from "@/components/dashboard/sidebar/sidebar-provider";
 import { DashboardShell } from "@/components/dashboard/shell";
 import type { NavItem } from "@/components/dashboard/sidebar/sidebar-item";
@@ -12,14 +13,6 @@ import { getSectionSeenAt } from "@/lib/nav/section-seen";
 import { getRecentInAppNotifications } from "@/lib/notifications/queries";
 import { SupplierRealtimeProvider } from "@/lib/realtime/supplier-provider";
 import type { SupplierRole } from "@/types/database";
-
-// Force dynamic rendering for all supplier pages — data must always be
-// fresh on every request (stock counts, pending orders, unread messages,
-// analytics KPIs, etc.). Disables full-route cache + data cache for
-// the entire /supplier route segment.
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-export const fetchCache = "force-no-store";
 
 type GatedNavItem = NavItem & {
   roles?: SupplierRole[];
@@ -120,69 +113,85 @@ function buildNavItems(
 }
 
 export default async function SupplierLayout({ children }: { children: ReactNode }) {
+  const user = await getCachedUser();
+
+  // Anonymous: render empty shell.
+  if (!user) {
+    const navItems = buildNavItems(null, false);
+    return (
+      <SidebarProvider>
+        <DashboardShell
+          navItems={navItems}
+          mobileNavItems={MOBILE_NAV}
+          role="supplier"
+          companyName="Fornitore"
+          userEmail=""
+        >
+          {children}
+        </DashboardShell>
+      </SidebarProvider>
+    );
+  }
+
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("company_name")
-    .eq("id", user?.id ?? "")
-    .single<{ company_name: string }>();
+  // Tier 1 — independent queries (parallel)
+  const messagesBadgePromise = getSectionSeenAt("supplier_messages")
+    .then((seen) => getTotalUnreadMessagesForCurrentUser(seen))
+    .catch(() => 0);
 
-  // Carica il primo supplier_member attivo del profilo. Il supplier-switcher
-  // multi-tenant è rinviato a Fase 1B — per ora scegliamo il primo disponibile.
-  let currentRole: SupplierRole | null = null;
+  const memberPromise = supabase
+    .from("supplier_members")
+    .select("role, supplier_id")
+    .eq("profile_id", user.id)
+    .eq("is_active", true)
+    .not("accepted_at", "is", null)
+    .limit(1)
+    .maybeSingle<{ role: SupplierRole; supplier_id: string }>();
+
+  const notificationsPromise = getRecentInAppNotifications(20).catch(() => []);
+
+  const [profile, messagesBadge, memberRes, initialNotifications] =
+    await Promise.all([
+      getCachedProfile(user.id),
+      messagesBadgePromise,
+      memberPromise,
+      notificationsPromise,
+    ]);
+
+  const member = memberRes.data ?? null;
+  const currentRole: SupplierRole | null = member?.role ?? null;
+  const supplierId: string | null = member?.supplier_id ?? null;
+
+  // Tier 2 — depends on supplier_id
   let phase1Enabled = false;
   let stockBadge = 0;
   let ordersBadge = 0;
-  let messagesBadge = 0;
-  let supplierId: string | null = null;
 
-  if (user) {
-    const msgSeenAt = await getSectionSeenAt("supplier_messages");
-    try {
-      messagesBadge = await getTotalUnreadMessagesForCurrentUser(msgSeenAt);
-    } catch {
-      messagesBadge = 0;
-    }
-    const { data: member } = await supabase
-      .from("supplier_members")
-      .select("role, supplier_id")
-      .eq("profile_id", user.id)
-      .eq("is_active", true)
-      .not("accepted_at", "is", null)
-      .limit(1)
-      .maybeSingle<{ role: SupplierRole; supplier_id: string }>();
-
-    if (member) {
-      currentRole = member.role;
-      supplierId = member.supplier_id;
-      const { data: supplier } = await supabase
+  if (supplierId) {
+    const [supplierRes, pendingOrders] = await Promise.all([
+      supabase
         .from("suppliers")
         .select("feature_flags")
-        .eq("id", member.supplier_id)
-        .maybeSingle<{ feature_flags: Record<string, unknown> }>();
-      phase1Enabled = isPhase1Enabled(supplier);
+        .eq("id", supplierId)
+        .maybeSingle<{ feature_flags: Record<string, unknown> }>(),
+      getSectionSeenAt("supplier_orders")
+        .then((seen) => getPendingOrdersCount(supplierId, seen))
+        .catch(() => 0),
+    ]);
+    phase1Enabled = isPhase1Enabled(supplierRes.data);
+    ordersBadge = pendingOrders;
 
-      if (phase1Enabled) {
-        try {
-          const { lowStockCount, expiringCount } = await getStockAlertCounts(
-            member.supplier_id,
-            7,
-          );
-          stockBadge = lowStockCount + expiringCount;
-        } catch {
-          stockBadge = 0;
-        }
-      }
-
+    // Tier 3 — stock counts only when phase1 is enabled
+    if (phase1Enabled) {
       try {
-        const ordSeenAt = await getSectionSeenAt("supplier_orders");
-        ordersBadge = await getPendingOrdersCount(member.supplier_id, ordSeenAt);
+        const { lowStockCount, expiringCount } = await getStockAlertCounts(
+          supplierId,
+          7,
+        );
+        stockBadge = lowStockCount + expiringCount;
       } catch {
-        ordersBadge = 0;
+        stockBadge = 0;
       }
     }
   }
@@ -195,9 +204,6 @@ export default async function SupplierLayout({ children }: { children: ReactNode
     messagesBadge,
   );
 
-  const initialNotifications =
-    user && supplierId ? await getRecentInAppNotifications(20) : [];
-
   const shell = (
     <SidebarProvider>
       <DashboardShell
@@ -205,14 +211,14 @@ export default async function SupplierLayout({ children }: { children: ReactNode
         mobileNavItems={MOBILE_NAV}
         role="supplier"
         companyName={profile?.company_name || "Fornitore"}
-        userEmail={user?.email || ""}
+        userEmail={user.email || ""}
       >
         {children}
       </DashboardShell>
     </SidebarProvider>
   );
 
-  if (!user || !supplierId) return shell;
+  if (!supplierId) return shell;
 
   return (
     <SupplierRealtimeProvider

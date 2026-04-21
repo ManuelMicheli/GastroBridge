@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { CartProvider } from "@/lib/hooks/useCart";
-import { createClient } from "@/lib/supabase/server";
+import { getCachedUser, getCachedProfile } from "@/lib/supabase/cached-user";
 import { SidebarProvider } from "@/components/dashboard/sidebar/sidebar-provider";
 import { DashboardShell } from "@/components/dashboard/shell";
 import type { NavItem } from "@/components/dashboard/sidebar/sidebar-item";
@@ -9,13 +9,6 @@ import { getTotalUnreadMessagesForCurrentUser } from "@/lib/messages/queries";
 import { getSectionSeenAt } from "@/lib/nav/section-seen";
 import { getRecentInAppNotifications } from "@/lib/notifications/queries";
 import { RestaurantRealtimeProvider } from "@/lib/realtime/restaurant-provider";
-
-// Force dynamic rendering for all restaurant pages — data must always be
-// fresh (dashboard KPIs, analytics, orders, cart totals, unread badges).
-// Disables full-route cache + data cache for the entire /(app) segment.
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-export const fetchCache = "force-no-store";
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard",    label: "Dashboard",       iconName: "LayoutDashboard" },
@@ -40,30 +33,24 @@ const MOBILE_NAV: MobileNavItem[] = [
 ];
 
 export default async function AppLayout({ children }: { children: ReactNode }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const user = await getCachedUser();
+  const userId = user?.id ?? "";
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("company_name")
-    .eq("id", user?.id ?? "")
-    .single<{ company_name: string }>();
+  const messagesBadgePromise = getSectionSeenAt("restaurant_messages")
+    .then((seen) => getTotalUnreadMessagesForCurrentUser(seen))
+    .catch(() => 0);
 
-  let messagesBadge = 0;
-  try {
-    const seenAt = await getSectionSeenAt("restaurant_messages");
-    messagesBadge = await getTotalUnreadMessagesForCurrentUser(seenAt);
-  } catch {
-    messagesBadge = 0;
-  }
+  const [profile, initialNotifications, messagesBadge] = await Promise.all([
+    userId ? getCachedProfile(userId) : Promise.resolve(null),
+    user ? getRecentInAppNotifications(20).catch(() => []) : Promise.resolve([]),
+    messagesBadgePromise,
+  ]);
 
   const navItems: NavItem[] = NAV_ITEMS.map((item) =>
     item.href === "/messaggi" && messagesBadge > 0
       ? { ...item, badge: messagesBadge }
       : item,
   );
-
-  const initialNotifications = user ? await getRecentInAppNotifications(20) : [];
 
   const shell = (
     <CartProvider>

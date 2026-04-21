@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import { motion } from "motion/react";
 import { PanelLeftClose, PanelLeft } from "lucide-react";
 import { useSidebar } from "./sidebar-provider";
 import { SidebarItem, type NavItem } from "./sidebar-item";
 import { SidebarUserCard } from "./sidebar-user-card";
+import { IdlePrefetch } from "@/components/shared/idle-prefetch";
 
 type Props = {
   navItems: NavItem[];
@@ -26,6 +28,8 @@ export function CollapsibleSidebar({ navItems, role, companyName, userEmail }: P
     if (!sections[section]) sections[section] = [];
     sections[section]!.push(item);
   }
+
+  const prefetchHrefs = useMemo(() => navItems.map((n) => n.href), [navItems]);
 
   return (
     <motion.aside
@@ -114,6 +118,9 @@ export function CollapsibleSidebar({ navItems, role, companyName, userEmail }: P
 
       {/* User card */}
       <SidebarUserCard companyName={companyName} userEmail={userEmail} role={role} />
+
+      {/* Warm RSC router cache for every top-level section in the background. */}
+      <IdlePrefetch hrefs={prefetchHrefs} />
     </motion.aside>
   );
 }

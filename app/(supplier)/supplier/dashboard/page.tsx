@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Inbox } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { getCachedUser, getCachedProfile } from "@/lib/supabase/cached-user";
 import { SupplierDashboard } from "@/components/dashboard/supplier/supplier-dashboard";
 import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
 import { getPendingRequestsForSupplier } from "@/lib/relationships/queries";
@@ -24,26 +25,21 @@ type RestaurantRow = { id: string; name: string };
 type ProductRow = { id: string; name: string };
 
 export default async function SupplierDashboardPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const user = await getCachedUser();
   const userId = user?.id ?? "";
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("company_name")
-    .eq("id", userId)
-    .single<{ company_name: string }>();
+  const supabase = await createClient();
 
-  const { data: supplier } = (await supabase
-    .from("suppliers")
-    .select("id")
-    .eq("profile_id", userId)
-    .single()) as { data: { id: string } | null };
+  const [profile, supplierRes] = await Promise.all([
+    userId ? getCachedProfile(userId) : Promise.resolve(null),
+    supabase
+      .from("suppliers")
+      .select("id")
+      .eq("profile_id", userId)
+      .single() as unknown as Promise<{ data: { id: string } | null }>,
+  ]);
 
-  const supplierId = supplier?.id;
+  const supplierId = supplierRes.data?.id;
 
   // No supplier record — empty dashboard
   if (!supplierId) {
@@ -130,22 +126,13 @@ export default async function SupplierDashboardPage() {
   // Active clients: count partnerships with status='active' (clienti effettivamente
   // collegati), fallback a clienti che hanno ordinato questo mese se la tabella
   // partnership è vuota o nascosta da RLS.
-  const { data: activeRels } = (await supabase
+  const activeRelsPromise = supabase
     .from("restaurant_suppliers")
     .select("restaurant_id")
     .eq("supplier_id", supplierId)
-    .eq("status", "active")) as { data: { restaurant_id: string }[] | null };
-
-  let activeClientsCount = new Set((activeRels ?? []).map((r) => r.restaurant_id)).size;
-
-  if (activeClientsCount === 0) {
-    const orderBasedClients = new Set<string>();
-    monthFiltered.forEach((s) => {
-      const o = ordersMap.get(s.order_id);
-      if (o) orderBasedClients.add(o.restaurant_id);
-    });
-    activeClientsCount = orderBasedClients.size;
-  }
+    .eq("status", "active") as unknown as Promise<{
+    data: { restaurant_id: string }[] | null;
+  }>;
 
   // Sparkline (14 days)
   const sparklineMap: Record<string, number> = {};
@@ -218,6 +205,7 @@ export default async function SupplierDashboardPage() {
     .map(([name, data]) => ({ name, ...data }));
 
   const [
+    activeRelsRes,
     pendingRequests,
     stockAlerts,
     kpiTiles,
@@ -227,6 +215,7 @@ export default async function SupplierDashboardPage() {
     topProductsRich,
     recentDeliveries,
   ] = await Promise.all([
+    activeRelsPromise,
     getPendingRequestsForSupplier(),
     getStockAlertCounts(supplierId, 7),
     getKpiTiles(supplierId),
@@ -236,6 +225,19 @@ export default async function SupplierDashboardPage() {
     getTopProducts(supplierId),
     getRecentDeliveries(supplierId, { limit: 8 }),
   ]);
+
+  let activeClientsCount = new Set(
+    (activeRelsRes.data ?? []).map((r) => r.restaurant_id),
+  ).size;
+
+  if (activeClientsCount === 0) {
+    const orderBasedClients = new Set<string>();
+    monthFiltered.forEach((s) => {
+      const o = ordersMap.get(s.order_id);
+      if (o) orderBasedClients.add(o.restaurant_id);
+    });
+    activeClientsCount = orderBasedClients.size;
+  }
 
   // Backlog: ordini pending totali (non solo > 24h) e eta del piu vecchio in ore.
   const pendingSplits = allSplits.filter(

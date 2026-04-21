@@ -3,6 +3,7 @@ import { DM_Serif_Display, Inter, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "@/components/ui/toast";
 import { PostHogProvider } from "@/components/providers/posthog-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
+import { WebVitalsReporter } from "@/components/shared/web-vitals-reporter";
 import "./globals.css";
 
 const dmSerifDisplay = DM_Serif_Display({
@@ -88,6 +89,7 @@ export default function RootLayout({
           <PostHogProvider>
             {children}
             <Toaster />
+            <WebVitalsReporter />
           </PostHogProvider>
         </ThemeProvider>
       </body>
