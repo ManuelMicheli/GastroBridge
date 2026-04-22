@@ -1,7 +1,9 @@
 "use client";
 
 import { Fragment, useEffect, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ArrowLeft, Search } from "lucide-react";
 
 import { useCart } from "@/lib/hooks/useCart";
 import { toast } from "@/components/ui/toast";
@@ -93,6 +95,15 @@ export default function CartPage() {
         description="Cerca prodotti e aggiungili al carrello per iniziare un ordine multi-fornitore."
         illustration={<EmptyCartIllustration />}
         context="page"
+        action={
+          <Link
+            href="/cerca"
+            className="inline-flex items-center gap-2 rounded-lg bg-brand-primary px-4 py-2 font-medium text-brand-on-primary transition-colors hover:bg-brand-primary-hover"
+          >
+            <Search className="h-4 w-4" />
+            Cerca prodotti
+          </Link>
+        }
       />
     );
   }
@@ -127,6 +138,15 @@ export default function CartPage() {
 
       {/* Desktop receipt view */}
       <div className="hidden lg:block mx-auto max-w-[640px] px-4 py-8">
+      <div className="mb-4 flex items-center justify-between">
+        <Link
+          href="/cerca"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-card px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          cerca prodotti
+        </Link>
+      </div>
       <article className="rounded-xl border border-border-subtle bg-surface-card">
         <ReceiptHeader restaurantName={restaurant?.name ?? null} />
 

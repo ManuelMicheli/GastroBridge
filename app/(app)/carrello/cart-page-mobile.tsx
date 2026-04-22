@@ -1,7 +1,8 @@
 "use client";
 
 import { Fragment } from "react";
-import { Minus, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, Minus, Plus, Trash2 } from "lucide-react";
 import type { CartBySupplier, CartItem } from "@/types/orders";
 import { formatCurrency } from "@/lib/utils/formatters";
 import { LargeTitle } from "@/components/ui/large-title";
@@ -36,6 +37,15 @@ export function CartPageMobile({
   return (
     <>
       <div className="pb-36">
+        <div className="px-4 pt-3">
+          <Link
+            href="/cerca"
+            className="inline-flex items-center gap-1.5 text-[13px] text-[color:var(--color-brand-primary)] active:opacity-60"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Cerca prodotti
+          </Link>
+        </div>
         <LargeTitle
           eyebrow="Totale carrello"
           title={
