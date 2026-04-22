@@ -82,7 +82,7 @@ export function KPICard({
             >
               <Icon className="h-4 w-4" style={{ color: accentColor }} />
             </div>
-            <span className="text-xs font-medium text-text-tertiary uppercase tracking-wider">
+            <span className="text-xs font-medium text-text-primary uppercase tracking-wider">
               {label}
             </span>
           </div>

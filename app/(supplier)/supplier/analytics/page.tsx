@@ -163,7 +163,7 @@ export default function SupplierAnalyticsPage() {
                     className="pointer-events-none absolute bottom-2 left-2 h-2.5 w-2.5 border-b border-l border-border-subtle opacity-60 transition-[opacity,border-color] duration-200 group-hover:border-accent-green group-hover:opacity-100"
                   />
                   <div className="flex flex-col gap-1.5">
-                    <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+                    <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-text-primary">
                       <span className="text-text-tertiary/70 tabular-nums">
                         {String(i + 1).padStart(2, "0")}
                       </span>

@@ -399,7 +399,7 @@ function SummaryTile({
           : "text-text-primary";
   return (
     <div className="flex flex-col gap-1 rounded-xl border border-border-subtle bg-surface-card px-4 py-3">
-      <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+      <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-text-primary">
         <span className="text-text-tertiary/70 tabular-nums">{index}</span>
         <span aria-hidden className="text-border-subtle">
           ·

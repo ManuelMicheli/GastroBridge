@@ -26,7 +26,7 @@ export function SectionFrame({
       className={`rounded-xl border border-border-subtle bg-surface-card ${className}`}
     >
       <header className="flex items-center gap-3 px-4 pt-3 pb-2">
-        <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+        <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-primary">
           {label}
         </span>
         <span

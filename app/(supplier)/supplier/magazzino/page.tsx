@@ -65,7 +65,7 @@ function TerminalKpi({
       />
       <div className="relative flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+          <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-text-primary">
             <span className="text-text-tertiary/70 tabular-nums">{index}</span>
             <span aria-hidden className="text-border-subtle">
               ·
