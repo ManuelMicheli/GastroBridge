@@ -2,32 +2,22 @@
 
 import { useRef, useEffect } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import {
-  ArrowRight,
-  BarChart3,
-  ShieldCheck,
-  MousePointerClick,
-  Truck,
-  Store,
-  ClipboardList,
-  TrendingUp,
-  Sparkles,
-} from "lucide-react";
 import { gsap } from "@/lib/gsap-config";
+import { EditorialEyebrow } from "./_primitives/editorial-eyebrow";
+import { prefersReducedMotion } from "@/lib/marketing-motion";
 
 const RISTORATORI_BULLETS = [
-  { icon: BarChart3, text: "Confronta prezzi in tempo reale" },
-  { icon: ShieldCheck, text: "Scopri fornitori verificati" },
-  { icon: MousePointerClick, text: "Ordina con un click" },
-  { icon: Truck, text: "Monitora consegne e spese" },
+  "Prezzi a confronto in tempo reale",
+  "Fornitori verificati della tua zona",
+  "Ordini e consegne in un solo posto",
+  "Spesa trasparente, senza sorprese",
 ];
 
 const FORNITORI_BULLETS = [
-  { icon: Store, text: "Vetrina prodotti professionale" },
-  { icon: ClipboardList, text: "Gestione ordini centralizzata" },
-  { icon: TrendingUp, text: "Analytics e insights" },
-  { icon: Sparkles, text: "Crescita garantita" },
+  "Vetrina prodotti sempre aggiornata",
+  "Gestione ordini centralizzata",
+  "Analytics e insight di mercato",
+  "Nuovi clienti senza costi di acquisizione",
 ];
 
 export function DualSection() {
@@ -36,13 +26,12 @@ export function DualSection() {
   const rightRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (prefersReducedMotion()) return;
     const mm = gsap.matchMedia();
-
     mm.add("(min-width: 1024px)", () => {
       if (leftRef.current) {
         gsap.to(leftRef.current, {
-          yPercent: -5,
+          yPercent: -4,
           ease: "none",
           scrollTrigger: {
             trigger: sectionRef.current,
@@ -52,39 +41,9 @@ export function DualSection() {
           },
         });
       }
-
       if (rightRef.current) {
         gsap.to(rightRef.current, {
-          yPercent: 5,
-          ease: "none",
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: "top bottom",
-            end: "bottom top",
-            scrub: true,
-          },
-        });
-      }
-
-      const layer1 = sectionRef.current?.querySelectorAll("[data-depth='1']");
-      const layer3 = sectionRef.current?.querySelectorAll("[data-depth='3']");
-
-      if (layer1?.length) {
-        gsap.to(layer1, {
-          yPercent: -8,
-          ease: "none",
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: "top bottom",
-            end: "bottom top",
-            scrub: true,
-          },
-        });
-      }
-
-      if (layer3?.length) {
-        gsap.to(layer3, {
-          yPercent: 8,
+          yPercent: 4,
           ease: "none",
           scrollTrigger: {
             trigger: sectionRef.current,
@@ -95,7 +54,6 @@ export function DualSection() {
         });
       }
     });
-
     return () => mm.revert();
   }, []);
 
@@ -103,70 +61,164 @@ export function DualSection() {
     <section
       ref={sectionRef}
       id="per-chi"
-      className="min-h-[80vh] flex flex-col lg:flex-row overflow-hidden"
+      className="relative flex flex-col lg:flex-row overflow-hidden"
     >
-      {/* Left — Ristoratori (cream) */}
+      {/* Hairline between panels (desktop) */}
+      <div
+        aria-hidden
+        className="hidden lg:block absolute top-0 bottom-0 left-1/2"
+        style={{ width: "1px", background: "var(--color-marketing-rule)" }}
+      />
+
+      {/* Left — Restaurant (bordeaux primary inherited) */}
       <div
         ref={leftRef}
-        className="flex-1 bg-cream px-8 py-20 lg:px-16 lg:py-28 flex items-center"
+        className="flex-1 flex items-center"
+        style={{
+          background: "var(--color-marketing-bg)",
+          paddingLeft: "var(--gutter-marketing)",
+          paddingRight: "clamp(24px, 4vw, 80px)",
+          paddingTop: "var(--rhythm-section)",
+          paddingBottom: "var(--rhythm-section)",
+        }}
       >
-        <div className="max-w-lg mx-auto lg:ml-auto lg:mr-16">
-          <p
-            data-depth="1"
-            className="text-sm font-semibold uppercase tracking-[0.15em] text-terracotta mb-4"
+        <div className="max-w-lg lg:ml-auto w-full">
+          <EditorialEyebrow tone="primary" className="mb-6">PER RISTORATORI</EditorialEyebrow>
+          <h2
+            className="font-display mb-8"
+            style={{
+              fontSize: "clamp(36px, 4.2vw, 56px)",
+              lineHeight: "1.02",
+              letterSpacing: "-0.018em",
+              color: "var(--color-marketing-ink)",
+            }}
           >
-            Per Ristoratori
-          </p>
-          <h2 className="text-3xl sm:text-4xl font-display text-forest mb-8 leading-tight">
-            Trova i migliori fornitori per la tua cucina
+            Un solo posto
+            <br />
+            per i tuoi fornitori.
           </h2>
-          <ul className="space-y-4 mb-10">
+          <p
+            className="mb-10 max-w-[42ch]"
+            style={{
+              fontSize: "16px",
+              lineHeight: "1.55",
+              color: "var(--color-marketing-ink-muted)",
+            }}
+          >
+            Dalla panetteria al pesce fresco, dal detergente professionale
+            al vino. Cataloghi aggiornati ogni giorno, spesa tracciata,
+            consegne verificate.
+          </p>
+          <ul className="space-y-4 mb-12">
             {RISTORATORI_BULLETS.map((b) => (
-              <li key={b.text} className="flex items-center gap-3 text-charcoal/80 font-body">
-                <div data-depth="3" className="w-8 h-8 rounded-lg bg-forest/10 flex items-center justify-center flex-shrink-0">
-                  <b.icon className="w-4 h-4 text-forest" />
-                </div>
-                {b.text}
+              <li
+                key={b}
+                className="flex items-baseline gap-4"
+                style={{
+                  fontSize: "var(--type-marketing-body)",
+                  lineHeight: "var(--type-marketing-body-lh)",
+                  color: "var(--color-marketing-ink)",
+                }}
+              >
+                <span
+                  aria-hidden
+                  className="font-display"
+                  style={{ color: "var(--color-marketing-primary)" }}
+                >
+                  —
+                </span>
+                <span>{b}</span>
               </li>
             ))}
           </ul>
-          <Link href="/signup">
-            <Button size="lg" className="bg-forest text-cream hover:bg-forest-dark">
-              Registra il tuo Ristorante <ArrowRight className="h-4 w-4" />
-            </Button>
+          <Link
+            href="/signup"
+            className="inline-flex items-center rounded-full px-6 py-3 text-[14px] tracking-wide transition-colors"
+            style={{
+              background: "var(--color-marketing-primary)",
+              color: "var(--color-marketing-on-primary)",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-marketing-primary-hover)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "var(--color-marketing-primary)")}
+          >
+            Registra il tuo ristorante →
           </Link>
         </div>
       </div>
 
-      {/* Right — Fornitori (forest dark) */}
+      {/* Right — Supplier (amber accent via data-side) */}
       <div
         ref={rightRef}
-        className="flex-1 bg-forest-dark px-8 py-20 lg:px-16 lg:py-28 flex items-center"
+        data-side="supplier"
+        className="flex-1 flex items-center"
+        style={{
+          background: "var(--color-marketing-accent-warm-subtle)",
+          paddingLeft: "clamp(24px, 4vw, 80px)",
+          paddingRight: "var(--gutter-marketing)",
+          paddingTop: "var(--rhythm-section)",
+          paddingBottom: "var(--rhythm-section)",
+        }}
       >
-        <div className="max-w-lg mx-auto lg:mr-auto lg:ml-16">
-          <p
-            data-depth="1"
-            className="text-sm font-semibold uppercase tracking-[0.15em] text-accent-orange mb-4"
+        <div className="max-w-lg lg:mr-auto w-full">
+          <EditorialEyebrow tone="primary" className="mb-6">PER FORNITORI</EditorialEyebrow>
+          <h2
+            className="font-display mb-8"
+            style={{
+              fontSize: "clamp(36px, 4.2vw, 56px)",
+              lineHeight: "1.02",
+              letterSpacing: "-0.018em",
+              color: "var(--color-marketing-ink)",
+            }}
           >
-            Per Fornitori
-          </p>
-          <h2 className="text-3xl sm:text-4xl font-display text-cream mb-8 leading-tight">
-            Raggiungi centinaia di nuovi clienti
+            Clienti nuovi,
+            <br />
+            senza intermediari.
           </h2>
-          <ul className="space-y-4 mb-10">
+          <p
+            className="mb-10 max-w-[42ch]"
+            style={{
+              fontSize: "16px",
+              lineHeight: "1.55",
+              color: "var(--color-marketing-ink-muted)",
+            }}
+          >
+            Raggiungi ristoranti, hotel e catering della tua zona di
+            consegna. Niente commissioni sulle vendite: il prezzo che
+            fai al cliente è quello che incassi.
+          </p>
+          <ul className="space-y-4 mb-12">
             {FORNITORI_BULLETS.map((b) => (
-              <li key={b.text} className="flex items-center gap-3 text-cream/80 font-body">
-                <div data-depth="3" className="w-8 h-8 rounded-lg bg-cream/10 flex items-center justify-center flex-shrink-0">
-                  <b.icon className="w-4 h-4 text-cream" />
-                </div>
-                {b.text}
+              <li
+                key={b}
+                className="flex items-baseline gap-4"
+                style={{
+                  fontSize: "var(--type-marketing-body)",
+                  lineHeight: "var(--type-marketing-body-lh)",
+                  color: "var(--color-marketing-ink)",
+                }}
+              >
+                <span
+                  aria-hidden
+                  className="font-display"
+                  style={{ color: "var(--color-marketing-primary)" }}
+                >
+                  —
+                </span>
+                <span>{b}</span>
               </li>
             ))}
           </ul>
-          <Link href="/signup?role=supplier">
-            <Button size="lg" className="bg-cream text-forest-dark hover:bg-cream/90">
-              Diventa Fornitore <ArrowRight className="h-4 w-4" />
-            </Button>
+          <Link
+            href="/per-fornitori"
+            className="inline-flex items-center rounded-full px-6 py-3 text-[14px] tracking-wide transition-colors"
+            style={{
+              background: "var(--color-marketing-primary)",
+              color: "var(--color-marketing-on-primary)",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-marketing-primary-hover)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "var(--color-marketing-primary)")}
+          >
+            Diventa fornitore →
           </Link>
         </div>
       </div>

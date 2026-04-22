@@ -1,128 +1,162 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import { Hexagon, Circle, Triangle } from "lucide-react";
 import { gsap } from "@/lib/gsap-config";
+import { EditorialEyebrow } from "./_primitives/editorial-eyebrow";
+import { MOTION, prefersReducedMotion } from "@/lib/marketing-motion";
 
 const STEPS = [
   {
-    icon: Hexagon,
     step: "01",
-    title: "Registrati",
-    description: "Registrati e configura il profilo della tua attivita in pochi minuti.",
+    title: "Registri.",
+    description:
+      "Apri il profilo della tua attività in meno di cinque minuti. Verifichiamo P.IVA e dati fiscali in modo automatico. Nessun contratto, nessun vincolo: quando vuoi, esci.",
+    meta: "≈ 5 minuti",
   },
   {
-    icon: Circle,
     step: "02",
-    title: "Cerca e Confronta",
-    description: "Cerca, confronta prezzi e scopri i migliori fornitori della tua zona.",
+    title: "Confronti.",
+    description:
+      "Cerchi per categoria, zona di consegna e tempi di ritorno. Confronti prezzi in tempo reale tra fornitori verificati e leggi recensioni di ristoratori come te. Nessun filtro nascosto sui risultati.",
+    meta: "Prezzi vivi",
   },
   {
-    icon: Triangle,
     step: "03",
-    title: "Ordina e Gestisci",
-    description: "Ordina e gestisci tutto in un posto. Semplice, veloce, trasparente.",
+    title: "Ordini.",
+    description:
+      "Crei l'ordine in pochi click, paghi con Stripe, ricevi conferma e traccia della consegna. Gestisci resi, fatture e spesa mensile dalla stessa dashboard — senza telefonate.",
+    meta: "Consegne tracciate",
   },
 ];
 
 export function HowItWorks() {
   const sectionRef = useRef<HTMLElement>(null);
-  const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
-  const lineRef = useRef<SVGPathElement>(null);
+  const itemsRef = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const els = itemsRef.current.filter(Boolean) as HTMLElement[];
+    if (els.length === 0) return;
+
+    if (prefersReducedMotion()) {
+      els.forEach((el) => (el.style.opacity = "1"));
+      return;
+    }
 
     const ctx = gsap.context(() => {
-      // Cards stagger
       gsap.fromTo(
-        cardsRef.current.filter(Boolean),
-        { opacity: 0, y: 40 },
+        els,
+        { opacity: 0, y: 24 },
         {
           opacity: 1,
           y: 0,
-          stagger: 0.15,
-          duration: 0.8,
-          ease: "power3.out",
+          duration: MOTION.duration.revealBase,
+          stagger: MOTION.stagger.block,
+          ease: MOTION.easeEditorial,
           scrollTrigger: {
             trigger: sectionRef.current,
-            start: "top 70%",
+            start: MOTION.scrollTrigger.defaultStart,
             once: true,
           },
         }
       );
-
-      // SVG line draw
-      if (lineRef.current) {
-        const length = lineRef.current.getTotalLength();
-        gsap.set(lineRef.current, { strokeDasharray: length, strokeDashoffset: length });
-        gsap.to(lineRef.current, {
-          strokeDashoffset: 0,
-          duration: 1.5,
-          ease: "power2.inOut",
-          scrollTrigger: {
-            trigger: sectionRef.current,
-            start: "top 60%",
-            once: true,
-          },
-        });
-      }
     }, sectionRef);
 
     return () => ctx.revert();
   }, []);
 
   return (
-    <section ref={sectionRef} id="come-funziona" className="py-24 px-4 bg-forest-dark">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl sm:text-4xl font-display text-cream mb-4">
-            Come funziona
-          </h2>
-          <p className="text-cream/50 text-lg max-w-xl mx-auto font-body">
-            Tre passi per trasformare i tuoi acquisti Ho.Re.Ca.
-          </p>
+    <section
+      ref={sectionRef}
+      id="come-funziona"
+      style={{
+        paddingLeft: "var(--gutter-marketing)",
+        paddingRight: "var(--gutter-marketing)",
+        paddingTop: "var(--rhythm-section)",
+        paddingBottom: "var(--rhythm-section)",
+      }}
+    >
+      <div className="grid grid-cols-12 gap-y-10 gap-x-6 lg:gap-x-10 mb-[clamp(48px,6vw,96px)]">
+        <div className="col-span-12 lg:col-span-4">
+          <EditorialEyebrow number="— 03">COME FUNZIONA</EditorialEyebrow>
         </div>
+        <h2
+          className="col-span-12 lg:col-span-8 font-display"
+          style={{
+            fontSize: "var(--type-marketing-h2)",
+            lineHeight: "var(--type-marketing-h2-lh)",
+            letterSpacing: "var(--type-marketing-h2-ls)",
+            color: "var(--color-marketing-ink)",
+          }}
+        >
+          Tre passi.
+          <br />
+          Un flusso senza frizione.
+        </h2>
+      </div>
 
-        {/* SVG connector line (desktop only) */}
-        <div className="hidden lg:block relative">
-          <svg
-            className="absolute top-1/2 left-0 w-full h-1 -translate-y-1/2 z-0"
-            viewBox="0 0 1000 2"
-            preserveAspectRatio="none"
+      <div className="grid grid-cols-1 lg:grid-cols-3">
+        {STEPS.map((item, i) => (
+          <div
+            key={item.step}
+            ref={(el) => {
+              itemsRef.current[i] = el;
+            }}
+            className="relative opacity-0 py-10 lg:py-0 lg:px-8 first:lg:pl-0 last:lg:pr-0"
+            style={{
+              borderTop: i !== 0 ? "1px solid var(--color-marketing-rule)" : undefined,
+            }}
           >
-            <path
-              ref={lineRef}
-              d="M 100 1 L 900 1"
-              stroke="rgba(250,248,245,0.15)"
-              strokeWidth="2"
-              fill="none"
-            />
-          </svg>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
-          {STEPS.map((item, i) => (
             <div
-              key={item.step}
-              ref={(el) => { cardsRef.current[i] = el; }}
-              className="gsap-reveal relative rounded-2xl border border-cream/10 bg-forest-dark/50 p-8 backdrop-blur-sm"
-            >
-              {/* Watermark number */}
-              <span className="absolute top-4 right-6 text-7xl font-display text-cream/[0.06] select-none">
-                {item.step}
-              </span>
+              aria-hidden
+              className="hidden lg:block absolute top-0 bottom-0 left-0"
+              style={{
+                width: i === 0 ? 0 : "1px",
+                background: "var(--color-marketing-rule)",
+              }}
+            />
 
-              <div className="relative z-10">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-accent-orange/10 mb-5">
-                  <item.icon className="h-6 w-6 text-accent-orange" />
-                </div>
-                <h3 className="text-xl font-display text-cream mb-3">{item.title}</h3>
-                <p className="text-cream/70 font-body leading-relaxed">{item.description}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+            <p
+              className="font-mono tracking-[0.15em] mb-8"
+              style={{
+                fontSize: "11px",
+                color: "var(--color-marketing-primary)",
+              }}
+            >
+              {item.step} / 03
+            </p>
+            <h3
+              className="font-display mb-6"
+              style={{
+                fontSize: "clamp(32px, 3.4vw, 48px)",
+                lineHeight: "1.05",
+                letterSpacing: "-0.018em",
+                color: "var(--color-marketing-ink)",
+              }}
+            >
+              {item.title}
+            </h3>
+            <p
+              className="max-w-[38ch]"
+              style={{
+                fontSize: "var(--type-marketing-body)",
+                lineHeight: "var(--type-marketing-body-lh)",
+                color: "var(--color-marketing-ink-muted)",
+              }}
+            >
+              {item.description}
+            </p>
+            <p
+              className="mt-8 font-mono uppercase"
+              style={{
+                fontSize: "11px",
+                letterSpacing: "0.2em",
+                color: "var(--color-marketing-ink-subtle)",
+              }}
+            >
+              — {item.meta}
+            </p>
+          </div>
+        ))}
       </div>
     </section>
   );

@@ -107,7 +107,7 @@ export default function SupplierAnalyticsPage() {
       </div>
 
       {/* Desktop — analyst workbench terminal */}
-      <div className="hidden lg:block">
+      <div className="hidden lg:block" data-strong-card-borders>
         <div className="flex flex-col gap-6">
           {/* Terminal header */}
           <header>
@@ -147,7 +147,7 @@ export default function SupplierAnalyticsPage() {
               {stats.map((stat, i) => (
                 <article
                   key={stat.label}
-                  className="group relative overflow-hidden rounded-xl border border-border-subtle bg-surface-card px-4 pt-3.5 pb-3 transition-colors hover:border-border-accent"
+                  className="group relative overflow-hidden rounded-xl border border-[color:var(--color-card-border,var(--color-border-subtle))] bg-surface-card px-4 pt-3.5 pb-3 transition-colors hover:border-border-accent"
                   style={{
                     backgroundImage:
                       "radial-gradient(circle at 1px 1px, color-mix(in srgb, var(--color-text-tertiary) 14%, transparent) 1px, transparent 0)",

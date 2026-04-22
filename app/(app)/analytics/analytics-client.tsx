@@ -31,7 +31,7 @@ export function AnalyticsContent({ data }: Props) {
     data.supplierBreakdown.reduce((m, s) => Math.max(m, s.spending), 0) || 1;
 
   return (
-    <div className="space-y-5 lg:space-y-6">
+    <div className="space-y-5 lg:space-y-6" data-strong-card-borders>
       {/* ─── Mobile editorial hero ─── */}
       <div className="lg:hidden">
         <LargeTitle

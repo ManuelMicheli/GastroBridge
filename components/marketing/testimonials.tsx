@@ -1,58 +1,69 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Pause, Play } from "lucide-react";
 import { gsap } from "@/lib/gsap-config";
+import { EditorialEyebrow } from "./_primitives/editorial-eyebrow";
+import { QuotePull } from "./_primitives/quote-pull";
+import { prefersReducedMotion } from "@/lib/marketing-motion";
 
 const TESTIMONIALS = [
   {
     quote:
-      "GastroBridge ha rivoluzionato il modo in cui gestiamo i nostri fornitori. Risparmiamo ore ogni settimana.",
-    name: "Marco R.",
-    role: "Chef Exec, Ristorante Esempio",
+      "GastroBridge ha trasformato il modo in cui gestiamo i fornitori. Ore risparmiate ogni settimana, e finalmente una visione chiara della spesa mensile — per categoria, per fornitore, per piatto del menu.",
+    author: "Marco R.",
+    role: "Chef Executive — Ristorante Bellaria, Milano",
   },
   {
     quote:
-      "Da quando usiamo la piattaforma, abbiamo aumentato i clienti del 40% in tre mesi.",
-    name: "Laura B.",
-    role: "Fornitore, Azienda Esempio",
+      "Da quando siamo sulla piattaforma, abbiamo aperto a quaranta nuovi ristoranti in tre mesi. Senza costi di acquisizione, senza telefonate, senza fiere. Il catalogo lavora al posto nostro.",
+    author: "Laura B.",
+    role: "Responsabile vendite — Caseificio Artigiano, Lodi",
   },
   {
     quote:
-      "Confrontare prezzi non e mai stato cosi semplice. Un must per ogni ristoratore.",
-    name: "Giuseppe T.",
-    role: "Proprietario, Trattoria Esempio",
+      "Confrontare prezzi non è mai stato così immediato. Vedo in trenta secondi se il mio fornitore storico è ancora competitivo oppure se è il momento di parlarci. Un cambio di categoria per chi lavora ogni giorno in cucina.",
+    author: "Giuseppe T.",
+    role: "Proprietario — Trattoria dei Navigli, Milano",
+  },
+  {
+    quote:
+      "Siamo un panificio piccolo. Pensavamo che una piattaforma non facesse per noi. Invece ci ha permesso di uscire dalla nostra provincia senza snaturarci: stessi clienti, stesso prodotto, solo più tracciabili.",
+    author: "Elena F.",
+    role: "Co-fondatrice — Panificio Est, Bergamo",
+  },
+  {
+    quote:
+      "La cosa che mi ha convinto è la trasparenza: nessuna commissione nascosta, nessuno sta in mezzo. È un rapporto diretto con il fornitore, ma con tutta la comodità del digitale.",
+    author: "Davide C.",
+    role: "Direttore F&B — Gruppo Alberghiero Lariano",
   },
 ];
 
 export function Testimonials() {
   const [current, setCurrent] = useState(0);
   const [playing, setPlaying] = useState(true);
-  const quoteRef = useRef<HTMLQuoteElement>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const goTo = useCallback(
     (index: number) => {
       if (index === current) return;
-      const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-      if (prefersReduced || !quoteRef.current) {
+      if (prefersReducedMotion() || !wrapRef.current) {
         setCurrent(index);
         return;
       }
-
       const dir = index > current ? 1 : -1;
-
-      gsap.to(quoteRef.current, {
+      gsap.to(wrapRef.current, {
         opacity: 0,
-        x: dir * -30,
+        x: dir * -16,
         duration: 0.3,
+        ease: "power2.in",
         onComplete() {
           setCurrent(index);
           gsap.fromTo(
-            quoteRef.current,
-            { opacity: 0, x: dir * 30 },
-            { opacity: 1, x: 0, duration: 0.3 }
+            wrapRef.current,
+            { opacity: 0, x: dir * 16 },
+            { opacity: 1, x: 0, duration: 0.4, ease: "power3.out" }
           );
         },
       });
@@ -68,17 +79,15 @@ export function Testimonials() {
     goTo((current - 1 + TESTIMONIALS.length) % TESTIMONIALS.length);
   }, [current, goTo]);
 
-  // Auto-rotate
   useEffect(() => {
     if (playing) {
-      intervalRef.current = setInterval(next, 5000);
+      intervalRef.current = setInterval(next, 7000);
     }
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [playing, next]);
 
-  // Keyboard nav
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "ArrowRight") next();
@@ -94,56 +103,66 @@ export function Testimonials() {
   return (
     <section
       id="testimonianze"
-      className="py-24 px-4 bg-forest-dark"
       tabIndex={-1}
       onMouseEnter={() => setPlaying(false)}
       onMouseLeave={() => setPlaying(true)}
       onFocus={() => setPlaying(false)}
       onBlur={() => setPlaying(true)}
+      style={{
+        paddingLeft: "var(--gutter-marketing)",
+        paddingRight: "var(--gutter-marketing)",
+        paddingTop: "var(--rhythm-section)",
+        paddingBottom: "var(--rhythm-section)",
+        background: "var(--color-marketing-bg-soft)",
+      }}
     >
-      <div className="max-w-3xl mx-auto text-center relative" aria-live="polite">
-        {/* Decorative quote */}
-        <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-[8rem] font-display text-cream/[0.06] select-none leading-none">
-          &ldquo;
-        </span>
+      <div className="grid grid-cols-12 gap-y-12 gap-x-6 lg:gap-x-10">
+        <div className="col-span-12 lg:col-span-4">
+          <EditorialEyebrow number="— 07">VOCI</EditorialEyebrow>
+        </div>
 
-        <blockquote ref={quoteRef} className="relative z-10">
-          <p className="text-xl sm:text-2xl font-display italic text-cream leading-relaxed mb-8">
-            &ldquo;{t.quote}&rdquo;
-          </p>
-          <footer>
-            <p className="text-cream font-semibold font-body">{t.name}</p>
-            <p className="text-cream/70 text-sm font-body">{t.role}</p>
-          </footer>
-        </blockquote>
+        <div className="col-span-12 lg:col-span-8" aria-live="polite">
+          <div ref={wrapRef}>
+            <QuotePull quote={t.quote} author={t.author} role={t.role} />
+          </div>
 
-        {/* Navigation */}
-        <div
-          className="flex items-center justify-center gap-3 mt-10"
-          role="tablist"
-          aria-label="Testimonials"
-        >
-          {TESTIMONIALS.map((_, i) => (
-            <button
-              key={i}
-              role="tab"
-              aria-selected={i === current}
-              aria-label={`Testimonial ${i + 1}`}
-              onClick={() => goTo(i)}
-              className={`w-2.5 h-2.5 rounded-full transition-all duration-300 ${
-                i === current
-                  ? "bg-accent-orange scale-125"
-                  : "bg-cream/30 hover:bg-cream/50"
-              }`}
-            />
-          ))}
-          <button
-            onClick={() => setPlaying(!playing)}
-            className="ml-3 text-cream/30 hover:text-cream/60 transition-colors"
-            aria-label={playing ? "Pausa" : "Riproduci"}
+          {/* Index plate */}
+          <div
+            className="flex items-center gap-6 mt-14"
+            role="tablist"
+            aria-label="Testimonianze"
           >
-            {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-          </button>
+            {TESTIMONIALS.map((_, i) => (
+              <button
+                key={i}
+                role="tab"
+                aria-selected={i === current}
+                aria-label={`Testimonianza ${i + 1} di ${TESTIMONIALS.length}`}
+                onClick={() => goTo(i)}
+                className="font-mono uppercase tracking-[0.18em] text-[12px] transition-colors"
+                style={{
+                  color:
+                    i === current
+                      ? "var(--color-marketing-primary)"
+                      : "var(--color-marketing-ink-subtle)",
+                }}
+              >
+                0{i + 1}
+              </button>
+            ))}
+            <span
+              aria-hidden
+              className="h-px flex-1 max-w-[120px]"
+              style={{ background: "var(--color-marketing-rule)" }}
+            />
+            <button
+              onClick={() => setPlaying(!playing)}
+              className="font-mono uppercase tracking-[0.18em] text-[12px] text-[var(--color-marketing-ink-subtle)] hover:text-[var(--color-marketing-ink)] link-editorial"
+              aria-label={playing ? "Pausa" : "Riproduci"}
+            >
+              {playing ? "Pausa" : "Play"}
+            </button>
+          </div>
         </div>
       </div>
     </section>

@@ -76,7 +76,7 @@ export function TerminalKPICard({
 
   return (
     <div
-      className="group relative overflow-hidden rounded-xl border border-border-subtle bg-surface-card px-4 pt-3.5 pb-3 transition-colors hover:border-border-accent"
+      className="group relative overflow-hidden rounded-xl border border-[color:var(--color-card-border,var(--color-border-subtle))] bg-surface-card px-4 pt-3.5 pb-3 transition-colors hover:border-border-accent"
       style={{
         // Subtle dotted watermark grid, awwwards-grade restraint.
         backgroundImage:

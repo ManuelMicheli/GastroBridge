@@ -2,22 +2,25 @@
 
 import { useRef, useEffect } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
 import { gsap, SplitText } from "@/lib/gsap-config";
+import { EditorialEyebrow } from "./_primitives/editorial-eyebrow";
+import { MOTION, prefersReducedMotion } from "@/lib/marketing-motion";
 
 export function CTASection() {
   const sectionRef = useRef<HTMLElement>(null);
   const headlineRef = useRef<HTMLHeadingElement>(null);
-  const subtitleRef = useRef<HTMLParagraphElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (prefersReducedMotion()) {
+      if (headlineRef.current) headlineRef.current.style.opacity = "1";
+      if (ctaRef.current) ctaRef.current.style.opacity = "1";
+      return;
+    }
 
     const ctx = gsap.context(() => {
-      // Split text reveal
       if (headlineRef.current) {
+        gsap.set(headlineRef.current, { opacity: 1 });
         const split = new SplitText(headlineRef.current, { type: "words" });
         gsap.fromTo(
           split.words,
@@ -26,9 +29,9 @@ export function CTASection() {
             opacity: 1,
             y: 0,
             rotationX: 0,
-            stagger: 0.08,
-            duration: 0.8,
-            ease: "power4.out",
+            stagger: MOTION.stagger.block,
+            duration: MOTION.duration.revealBase,
+            ease: MOTION.easeDramatic,
             scrollTrigger: {
               trigger: sectionRef.current,
               start: "top 80%",
@@ -38,16 +41,14 @@ export function CTASection() {
         );
       }
 
-      // Subtitle + CTA fade in after headline
       gsap.fromTo(
-        [subtitleRef.current, ctaRef.current],
+        ctaRef.current,
         { opacity: 0, y: 20 },
         {
           opacity: 1,
           y: 0,
-          stagger: 0.15,
-          duration: 0.6,
-          ease: "power3.out",
+          duration: MOTION.duration.revealBase,
+          ease: MOTION.easeEditorial,
           scrollTrigger: {
             trigger: sectionRef.current,
             start: "top 70%",
@@ -55,24 +56,6 @@ export function CTASection() {
           },
         }
       );
-
-      // Mesh gradient intensification
-      const meshEl = sectionRef.current?.querySelector(".mesh-gradient");
-      if (meshEl) {
-        gsap.fromTo(
-          meshEl,
-          { opacity: 0.5 },
-          {
-            opacity: 1,
-            scrollTrigger: {
-              trigger: sectionRef.current,
-              start: "top bottom",
-              end: "bottom top",
-              scrub: true,
-            },
-          }
-        );
-      }
     }, sectionRef);
 
     return () => ctx.revert();
@@ -82,43 +65,79 @@ export function CTASection() {
     <section
       ref={sectionRef}
       id="cta-finale"
-      className="relative py-32 px-4 overflow-hidden bg-forest-dark"
+      style={{
+        paddingLeft: "var(--gutter-marketing)",
+        paddingRight: "var(--gutter-marketing)",
+        paddingTop: "var(--rhythm-section)",
+        paddingBottom: "var(--rhythm-section)",
+        background: "var(--color-marketing-bg)",
+      }}
     >
-      {/* Mesh gradient bg overlay */}
-      <div className="absolute inset-0 mesh-gradient" />
+      <div className="mx-auto max-w-[68rem]">
+        <EditorialEyebrow number="— 09" className="mb-10">CHIUSURA</EditorialEyebrow>
 
-      <div className="relative z-10 max-w-3xl mx-auto text-center">
         <h2
           ref={headlineRef}
-          className="opacity-0 text-3xl sm:text-4xl lg:text-5xl font-display text-cream mb-6 leading-tight"
-          style={{ perspective: "600px" }}
+          className="font-display opacity-0"
+          style={{
+            fontSize: "clamp(56px, 9vw, 140px)",
+            lineHeight: "0.96",
+            letterSpacing: "-0.028em",
+            color: "var(--color-marketing-ink)",
+            perspective: "600px",
+          }}
         >
-          Il futuro della ristorazione inizia qui
+          Un gesto piccolo
+          <br />
+          cambia una{" "}
+          <span style={{ color: "var(--color-marketing-primary)" }}>filiera</span>.
         </h2>
+
         <p
-          ref={subtitleRef}
-          className="opacity-0 text-cream/70 text-lg mb-12 font-body max-w-xl mx-auto"
+          className="mt-[clamp(32px,4vw,56px)] max-w-[56ch]"
+          style={{
+            fontSize: "var(--type-marketing-body)",
+            lineHeight: "var(--type-marketing-body-lh)",
+            color: "var(--color-marketing-ink-muted)",
+          }}
         >
-          Unisciti a centinaia di professionisti Ho.Re.Ca. che stanno gia crescendo con noi.
+          Cinque minuti per registrarti. Due settimane per capire se ti
+          stiamo restituendo tempo. Nessuna carta all&apos;iscrizione,
+          nessun contratto.
         </p>
-        <div ref={ctaRef} className="opacity-0 flex flex-col sm:flex-row gap-4 justify-center">
-          <Link href="/signup">
-            <Button
-              size="lg"
-              className="w-full sm:w-auto bg-cream text-forest-dark hover:bg-cream/90 shadow-lg text-lg px-10"
-            >
-              Registra il tuo Ristorante <ArrowRight className="h-5 w-5" />
-            </Button>
+
+        <div
+          ref={ctaRef}
+          className="opacity-0 mt-[clamp(32px,4vw,56px)] flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-10"
+        >
+          <Link
+            href="/signup"
+            className="inline-flex items-center rounded-full px-8 py-4 text-[14px] tracking-wide transition-colors"
+            style={{
+              background: "var(--color-marketing-primary)",
+              color: "var(--color-marketing-on-primary)",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-marketing-primary-hover)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "var(--color-marketing-primary)")}
+          >
+            Apri un account
           </Link>
-          <Link href="/signup?role=supplier">
-            <Button
-              variant="ghost"
-              size="lg"
-              className="w-full sm:w-auto text-cream border border-cream/30 hover:bg-cream/10 text-lg px-10"
+
+          <span
+            aria-hidden
+            className="hidden sm:block h-6"
+            style={{ width: "1px", background: "var(--color-marketing-rule-strong)" }}
+          />
+
+          <span data-side="supplier">
+            <Link
+              href="/per-fornitori"
+              className="link-editorial text-[14px] tracking-wide"
+              style={{ color: "var(--color-marketing-primary)" }}
             >
-              Diventa Fornitore
-            </Button>
-          </Link>
+              Diventa fornitore →
+            </Link>
+          </span>
         </div>
       </div>
     </section>

@@ -2,65 +2,76 @@
 
 import { useRef, useEffect } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
 import { gsap, SplitText } from "@/lib/gsap-config";
+import { EditorialEyebrow } from "./_primitives/editorial-eyebrow";
+import { MOTION, prefersReducedMotion } from "@/lib/marketing-motion";
 
 export function Hero() {
   const sectionRef = useRef<HTMLElement>(null);
   const headlineRef = useRef<HTMLHeadingElement>(null);
-  const badgeRef = useRef<HTMLDivElement>(null);
+  const eyebrowRef = useRef<HTMLDivElement>(null);
+  const metaRef = useRef<HTMLDivElement>(null);
   const subtitleRef = useRef<HTMLParagraphElement>(null);
+  const breveRef = useRef<HTMLDivElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);
-  const statsRef = useRef<HTMLDivElement>(null);
+  const footNoteRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (prefersReduced) return;
+    if (prefersReducedMotion()) {
+      [eyebrowRef, metaRef, headlineRef, subtitleRef, breveRef, ctaRef, footNoteRef].forEach((r) => {
+        if (r.current) r.current.style.opacity = "1";
+      });
+      return;
+    }
 
     const ctx = gsap.context(() => {
-      const tl = gsap.timeline({ defaults: { ease: "power3.out" } });
+      const tl = gsap.timeline({ defaults: { ease: MOTION.easeEditorial } });
 
-      // Badge fade in
       tl.fromTo(
-        badgeRef.current,
-        { opacity: 0, y: -10 },
-        { opacity: 1, y: 0, duration: 0.6 },
-        0.2
+        eyebrowRef.current,
+        { opacity: 0, y: 8 },
+        { opacity: 1, y: 0, duration: MOTION.duration.revealShort },
+        0.1
+      );
+      tl.fromTo(
+        metaRef.current,
+        { opacity: 0, y: 8 },
+        { opacity: 1, y: 0, duration: MOTION.duration.revealShort },
+        0.18
       );
 
-      // Headline split text
       if (headlineRef.current) {
         const split = new SplitText(headlineRef.current, { type: "words" });
         tl.fromTo(
           split.words,
           { opacity: 0, y: 40 },
-          { opacity: 1, y: 0, stagger: 0.05, duration: 1 },
-          0.4
+          { opacity: 1, y: 0, stagger: MOTION.stagger.word, duration: MOTION.duration.revealLong },
+          0.35
         );
       }
 
-      // Subtitle
       tl.fromTo(
         subtitleRef.current,
         { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 0.6 },
-        "-=0.4"
-      );
-
-      // CTAs
-      tl.fromTo(
-        ctaRef.current,
-        { opacity: 0, y: 20 },
-        { opacity: 1, y: 0, duration: 0.6 },
+        { opacity: 1, y: 0, duration: MOTION.duration.revealBase },
         "-=0.3"
       );
-
-      // Stats
       tl.fromTo(
-        statsRef.current,
+        breveRef.current,
+        { opacity: 0, y: 12 },
+        { opacity: 1, y: 0, duration: MOTION.duration.revealBase },
+        "-=0.45"
+      );
+      tl.fromTo(
+        ctaRef.current,
+        { opacity: 0, y: 16 },
+        { opacity: 1, y: 0, duration: MOTION.duration.revealBase },
+        "-=0.4"
+      );
+      tl.fromTo(
+        footNoteRef.current,
         { opacity: 0 },
-        { opacity: 1, duration: 0.6 },
+        { opacity: 1, duration: MOTION.duration.revealShort },
         "-=0.2"
       );
     }, sectionRef);
@@ -72,68 +83,130 @@ export function Hero() {
     <section
       ref={sectionRef}
       id="hero"
-      className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden"
+      className="relative flex flex-col"
+      style={{
+        minHeight: "calc(100svh - 5rem)",
+        paddingLeft: "var(--gutter-marketing)",
+        paddingRight: "var(--gutter-marketing)",
+        paddingTop: "clamp(112px, 14vw, 200px)",
+        paddingBottom: "clamp(48px, 6vw, 96px)",
+      }}
     >
-      {/* Mesh gradient background */}
-      <div className="absolute inset-0 mesh-gradient" />
-
-      <div className="relative z-10 max-w-4xl mx-auto text-center">
-        {/* Badge */}
-        <div ref={badgeRef} className="opacity-0 mb-8">
-          <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-cream/20 text-cream/70 text-sm font-body">
-            <span className="h-2 w-2 rounded-full bg-accent-green animate-pulse" />
-            La piattaforma Ho.Re.Ca. #1 in Italia
-          </span>
+      <div className="grid grid-cols-12 gap-y-10 gap-x-6 lg:gap-x-10 flex-1">
+        {/* Eyebrow top-left */}
+        <div ref={eyebrowRef} className="col-span-12 lg:col-span-9 opacity-0">
+          <EditorialEyebrow number="N.01">PIATTAFORMA HO.RE.CA.</EditorialEyebrow>
         </div>
 
-        {/* Headline */}
+        {/* Meta top-right */}
+        <div
+          ref={metaRef}
+          className="col-span-12 lg:col-span-3 lg:text-right font-mono uppercase opacity-0"
+          style={{
+            fontSize: "var(--type-marketing-eyebrow)",
+            letterSpacing: "var(--type-marketing-eyebrow-ls)",
+            color: "var(--color-marketing-ink-subtle)",
+          }}
+        >
+          <p>NORD ITALIA</p>
+          <p className="mt-1">2024 —</p>
+        </div>
+
+        {/* H1 col 1-10 */}
         <h1
           ref={headlineRef}
-          className="opacity-0 font-display text-cream text-4xl sm:text-5xl lg:text-[5.5rem] leading-[1.1] tracking-tight mb-6"
+          className="col-span-12 lg:col-span-10 font-display opacity-0 mt-[clamp(24px,6vw,80px)]"
+          style={{
+            fontSize: "var(--type-marketing-display)",
+            lineHeight: "var(--type-marketing-display-lh)",
+            letterSpacing: "var(--type-marketing-display-ls)",
+            color: "var(--color-marketing-ink)",
+          }}
         >
-          Tutti i tuoi fornitori. Un solo posto.
+          Fornitori e ristoranti.
+          <br />
+          Una sola piattaforma.
         </h1>
 
-        {/* Subtitle */}
+        {/* Subtitle col 1-7 */}
         <p
           ref={subtitleRef}
-          className="opacity-0 text-cream/70 text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed font-body"
+          className="col-span-12 lg:col-span-7 opacity-0 mt-[clamp(20px,3vw,40px)]"
+          style={{
+            fontSize: "var(--type-marketing-body)",
+            lineHeight: "var(--type-marketing-body-lh)",
+            color: "var(--color-marketing-ink-muted)",
+            maxWidth: "58ch",
+          }}
         >
-          Confronta prezzi, scopri fornitori e gestisci ordini per la tua attivita.
+          La rete Ho.Re.Ca. che mette ogni ordine, ogni prezzo e ogni
+          relazione commerciale in un solo posto. Zero intermediari, zero
+          costi nascosti, zero chiamate alle sette del mattino per capire
+          se la consegna arriverà.
         </p>
 
-        {/* CTAs */}
-        <div ref={ctaRef} className="opacity-0 flex flex-col sm:flex-row gap-4 justify-center">
-          <Link href="/signup">
-            <Button
-              size="lg"
-              className="w-full sm:w-auto bg-cream text-forest-dark hover:bg-cream/90 shadow-lg"
-            >
-              Inizia Gratis <ArrowRight className="h-5 w-5" />
-            </Button>
-          </Link>
-          <Link href="/pricing">
-            <Button
-              variant="ghost"
-              size="lg"
-              className="w-full sm:w-auto text-cream border border-cream/30 hover:bg-cream/10"
-            >
-              Scopri i Piani
-            </Button>
-          </Link>
+        {/* In breve — mini caption row */}
+        <div
+          ref={breveRef}
+          className="col-span-12 lg:col-span-7 opacity-0 mt-[clamp(20px,2.5vw,36px)] flex flex-wrap items-center gap-x-8 gap-y-2 font-mono uppercase"
+          style={{
+            fontSize: "11px",
+            letterSpacing: "0.18em",
+            color: "var(--color-marketing-ink-subtle)",
+          }}
+        >
+          <span>— Nord Italia</span>
+          <span>— Fornitori verificati</span>
+          <span>— Pagamenti Stripe</span>
+          <span>— Nessun contratto</span>
         </div>
 
-        {/* Stats */}
+        {/* CTAs col 1-12 */}
         <div
-          ref={statsRef}
-          className="opacity-0 mt-16 flex flex-wrap items-center justify-center gap-6 text-sm text-cream/50"
+          ref={ctaRef}
+          className="col-span-12 opacity-0 mt-[clamp(32px,4vw,56px)] flex flex-wrap items-center gap-x-8 gap-y-5"
         >
-          <span>Nord Italia</span>
-          <div className="h-4 w-px bg-cream/20 hidden sm:block" />
-          <span>Gratis per Iniziare</span>
-          <div className="h-4 w-px bg-cream/20 hidden sm:block" />
-          <span>Supporto 24/7</span>
+          <Link
+            href="/signup"
+            className="inline-flex items-center rounded-full px-6 py-3 text-[14px] tracking-wide transition-colors"
+            style={{
+              background: "var(--color-marketing-primary)",
+              color: "var(--color-marketing-on-primary)",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-marketing-primary-hover)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "var(--color-marketing-primary)")}
+          >
+            Apri un account
+          </Link>
+          <Link
+            href="/login"
+            className="link-editorial text-[14px] tracking-wide text-[var(--color-marketing-ink)]"
+          >
+            Accedi →
+          </Link>
         </div>
+      </div>
+
+      {/* Foot-note bottom-left */}
+      <div
+        ref={footNoteRef}
+        className="opacity-0 flex items-center gap-4 mt-[clamp(48px,8vw,112px)]"
+        aria-hidden
+      >
+        <span
+          className="inline-block h-px"
+          style={{ width: "48px", background: "var(--color-marketing-ink-subtle)" }}
+        />
+        <p
+          className="font-mono uppercase"
+          style={{
+            fontSize: "var(--type-marketing-eyebrow)",
+            letterSpacing: "var(--type-marketing-eyebrow-ls)",
+            color: "var(--color-marketing-ink-subtle)",
+          }}
+        >
+          Scorri per leggere
+        </p>
       </div>
     </section>
   );

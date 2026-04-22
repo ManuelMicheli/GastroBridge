@@ -6,6 +6,8 @@
    come later via [data-area="restaurant"].
    ========================================= */
 @theme {
+  /* DO NOT REMOVE — consumed by [data-area="restaurant"] and [data-area="supplier"].
+     The marketing area uses its own --color-marketing-* tokens (see bottom of file). */
   /* Legacy GastroBridge Brand (forest green — still used by the supplier area) */
   --color-forest: #1B6B4A;
   --color-forest-dark: #145238;
@@ -424,6 +426,9 @@ body {
   --color-border-accent: rgba(168, 117, 53, 0.28);
   --color-border-glow: rgba(168, 117, 53, 0.22);
 
+  /* Card outline — strong black in supplier light for stronger visual hierarchy */
+  --color-card-border: #000;
+
   /* Glow effects — tinted ocra / gold */
   --glow-forest: 0 0 20px rgba(168, 117, 53, 0.14);
   --glow-forest-strong: 0 0 36px rgba(168, 117, 53, 0.24);
@@ -520,6 +525,9 @@ body {
   /* Border accents */
   --color-border-accent: rgba(232, 163, 85, 0.28);
   --color-border-glow: rgba(232, 163, 85, 0.22);
+
+  /* Card outline — on dark, fall back to subtle (black outlines vanish on #09090F) */
+  --color-card-border: var(--color-border-subtle);
 
   /* Glow effects — ocra miele + gold highlight */
   --glow-forest: 0 0 24px rgba(232, 163, 85, 0.25);
@@ -627,6 +635,9 @@ body {
   --color-border-accent: rgba(185, 28, 60, 0.28);
   --color-border-glow: rgba(185, 28, 60, 0.22);
 
+  /* Card outline — strong black in restaurant light for stronger visual hierarchy */
+  --color-card-border: #000;
+
   /* Glow effects — tinted carmine */
   --glow-forest: 0 0 20px rgba(185, 28, 60, 0.14);
   --glow-forest-strong: 0 0 36px rgba(185, 28, 60, 0.24);
@@ -713,6 +724,12 @@ body {
   --tone-rose-ring:    rgb(254 205 211);
 }
 
+/* Scoped: pages opt into strong black card borders (e.g. analytics).
+   Targets SectionFrame-style wrappers — <section class="rounded-xl ... bg-surface-card">. */
+[data-strong-card-borders] section.rounded-xl.bg-surface-card {
+  border-color: #000;
+}
+
 /* =========================================
    Area: Restaurant — Dark mode
    Triggers:
@@ -723,49 +740,115 @@ body {
 .dark[data-area="restaurant"],
 [data-area="restaurant"].dark,
 [data-area="restaurant"] .dark {
-  /* Canonical brand tokens (dark — brightened carmine / lifted bordeaux) */
-  --color-brand-primary: #E84560;
-  --color-brand-primary-hover: #F25A74;
-  --color-brand-primary-active: #D43552;
-  --color-brand-primary-subtle: rgba(232, 69, 96, 0.12);
-  --color-brand-primary-border: rgba(232, 69, 96, 0.28);
-  --color-brand-depth: #C9606E;
-  --color-brand-depth-subtle: rgba(201, 96, 110, 0.08);
+  /* Canonical brand tokens (dark — carmine rialzato, saturazione piena,
+     testato su WCAG AA per #0B0A0E bg).
+     Primary: 5.8:1 contrast on surface-base.
+     Hover/active: ±8% luminosità per feedback visivo percepibile. */
+  --color-brand-primary: #EC4A66;
+  --color-brand-primary-hover: #F6627E;
+  --color-brand-primary-active: #D43554;
+  --color-brand-primary-subtle: rgba(236, 74, 102, 0.14);
+  --color-brand-primary-border: rgba(236, 74, 102, 0.32);
+  --color-brand-depth: #D48393;
+  --color-brand-depth-subtle: rgba(212, 131, 147, 0.10);
   --color-brand-on-primary: #FFFFFF;
 
-  /* Page surfaces for dark */
-  --surface-page: #09090F;
-  --surface-muted: #12121A;
+  /* ─────────────────────────────────────────────────────────
+     Surface palette — warm carmine-tinted near-blacks.
+     Each step has measurable luminance separation so card/
+     elevated/hover read as distinct planes under the eye.
+     Tint: neutral #09 base + whisper of #22 red → all surfaces
+     share a family without ever looking "red".
+     ───────────────────────────────────────────────────────── */
+  --color-surface-base:      #0B0A0E;   /* app canvas */
+  --color-surface-card:      #141219;   /* default card */
+  --color-surface-elevated:  #1D1A24;   /* popover / dropdown */
+  --color-surface-hover:     #25222E;   /* row hover, tap target */
+  --color-surface-sidebar:   #0D0B11;   /* darker than card, no "floating" seam */
+  --color-surface-overlay:   rgba(11, 10, 14, 0.72);
+
+  /* Page surfaces (scoped aliases used by layout chrome) */
+  --surface-page:  #0B0A0E;
+  --surface-muted: #141219;
+
+  /* ─────────────────────────────────────────────────────────
+     Borders — hairlines with carmine warmth. Avoids the
+     "cheap dark UI" look of pure white-alpha borders.
+     Subtle / default / accent grow in presence, not saturation.
+     ───────────────────────────────────────────────────────── */
+  --color-border-subtle:  rgba(236, 214, 220, 0.07);
+  --color-border-default: rgba(236, 214, 220, 0.13);
+  --color-border-accent:  rgba(236, 74, 102, 0.32);
+  --color-border-glow:    rgba(236, 74, 102, 0.28);
+
+  /* Card outline — on dark, fall back to subtle (black outlines vanish on #0B0A0E) */
+  --color-card-border: var(--color-border-subtle);
+
+  /* ─────────────────────────────────────────────────────────
+     Text hierarchy — warm off-white, WCAG AA+ on #0B0A0E.
+     primary   ~17.8:1  · body + H1
+     secondary ~ 8.4:1  · paragraphs, labels
+     tertiary  ~ 5.1:1  · eyebrow labels, captions, muted hints
+     ───────────────────────────────────────────────────────── */
+  --color-text-primary:   #F4F1F2;
+  --color-text-secondary: #B7B0B4;
+  --color-text-tertiary:  #7C7680;
+  --color-text-warning:   #F2A15C;
+  --color-text-danger:    #F47280;
 
   /* Legacy forest* family → carmine bright for dark */
-  --color-forest: #E84560;
-  --color-forest-dark: #D43552;
-  --color-forest-light: rgba(232, 69, 96, 0.12);
+  --color-forest: #EC4A66;
+  --color-forest-dark: #D43554;
+  --color-forest-light: rgba(236, 74, 102, 0.14);
 
   /* Accent-green family → carmine-bright so shared dashboard surfaces
      (KPI accent, sidebar active indicator, quick-action icons, link
      colors, focus rings) render in carmine-bright on dark. */
-  --color-accent-green: #E84560;
-  --color-accent-green-muted: rgba(232, 69, 96, 0.12);
-  --color-text-accent: #E84560;
-  --color-text-link: #F25A74;
+  --color-accent-green: #EC4A66;
+  --color-accent-green-muted: rgba(236, 74, 102, 0.14);
+  --color-text-accent: #EC4A66;
+  --color-text-link: #F6627E;
 
-  /* Border accents */
-  --color-border-accent: rgba(232, 69, 96, 0.28);
-  --color-border-glow: rgba(232, 69, 96, 0.22);
+  /* Accent palette tuned for warm-dark surface — less saturation,
+     slight warm push, so amber/blue/emerald/red never clash with carmine. */
+  --color-accent-amber:  #F5B752;
+  --color-accent-amber-muted: rgba(245, 183, 82, 0.14);
+  --color-accent-yellow: #F3CE58;
+  --color-accent-yellow-muted: rgba(243, 206, 88, 0.14);
+  --color-accent-blue:   #7AB2F6;
+  --color-accent-blue-muted: rgba(122, 178, 246, 0.12);
+  --color-accent-orange: #F08A52;
+  --color-accent-orange-muted: rgba(240, 138, 82, 0.14);
+  --color-accent-red:    #F47280;
+  --color-accent-red-muted: rgba(244, 114, 128, 0.12);
 
   /* Glow */
-  --glow-forest: 0 0 24px rgba(232, 69, 96, 0.25);
-  --glow-forest-strong: 0 0 40px rgba(232, 69, 96, 0.40);
-  --glow-accent: 0 0 28px rgba(232, 69, 96, 0.28);
-  --glow-brand: 0 0 24px rgba(232, 69, 96, 0.25);
-  --glow-brand-strong: 0 0 40px rgba(232, 69, 96, 0.40);
+  --glow-forest: 0 0 24px rgba(236, 74, 102, 0.28);
+  --glow-forest-strong: 0 0 44px rgba(236, 74, 102, 0.44);
+  --glow-accent: 0 0 28px rgba(236, 74, 102, 0.30);
+  --glow-brand: 0 0 24px rgba(236, 74, 102, 0.28);
+  --glow-brand-strong: 0 0 44px rgba(236, 74, 102, 0.44);
 
-  /* Phase A foundations — elevation + caption bound to scope (dark) */
-  --elevation-card-active: var(--elevation-card-dark);
-  --elevation-card-active-hover: var(--elevation-card-hover-dark);
-  --elevation-modal-active: var(--elevation-modal-dark);
+  /* ─────────────────────────────────────────────────────────
+     Elevation — two-layer: inset top highlight (catches light
+     like frosted glass) + soft drop shadow. Linear-grade.
+     ───────────────────────────────────────────────────────── */
+  --elevation-card-active:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 8px 28px rgba(0, 0, 0, 0.45);
+  --elevation-card-active-hover:
+    0 1px 0 rgba(255, 255, 255, 0.09) inset,
+    0 2px 4px rgba(0, 0, 0, 0.55),
+    0 16px 40px rgba(0, 0, 0, 0.55);
+  --elevation-modal-active:
+    0 1px 0 rgba(255, 255, 255, 0.07) inset,
+    0 32px 72px rgba(0, 0, 0, 0.68);
   --caption-color: var(--color-brand-depth);
+
+  /* Shadows — warm-dark drop shadows */
+  --shadow-card-dark:     0 2px 16px rgba(0, 0, 0, 0.45);
+  --shadow-elevated-dark: 0 10px 36px rgba(0, 0, 0, 0.55);
 
   /* =========================================
      Fluid typography — mobile-tuned (Apple-app editorial, dark)
@@ -782,45 +865,143 @@ body {
 
   /* =========================================
      iOS Apple-app surface + chrome tokens (restaurant — dark)
-     Mirrors light scope with dark-tinted surfaces.
+     Mirror light scope but with warm carmine-tinted dark surfaces.
+     Separators reintroduce a whisper of warmth so grouped lists
+     feel cohesive with the carmine brand instead of cold neutral.
      ========================================= */
-  --ios-grouped-bg:    #0F0D11;
-  --ios-surface:       #1A1619;
-  --ios-separator:     rgba(255, 255, 255, 0.08);
-  --ios-separator-strong: rgba(255, 255, 255, 0.14);
-  --ios-fill-quinary:  rgba(120, 120, 128, 0.22);
-  --ios-fill-quaternary: rgba(120, 120, 128, 0.32);
-  --ios-chrome-bg:     rgba(15, 13, 17, 0.78);
+  --ios-grouped-bg:    #0D0B11;
+  --ios-surface:       #17141C;
+  --ios-separator:     rgba(236, 214, 220, 0.09);
+  --ios-separator-strong: rgba(236, 214, 220, 0.16);
+  --ios-fill-quinary:  rgba(236, 214, 220, 0.08);
+  --ios-fill-quaternary: rgba(236, 214, 220, 0.14);
+  --ios-chrome-bg:     rgba(13, 11, 17, 0.80);
   --ios-chrome-blur:   blur(20px) saturate(180%);
-  --ios-chev-muted:    rgba(142, 142, 147, 1);
-  --sticky-cta-shadow: 0 6px 18px rgba(232, 69, 96, 0.35);
-  --pill-nav-ring:     rgba(232, 69, 96, 0.14);
-  --pill-nav-shadow:   0 12px 30px rgba(0, 0, 0, 0.5);
+  --ios-chev-muted:    rgba(167, 158, 162, 1);
+  --sticky-cta-shadow: 0 6px 22px rgba(236, 74, 102, 0.42);
+  --pill-nav-ring:     rgba(236, 74, 102, 0.18);
+  --pill-nav-shadow:   0 14px 34px rgba(0, 0, 0, 0.55);
 
-  /* Status tone palette — dark mode (alpha-tinted bg, brightened fg) */
-  --tone-neutral-bg:   rgba(244, 244, 245, 0.06);
-  --tone-neutral-fg:   rgb(212 212 216);
-  --tone-neutral-ring: rgba(244, 244, 245, 0.14);
+  /* Status tone palette — dark mode (warm-washed bg, readable fg).
+     Rings slightly reinforced so badges carry definition on dark card. */
+  --tone-neutral-bg:   rgba(244, 238, 240, 0.07);
+  --tone-neutral-fg:   rgb(216 210 213);
+  --tone-neutral-ring: rgba(244, 238, 240, 0.16);
 
-  --tone-amber-bg:     rgba(251, 191, 36, 0.12);
-  --tone-amber-fg:     rgb(252 211 77);
-  --tone-amber-ring:   rgba(251, 191, 36, 0.28);
+  --tone-amber-bg:     rgba(245, 183, 82, 0.14);
+  --tone-amber-fg:     rgb(250 207 120);
+  --tone-amber-ring:   rgba(245, 183, 82, 0.32);
 
-  --tone-blue-bg:      rgba(96, 165, 250, 0.12);
-  --tone-blue-fg:      rgb(147 197 253);
-  --tone-blue-ring:    rgba(96, 165, 250, 0.28);
+  --tone-blue-bg:      rgba(122, 178, 246, 0.13);
+  --tone-blue-fg:      rgb(161 205 251);
+  --tone-blue-ring:    rgba(122, 178, 246, 0.30);
 
   --tone-brand-bg:     var(--color-brand-primary-subtle);
-  --tone-brand-fg:     var(--color-brand-depth);
+  --tone-brand-fg:     #F6A8B4;
   --tone-brand-ring:   var(--color-brand-primary-border);
 
-  --tone-emerald-bg:   rgba(52, 211, 153, 0.12);
-  --tone-emerald-fg:   rgb(110 231 183);
-  --tone-emerald-ring: rgba(52, 211, 153, 0.28);
+  --tone-emerald-bg:   rgba(74, 222, 170, 0.12);
+  --tone-emerald-fg:   rgb(134 232 190);
+  --tone-emerald-ring: rgba(74, 222, 170, 0.30);
 
-  --tone-rose-bg:      rgba(251, 113, 133, 0.12);
-  --tone-rose-fg:      rgb(253 164 175);
-  --tone-rose-ring:    rgba(251, 113, 133, 0.28);
+  --tone-rose-bg:      rgba(244, 114, 128, 0.13);
+  --tone-rose-fg:      rgb(253 168 178);
+  --tone-rose-ring:    rgba(244, 114, 128, 0.30);
+}
+
+/* =========================================================
+   Area: Marketing — public landing (scoped).
+   Cream + bordeaux editorial palette. Amber for supplier
+   surfaces (nested [data-side="supplier"]). Does NOT touch
+   legacy forest/cream/terracotta tokens. Dark mode is
+   intentionally undefined: the public landing is cream-only.
+   ========================================================= */
+[data-area="marketing"] {
+  --color-marketing-bg: #FAFAF7;
+  --color-marketing-bg-soft: #F3F2EC;
+  --color-marketing-ink: #0F0F10;
+  --color-marketing-ink-muted: #4A4A4F;
+  --color-marketing-ink-subtle: #8A8A8F;
+  --color-marketing-rule: rgba(15, 15, 16, 0.10);
+  --color-marketing-rule-strong: rgba(15, 15, 16, 0.18);
+  --color-marketing-primary: #6B1F2E;
+  --color-marketing-primary-hover: #7C2536;
+  --color-marketing-primary-deep: #4E1520;
+  --color-marketing-primary-subtle: #F5E8EB;
+  --color-marketing-on-primary: #FAFAF7;
+  --color-marketing-accent-warm: #B8791F;
+  --color-marketing-accent-warm-deep: #8E5A14;
+  --color-marketing-accent-warm-subtle: #F4EAD7;
+  --color-marketing-on-warm: #0F0F10;
+
+  --type-marketing-mega: clamp(64px, 12vw, 200px);
+  --type-marketing-mega-lh: 0.88;
+  --type-marketing-mega-ls: -0.035em;
+  --type-marketing-display: clamp(44px, 7.5vw, 104px);
+  --type-marketing-display-lh: 0.96;
+  --type-marketing-display-ls: -0.025em;
+  --type-marketing-h2: clamp(32px, 4.5vw, 64px);
+  --type-marketing-h2-lh: 1.02;
+  --type-marketing-h2-ls: -0.018em;
+  --type-marketing-pull: clamp(24px, 2.4vw, 34px);
+  --type-marketing-pull-lh: 1.34;
+  --type-marketing-body: 17px;
+  --type-marketing-body-lh: 1.55;
+  --type-marketing-eyebrow: 11px;
+  --type-marketing-eyebrow-ls: 0.22em;
+
+  --gutter-marketing: clamp(20px, 5vw, 96px);
+  --rhythm-section: clamp(96px, 14vw, 192px);
+  --rhythm-block: clamp(48px, 6vw, 96px);
+
+  background: var(--color-marketing-bg);
+  color: var(--color-marketing-ink);
+}
+
+/* Supplier palette flip within marketing. Amber replaces bordeaux. */
+[data-area="marketing"] [data-side="supplier"] {
+  --color-marketing-primary: var(--color-marketing-accent-warm);
+  --color-marketing-primary-hover: var(--color-marketing-accent-warm-deep);
+  --color-marketing-primary-deep: var(--color-marketing-accent-warm-deep);
+  --color-marketing-primary-subtle: var(--color-marketing-accent-warm-subtle);
+  --color-marketing-on-primary: var(--color-marketing-on-warm);
+}
+
+[data-area="marketing"] ::selection {
+  background: var(--color-marketing-primary);
+  color: var(--color-marketing-on-primary);
+}
+
+[data-area="marketing"] hr.rule {
+  border: 0;
+  border-top: 1px solid var(--color-marketing-rule);
+  margin: 0;
+}
+
+[data-area="marketing"] a.link-editorial {
+  position: relative;
+  display: inline-block;
+}
+[data-area="marketing"] a.link-editorial::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -2px;
+  height: 1px;
+  width: 100%;
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-area="marketing"] a.link-editorial:hover::after {
+  transform: scaleX(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-area="marketing"] a.link-editorial::after {
+    transition: none;
+  }
 }
 
 /* =========================================
@@ -983,6 +1164,48 @@ body {
 .dashboard-dark ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.14);
 }
+
+/* Restaurant dark — scrollbar tinted carmine for cohesion with brand */
+.dashboard-dark[data-area="restaurant"] ::-webkit-scrollbar-thumb,
+[data-area="restaurant"].dashboard-dark ::-webkit-scrollbar-thumb {
+  background: rgba(236, 74, 102, 0.18);
+}
+
+.dashboard-dark[data-area="restaurant"] ::-webkit-scrollbar-thumb:hover,
+[data-area="restaurant"].dashboard-dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(236, 74, 102, 0.32);
+}
+
+/* Restaurant dark — text selection tinted carmine */
+.dashboard-dark[data-area="restaurant"] ::selection,
+[data-area="restaurant"].dashboard-dark ::selection {
+  background: rgba(236, 74, 102, 0.32);
+  color: #FFFFFF;
+}
+
+/* Restaurant dark — placeholder warm desaturated */
+.dashboard-dark[data-area="restaurant"] input::placeholder,
+.dashboard-dark[data-area="restaurant"] textarea::placeholder,
+[data-area="restaurant"].dashboard-dark input::placeholder,
+[data-area="restaurant"].dashboard-dark textarea::placeholder {
+  color: rgba(183, 176, 180, 0.55);
+}
+
+/* Restaurant dark — input focus ring uses brand-primary (not raw accent-green).
+   Overrides the neutral `.dashboard-dark input:focus` above for scope cohesion. */
+.dashboard-dark[data-area="restaurant"] input:focus,
+.dashboard-dark[data-area="restaurant"] select:focus,
+.dashboard-dark[data-area="restaurant"] textarea:focus,
+[data-area="restaurant"].dashboard-dark input:focus,
+[data-area="restaurant"].dashboard-dark select:focus,
+[data-area="restaurant"].dashboard-dark textarea:focus {
+  border-color: var(--color-brand-primary);
+  box-shadow: 0 0 0 3px var(--color-brand-primary-subtle);
+}
+
+/* Restaurant dark — bg-white override (inherited from .dashboard-dark)
+   picks up the warm card surface automatically via variable cascade.
+   No additional rule needed; kept here as documentation. */
 
 /* =========================================
    Marketing Landing Page — Animations & States
