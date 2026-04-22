@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Plus, Upload } from "lucide-react";
 import {
   listProductsForSupplier,
@@ -66,9 +64,11 @@ export default async function CatalogPage({
 
   if (!supplierId) {
     return (
-      <Card className="text-center py-16">
-        <p className="text-sage">Profilo fornitore non trovato.</p>
-      </Card>
+      <div className="rounded-xl border border-border-subtle bg-surface-card px-6 py-16 text-center">
+        <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-text-tertiary">
+          Profilo fornitore non trovato
+        </p>
+      </div>
     );
   }
 
@@ -195,41 +195,78 @@ export default async function CatalogPage({
         )}
       </div>
 
-      {/* Desktop */}
+      {/* Desktop — terminal command surface */}
       <div className="hidden lg:block">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="font-display text-3xl text-text-primary">
-            Catalogo<span className="text-brand-primary">.</span>
-          </h1>
-          <p className="text-sm text-sage mt-1">
-            {summary.total.toLocaleString("it-IT")} prodotti ·{" "}
-            {summary.available.toLocaleString("it-IT")} disponibili ·{" "}
-            {summary.categories} categorie
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <Link href="/supplier/catalogo/import">
-            <Button variant="secondary" size="sm">
-              <Upload className="h-4 w-4" /> Import CSV
-            </Button>
-          </Link>
-          <Link href="/supplier/catalogo/nuovo">
-            <Button size="sm">
-              <Plus className="h-4 w-4" /> Nuovo Prodotto
-            </Button>
-          </Link>
-        </div>
-      </div>
+        <div className="flex flex-col gap-6">
+          {/* Terminal header */}
+          <header>
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+                Catalogo · gestione prodotti · ultimi aggiornamenti
+              </span>
+              <span aria-hidden className="h-px flex-1 bg-border-subtle" />
+              <span className="inline-flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+                <span className="tabular-nums text-text-primary">
+                  {summary.total.toLocaleString("it-IT")}
+                </span>
+                <span>totali</span>
+                <span aria-hidden>·</span>
+                <span className="tabular-nums text-accent-green">
+                  {summary.available.toLocaleString("it-IT")}
+                </span>
+                <span>attivi</span>
+                <span aria-hidden>·</span>
+                <span className="tabular-nums text-text-primary">
+                  {summary.categories}
+                </span>
+                <span>categorie</span>
+              </span>
+            </div>
+            <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <h1
+                  className="font-display"
+                  style={{
+                    fontSize: "var(--text-display-lg)",
+                    lineHeight: "var(--text-display-lg--line-height)",
+                    letterSpacing: "var(--text-display-lg--letter-spacing)",
+                    fontWeight: "var(--text-display-lg--font-weight)",
+                    color: "var(--color-text-primary)",
+                  }}
+                >
+                  Catalogo
+                </h1>
+                <p className="mt-1.5 text-sm text-text-secondary">
+                  Gestisci i prodotti, i prezzi e la disponibilità del tuo
+                  catalogo pubblicato ai ristoratori collegati.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/supplier/catalogo/import"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-card px-3 py-2 font-mono text-[11px] uppercase tracking-[0.08em] text-text-secondary transition-colors hover:border-accent-green/50 hover:text-text-primary"
+                >
+                  <Upload className="h-3.5 w-3.5" aria-hidden /> Importa CSV
+                </Link>
+                <Link
+                  href="/supplier/catalogo/nuovo"
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-accent-green/40 bg-accent-green/10 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.08em] text-accent-green transition-colors hover:bg-accent-green/20"
+                >
+                  <Plus className="h-3.5 w-3.5" aria-hidden /> Nuovo prodotto
+                </Link>
+              </div>
+            </div>
+          </header>
 
-      <CatalogTable
-        supplierId={supplierId}
-        initialItems={items}
-        initialNextCursor={nextCursor}
-        categories={categories ?? []}
-        sort={sort}
-        filters={filters}
-      />
+          <CatalogTable
+            supplierId={supplierId}
+            initialItems={items}
+            initialNextCursor={nextCursor}
+            categories={categories ?? []}
+            sort={sort}
+            filters={filters}
+          />
+        </div>
       </div>
     </>
   );
