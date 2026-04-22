@@ -1,31 +1,45 @@
+// components/dashboard/supplier/supplier-dashboard.tsx
+//
+// Supplier "Operator Console" — awwwards-grade premium terminal-dense redesign.
+// Coherent with the restaurant operator console. Blocks:
+//   1. SupplierHeroStrip   — greeting · date · time + live pulse
+//   2. SupplierQuickActionBar — compact pill bar with supplier-area hrefs
+//   3. SectionFrame + KpiGrid + AlertsStrip
+//   4. SectionFrame + revenue line chart (30 days)
+//   5. SectionFrame + SupplierRecentOrdersLog
+//   6. SectionFrame + Top clienti / Top prodotti ranked lists
+//   7. SectionFrame + Consegne recenti
+//
+// Props shape is preserved verbatim: server fetch in dashboard/page.tsx is
+// untouched. Mobile view (SupplierDashboardMobile) left intact.
+
 "use client";
 
 import Link from "next/link";
-import { motion } from "motion/react";
 import {
-  ClipboardList, TrendingUp, Users, Package,
-  Plus, MapPin, BarChart3, Star,
-  AlertTriangle, Clock, PackageX, Receipt, Hourglass, Truck,
-} from "lucide-react";
-import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { KPICard } from "../cards/kpi-card";
-import { DarkCard, DarkCardHeader, DarkCardTitle } from "../cards/dark-card";
-import { QuickAction } from "../cards/quick-action";
-import { AreaChart } from "../charts/area-chart";
-import { MiniBar } from "../charts/mini-bar";
-import { StatusBadge } from "../tables/status-badge";
-import { DataTable, type Column } from "../tables/data-table";
 import {
-  SerifGreeting,
-  PulseDot,
-  CelebrationCheck,
-} from "@/components/supplier/signature";
-import { formatCurrency, formatDate } from "@/lib/utils/formatters";
-import { useRouter } from "next/navigation";
+  AlertTriangle,
+  Clock,
+  PackageX,
+  Truck,
+} from "lucide-react";
+import { CelebrationCheck, PulseDot } from "@/components/supplier/signature";
+import { formatCurrency } from "@/lib/utils/formatters";
 import { SupplierDashboardMobile } from "./supplier-dashboard-mobile";
+import { SupplierHeroStrip } from "./_awwwards/hero-strip";
+import { SupplierQuickActionBar } from "./_awwwards/quick-action-bar";
+import { SectionFrame } from "./_awwwards/section-frame";
+import { SupplierKpiGrid } from "./_awwwards/kpi-grid";
+import { SupplierAlertsStrip } from "./_awwwards/alerts-strip";
+import { SupplierRecentOrdersLog } from "./_awwwards/recent-orders-log";
 
 type OrderRow = {
   id: string;
@@ -80,7 +94,6 @@ type Props = {
     prevRevenue: number;
     activeClients: number;
     activeProducts: number;
-    // Nuovi KPI (Task 11)
     avgTicket?: number;
     avgTicketPrev?: number;
     revenueYoYDeltaPct?: number | null;
@@ -97,7 +110,6 @@ type Props = {
     expiringLotsCount: number;
     failedDeliveriesCount: number;
   };
-  // Task 12
   revenueChart30d?: RevenueChartPoint[];
   topClientsRich?: TopClientRich[];
   topProductsRich?: TopProductRich[];
@@ -106,13 +118,29 @@ type Props = {
 
 const DELIVERY_STATUS_META: Record<
   RecentDelivery["status"],
-  { label: string; dot: string; text: string; bg: string }
+  { label: string; dot: string; text: string }
 > = {
-  planned: { label: "Pianificata", dot: "bg-text-tertiary", text: "text-text-tertiary", bg: "bg-surface-hover" },
-  loaded: { label: "Caricata", dot: "bg-accent-orange", text: "text-accent-orange", bg: "bg-accent-orange-muted" },
-  in_transit: { label: "In viaggio", dot: "bg-accent-blue", text: "text-accent-blue", bg: "bg-accent-blue-muted" },
-  delivered: { label: "Consegnata", dot: "bg-accent-green", text: "text-accent-green", bg: "bg-accent-green-muted" },
-  failed: { label: "Fallita", dot: "bg-accent-red", text: "text-accent-red", bg: "bg-accent-red-muted" },
+  planned: {
+    label: "Pianificata",
+    dot: "bg-text-tertiary",
+    text: "text-text-tertiary",
+  },
+  loaded: {
+    label: "Caricata",
+    dot: "bg-accent-orange",
+    text: "text-accent-orange",
+  },
+  in_transit: {
+    label: "In viaggio",
+    dot: "bg-accent-blue",
+    text: "text-accent-blue",
+  },
+  delivered: {
+    label: "Consegnata",
+    dot: "bg-accent-green",
+    text: "text-accent-green",
+  },
+  failed: { label: "Fallita", dot: "bg-accent-red", text: "text-accent-red" },
 };
 
 function formatDeliveryWhen(d: RecentDelivery): string {
@@ -127,38 +155,7 @@ function formatDeliveryWhen(d: RecentDelivery): string {
   }
 }
 
-const stagger = {
-  hidden: {},
-  show: { transition: { staggerChildren: 0.06 } },
-};
-
-const orderColumns: Column<OrderRow>[] = [
-  {
-    key: "restaurant",
-    label: "Cliente",
-    render: (row) => <span className="text-text-primary font-medium">{row.restaurant_name}</span>,
-  },
-  {
-    key: "status",
-    label: "Stato",
-    render: (row) => (
-      <StatusBadge status={row.status as "draft" | "submitted" | "confirmed" | "preparing" | "shipping" | "delivered" | "cancelled"} />
-    ),
-  },
-  {
-    key: "total",
-    label: "Totale",
-    sortable: true,
-    render: (row) => <span className="font-mono text-text-primary">{formatCurrency(row.total)}</span>,
-  },
-  {
-    key: "date",
-    label: "Data",
-    render: (row) => <span className="text-text-tertiary">{formatDate(row.created_at)}</span>,
-  },
-];
-
-type AlertItem = {
+type MobileAlertItem = {
   key: string;
   tone: "amber" | "red";
   icon: typeof AlertTriangle;
@@ -168,9 +165,9 @@ type AlertItem = {
   cta: string;
 };
 
-function buildAlerts(alerts: Props["alerts"]): AlertItem[] {
+function buildMobileAlerts(alerts: Props["alerts"]): MobileAlertItem[] {
   if (!alerts) return [];
-  const list: AlertItem[] = [];
+  const list: MobileAlertItem[] = [];
   if (alerts.pendingOverdueCount > 0) {
     list.push({
       key: "pending",
@@ -178,7 +175,7 @@ function buildAlerts(alerts: Props["alerts"]): AlertItem[] {
       icon: Clock,
       title: `${alerts.pendingOverdueCount} ordin${alerts.pendingOverdueCount === 1 ? "e" : "i"} in attesa da oltre 24h`,
       description: "Conferma o rifiuta per evitare rallentamenti alla consegna.",
-      href: "/supplier/ordini?status=pending",
+      href: "/supplier/ordini?state=submitted",
       cta: "Vai agli ordini",
     });
   }
@@ -221,16 +218,10 @@ export function SupplierDashboard({
   topProductsRich,
   recentDeliveries,
 }: Props) {
-  const router = useRouter();
-  const alertItems = buildAlerts(alerts);
   const chart30 = revenueChart30d ?? [];
-  const hasRecharts = chart30.some((d) => d.value > 0);
-  const topClientsList = (topClientsRich && topClientsRich.length > 0)
-    ? topClientsRich
-    : [];
-  const topProductsList = (topProductsRich && topProductsRich.length > 0)
-    ? topProductsRich
-    : [];
+  const hasRechartsData = chart30.some((d) => d.value > 0);
+  const topClientsList = topClientsRich ?? [];
+  const topProductsList = topProductsRich ?? [];
   const recentDeliveriesList = recentDeliveries ?? [];
   const topClientsMax = topClientsList.reduce(
     (m, c) => (c.revenue > m ? c.revenue : m),
@@ -241,494 +232,535 @@ export function SupplierDashboard({
     0,
   );
 
+  const chartFallback = chartData.length > 0 && chart30.length === 0;
+  const hasClassifica =
+    topClientsList.length > 0 ||
+    topProductsList.length > 0 ||
+    topProducts.length > 0 ||
+    topClients.length > 0;
+
   return (
     <>
-      {/* Mobile Apple-app view */}
+      {/* Mobile Apple-app view — untouched */}
       <div className="lg:hidden">
         <SupplierDashboardMobile
           companyName={companyName}
           kpi={kpi}
           recentOrders={recentOrders}
           topClients={topClientsList}
-          alerts={alertItems}
+          alerts={buildMobileAlerts(alerts)}
         />
       </div>
 
-      {/* Desktop */}
-      <motion.div
-        variants={stagger}
-        initial="hidden"
-        animate="show"
-        className="hidden lg:block space-y-6"
-      >
-      {/* Editorial hero */}
-      <SerifGreeting name={companyName} />
+      {/* Desktop — terminal operator console */}
+      <div className="hidden lg:block">
+        <div className="space-y-6">
+          {/* Block 1 — Hero identity strip */}
+          <SupplierHeroStrip
+            companyName={companyName}
+            subtitle="Console operativa del giorno · ordini, fatturato e consegne in tempo reale."
+          />
 
-      {/* Alert banner (Task 11) */}
-      {alertItems.length > 0 && (
-        <div className="space-y-2">
-          {alertItems.map((a) => {
-            const Icon = a.icon;
-            const toneClasses =
-              a.tone === "red"
-                ? "border-red-500/40 bg-red-500/10 text-red-100 hover:bg-red-500/15"
-                : "border-amber-500/40 bg-amber-500/10 text-amber-100 hover:bg-amber-500/15";
-            const iconTone = a.tone === "red" ? "text-red-300" : "text-amber-300";
-            return (
-              <Link
-                key={a.key}
-                href={a.href}
-                className={`flex items-center gap-3 rounded-xl border px-4 py-3 transition-colors ${toneClasses}`}
-              >
-                <Icon className={`h-5 w-5 shrink-0 ${iconTone}`} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{a.title}</p>
-                  <p className="text-xs opacity-80 truncate">{a.description}</p>
-                </div>
-                <span className="text-xs font-semibold whitespace-nowrap">
-                  {a.cta} →
-                </span>
-              </Link>
-            );
-          })}
-        </div>
-      )}
+          {/* Block 2 — Quick action pills */}
+          <div className="animate-[fadeInUp_240ms_ease-out_both] [animation-delay:60ms]">
+            <SupplierQuickActionBar />
+          </div>
 
-      {/* KPI Row */}
-      <div
-        className="cq-section grid gap-4"
-        style={{
-          gridTemplateColumns:
-            "repeat(auto-fit, minmax(min(220px, 100%), 1fr))",
-        }}
-      >
-        <KPICard
-          label="Ordini oggi"
-          value={kpi.ordersToday.toString()}
-          numericValue={kpi.ordersToday}
-          icon={ClipboardList}
-        />
-        <KPICard
-          label="Fatturato mese"
-          value={`€${kpi.monthlyRevenue.toLocaleString("it-IT")}`}
-          numericValue={kpi.monthlyRevenue}
-          previousValue={kpi.prevRevenue}
-          icon={TrendingUp}
-          accentColor="var(--color-accent-orange)"
-          sparklineData={revenueSparkline}
-        />
-        <KPICard
-          label="Clienti attivi"
-          value={kpi.activeClients.toString()}
-          numericValue={kpi.activeClients}
-          icon={Users}
-          accentColor="var(--color-accent-blue)"
-        />
-        <KPICard
-          label="Prodotti attivi"
-          value={kpi.activeProducts.toString()}
-          numericValue={kpi.activeProducts}
-          icon={Package}
-          accentColor="var(--color-accent-green)"
-        />
-      </div>
+          {/* Block 3 — KPI summary + alerts */}
+          <div className="animate-[fadeInUp_260ms_ease-out_both] [animation-delay:120ms]">
+            <SectionFrame
+              label="Sintesi · Questo mese"
+              trailing={`${kpi.ordersToday} nuovi oggi`}
+              padded={false}
+            >
+              <div className="px-5 pt-5 pb-6 sm:px-6 sm:pt-6 sm:pb-7">
+                <SupplierKpiGrid
+                  ordersToday={kpi.ordersToday}
+                  orderBacklogCount={kpi.orderBacklogCount ?? 0}
+                  orderBacklogOldestHours={kpi.orderBacklogOldestHours ?? 0}
+                  activeClients={kpi.activeClients}
+                  activeProducts={kpi.activeProducts}
+                  monthlyRevenue={kpi.monthlyRevenue}
+                  prevRevenue={kpi.prevRevenue}
+                  revenueSparkline={revenueSparkline}
+                  avgTicket={kpi.avgTicket ?? null}
+                  avgTicketPrev={kpi.avgTicketPrev ?? null}
+                  revenueYoYDeltaPct={kpi.revenueYoYDeltaPct ?? null}
+                />
+              </div>
+              <div className="border-t border-border-subtle px-5 py-3 sm:px-6">
+                <SupplierAlertsStrip alerts={alerts} />
+              </div>
+            </SectionFrame>
+          </div>
 
-      {/* Secondary KPI row (Task 11: ticket medio, backlog, YoY delta) */}
-      {(kpi.avgTicket !== undefined ||
-        kpi.orderBacklogCount !== undefined ||
-        kpi.revenueYoYDeltaPct !== undefined) && (
-        <div
-          className="cq-section grid gap-4"
-          style={{
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(min(260px, 100%), 1fr))",
-          }}
-        >
-          {kpi.avgTicket !== undefined && (
-            <KPICard
-              label="Ticket medio (14gg)"
-              value={`€${Math.round(kpi.avgTicket).toLocaleString("it-IT")}`}
-              numericValue={Math.round(kpi.avgTicket)}
-              previousValue={kpi.avgTicketPrev}
-              icon={Receipt}
-              accentColor="var(--color-accent-orange)"
-            />
-          )}
-          {kpi.orderBacklogCount !== undefined && (
-            <KPICard
-              label="Backlog ordini"
-              value={kpi.orderBacklogCount.toString()}
-              numericValue={kpi.orderBacklogCount}
-              icon={Hourglass}
-              accentColor="var(--color-accent-blue)"
-            />
-          )}
-          {kpi.revenueYoYDeltaPct !== undefined && kpi.revenueYoYDeltaPct !== null && (
-            <div className="bg-surface-card border border-border-subtle rounded-2xl p-5 shadow-card-dark">
-              <div className="flex items-center gap-2 mb-3">
-                <div
-                  className="p-2 rounded-lg"
-                  style={{ backgroundColor: "color-mix(in srgb, var(--color-accent-green) 12%, transparent)" }}
+          {/* Block 4 — Revenue line chart */}
+          <div className="animate-[fadeInUp_280ms_ease-out_both] [animation-delay:180ms]">
+            <SectionFrame
+              label="Andamento fatturato · ultimi 30 giorni"
+              trailing={
+                hasRechartsData
+                  ? `${formatCurrency(
+                      chart30.reduce((s, p) => s + p.value, 0),
+                    )} totale`
+                  : "nessun dato"
+              }
+              padded={false}
+            >
+              <div className="px-2 pb-3" style={{ height: 240 }}>
+                {chart30.length > 0 && hasRechartsData ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={chart30}
+                      margin={{ top: 12, right: 16, left: 0, bottom: 4 }}
+                    >
+                      <defs>
+                        <linearGradient
+                          id="supplierRevenueLine"
+                          x1="0"
+                          y1="0"
+                          x2="1"
+                          y2="0"
+                        >
+                          <stop
+                            offset="0%"
+                            stopColor="var(--color-accent-green)"
+                          />
+                          <stop
+                            offset="100%"
+                            stopColor="var(--color-accent-orange)"
+                          />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid
+                        stroke="var(--color-border-subtle)"
+                        strokeDasharray="2 4"
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey="label"
+                        stroke="var(--color-text-tertiary)"
+                        fontSize={11}
+                        tickLine={false}
+                        axisLine={false}
+                        minTickGap={24}
+                      />
+                      <YAxis
+                        stroke="var(--color-text-tertiary)"
+                        fontSize={11}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(v: number) =>
+                          v >= 1000
+                            ? `€${Math.round(v / 1000)}k`
+                            : `€${Math.round(v)}`
+                        }
+                        width={48}
+                      />
+                      <Tooltip
+                        cursor={{
+                          stroke: "var(--color-border-default)",
+                          strokeWidth: 1,
+                        }}
+                        contentStyle={{
+                          backgroundColor: "var(--color-surface-elevated)",
+                          border: "1px solid var(--color-border-default)",
+                          borderRadius: 12,
+                          fontSize: 12,
+                          color: "var(--color-text-primary)",
+                        }}
+                        labelStyle={{
+                          color: "var(--color-text-tertiary)",
+                          fontSize: 11,
+                        }}
+                        formatter={(value) => [
+                          formatCurrency(
+                            typeof value === "number"
+                              ? value
+                              : Number(value ?? 0),
+                          ),
+                          "Fatturato",
+                        ]}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="value"
+                        stroke="url(#supplierRevenueLine)"
+                        strokeWidth={2.2}
+                        dot={false}
+                        activeDot={{
+                          r: 4,
+                          fill: "var(--color-accent-green)",
+                        }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : chartFallback ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={chartData}
+                      margin={{ top: 12, right: 16, left: 0, bottom: 4 }}
+                    >
+                      <CartesianGrid
+                        stroke="var(--color-border-subtle)"
+                        strokeDasharray="2 4"
+                        vertical={false}
+                      />
+                      <XAxis
+                        dataKey="label"
+                        stroke="var(--color-text-tertiary)"
+                        fontSize={11}
+                        tickLine={false}
+                        axisLine={false}
+                        minTickGap={24}
+                      />
+                      <YAxis
+                        stroke="var(--color-text-tertiary)"
+                        fontSize={11}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(v: number) =>
+                          v >= 1000
+                            ? `€${Math.round(v / 1000)}k`
+                            : `€${Math.round(v)}`
+                        }
+                        width={48}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="value"
+                        stroke="var(--color-accent-orange)"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="flex h-full items-center justify-center font-mono text-[11px] uppercase tracking-[0.1em] text-text-tertiary">
+                    Nessun fatturato registrato negli ultimi 30 giorni
+                  </div>
+                )}
+              </div>
+            </SectionFrame>
+          </div>
+
+          {/* Block 5 — Recent orders log */}
+          <div className="animate-[fadeInUp_300ms_ease-out_both] [animation-delay:240ms]">
+            <SectionFrame
+              label="Ordini recenti"
+              trailing={
+                <Link
+                  href="/supplier/ordini"
+                  className="text-accent-green hover:text-text-primary transition-colors"
                 >
-                  <TrendingUp className="h-4 w-4 text-accent-green" />
-                </div>
-                <span className="text-xs font-medium text-text-tertiary uppercase tracking-wider">
-                  Revenue vs 14gg prec.
+                  vedi tutti →
+                </Link>
+              }
+              padded={false}
+            >
+              <div className="py-2">
+                <SupplierRecentOrdersLog rows={recentOrders} />
+              </div>
+            </SectionFrame>
+          </div>
+
+          {/* Block 6 — Classifica top clienti / top prodotti */}
+          {hasClassifica && (
+            <div className="animate-[fadeInUp_320ms_ease-out_both] [animation-delay:300ms]">
+              <div
+                className="grid gap-4"
+                style={{
+                  gridTemplateColumns:
+                    "repeat(auto-fit, minmax(min(340px, 100%), 1fr))",
+                }}
+              >
+                {/* Top clienti */}
+                <SectionFrame
+                  label="Classifica · Top clienti · mese"
+                  trailing={
+                    topClientsList.length > 0
+                      ? `top ${topClientsList.length}`
+                      : topClients.length > 0
+                        ? `top ${topClients.length}`
+                        : undefined
+                  }
+                  padded={false}
+                >
+                  <TopClientsList
+                    rich={topClientsList}
+                    legacy={topClients}
+                    max={topClientsMax}
+                  />
+                </SectionFrame>
+
+                {/* Top prodotti */}
+                <SectionFrame
+                  label="Classifica · Top prodotti · mese"
+                  trailing={
+                    topProductsList.length > 0
+                      ? `top ${topProductsList.length}`
+                      : topProducts.length > 0
+                        ? `top ${topProducts.length}`
+                        : undefined
+                  }
+                  padded={false}
+                >
+                  <TopProductsList
+                    rich={topProductsList}
+                    legacy={topProducts}
+                    max={topProductsMax}
+                  />
+                </SectionFrame>
+              </div>
+            </div>
+          )}
+
+          {/* Block 7 — Consegne recenti */}
+          {recentDeliveriesList.length > 0 && (
+            <div className="animate-[fadeInUp_340ms_ease-out_both] [animation-delay:360ms]">
+              <SectionFrame
+                label="Consegne recenti"
+                trailing={
+                  <Link
+                    href="/supplier/consegne"
+                    className="text-accent-green hover:text-text-primary transition-colors"
+                  >
+                    vedi tutte →
+                  </Link>
+                }
+                padded={false}
+              >
+                <ul className="flex flex-col">
+                  {recentDeliveriesList.map((d) => {
+                    const meta =
+                      DELIVERY_STATUS_META[d.status] ??
+                      DELIVERY_STATUS_META.planned;
+                    const isDelivered = d.status === "delivered";
+                    const isInTransit = d.status === "in_transit";
+                    return (
+                      <li key={d.id}>
+                        <div
+                          className="group grid w-full grid-cols-[48px_14px_minmax(0,1fr)_auto] items-center gap-x-3 border-l-2 border-transparent px-2 text-left transition-colors hover:border-accent-green hover:bg-surface-hover"
+                          style={{ minHeight: 44 }}
+                        >
+                          <span className="font-mono text-[11px] tabular-nums text-text-tertiary">
+                            {formatDeliveryWhen(d)}
+                          </span>
+                          <span className="flex h-6 w-6 items-center justify-center">
+                            {isDelivered ? (
+                              <CelebrationCheck size={16} />
+                            ) : isInTransit ? (
+                              <PulseDot variant="live" size={8} />
+                            ) : (
+                              <span
+                                className={`h-2 w-2 rounded-full ${meta.dot}`}
+                              />
+                            )}
+                          </span>
+                          <span className="flex min-w-0 items-center gap-3">
+                            <Truck className="h-3.5 w-3.5 text-text-tertiary" />
+                            <span className="truncate text-[13px] text-text-primary">
+                              {d.restaurant_name}
+                            </span>
+                          </span>
+                          <span
+                            className={`font-mono text-[10px] uppercase tracking-[0.08em] ${meta.text}`}
+                          >
+                            {meta.label}
+                          </span>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </SectionFrame>
+            </div>
+          )}
+
+          <style jsx global>{`
+            @keyframes fadeInUp {
+              from {
+                opacity: 0;
+                transform: translate3d(0, 6px, 0);
+              }
+              to {
+                opacity: 1;
+                transform: translate3d(0, 0, 0);
+              }
+            }
+          `}</style>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function TopClientsList({
+  rich,
+  legacy,
+  max,
+}: {
+  rich: TopClientRich[];
+  legacy: TopClient[];
+  max: number;
+}) {
+  if (rich.length === 0 && legacy.length === 0) {
+    return (
+      <p className="px-3 py-6 text-center font-mono text-[11px] uppercase tracking-[0.1em] text-text-tertiary">
+        Nessun ordine questo mese
+      </p>
+    );
+  }
+
+  if (rich.length > 0) {
+    return (
+      <ul className="flex flex-col">
+        {rich.map((c, i) => {
+          const pct = max > 0 ? (c.revenue / max) * 100 : 0;
+          return (
+            <li key={c.restaurant_id}>
+              <div
+                className="group relative grid w-full grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-x-3 border-l-2 border-transparent px-2 text-left transition-colors hover:border-accent-blue hover:bg-surface-hover"
+                style={{ minHeight: 40 }}
+              >
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-y-0 left-0 bg-accent-blue/10"
+                  style={{ width: `${pct}%` }}
+                />
+                <span className="relative font-mono text-[11px] tabular-nums text-text-tertiary">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="relative flex min-w-0 items-center gap-3">
+                  <span className="truncate text-[13px] text-text-primary">
+                    {c.name}
+                  </span>
+                  <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+                    {c.orders} ord
+                  </span>
+                </span>
+                <span className="relative font-mono text-[13px] tabular-nums text-text-primary">
+                  {formatCurrency(c.revenue)}
                 </span>
               </div>
-              <p className="text-2xl font-mono font-bold text-text-primary">
-                {kpi.revenueYoYDeltaPct >= 0 ? "+" : ""}
-                {kpi.revenueYoYDeltaPct.toFixed(1)}%
-              </p>
-              <p className="text-xs text-text-tertiary mt-1.5">
-                Confronto ultimi 14gg vs 14gg precedenti
-              </p>
-            </div>
-          )}
-        </div>
-      )}
+            </li>
+          );
+        })}
+      </ul>
+    );
+  }
 
-      {/* Row 2: Revenue Chart + Quick Actions */}
-      <div className="cq-section grid grid-cols-1 @[900px]:grid-cols-3 gap-4">
-        <DarkCard className="@[900px]:col-span-2" noPadding>
-          <div className="p-5 pb-0">
-            <DarkCardHeader>
-              <DarkCardTitle>Andamento Fatturato</DarkCardTitle>
-              <span className="text-xs text-text-tertiary">Ultimi 30 giorni</span>
-            </DarkCardHeader>
-          </div>
-          {chart30.length > 0 ? (
-            <div className="px-4 pb-4" style={{ height: 240 }}>
-              {hasRecharts ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={chart30}
-                    margin={{ top: 8, right: 12, left: 0, bottom: 4 }}
-                  >
-                    <defs>
-                      <linearGradient id="revenueLine" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor="var(--color-accent-green)" />
-                        <stop offset="100%" stopColor="var(--color-accent-orange)" />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid
-                      stroke="var(--color-border-subtle)"
-                      strokeDasharray="2 4"
-                      vertical={false}
-                    />
-                    <XAxis
-                      dataKey="label"
-                      stroke="var(--color-text-tertiary)"
-                      fontSize={11}
-                      tickLine={false}
-                      axisLine={false}
-                      minTickGap={24}
-                    />
-                    <YAxis
-                      stroke="var(--color-text-tertiary)"
-                      fontSize={11}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(v: number) =>
-                        v >= 1000 ? `€${Math.round(v / 1000)}k` : `€${Math.round(v)}`
-                      }
-                      width={48}
-                    />
-                    <Tooltip
-                      cursor={{ stroke: "var(--color-border-default)", strokeWidth: 1 }}
-                      contentStyle={{
-                        backgroundColor: "var(--color-surface-elevated)",
-                        border: "1px solid var(--color-border-default)",
-                        borderRadius: 12,
-                        fontSize: 12,
-                        color: "var(--color-text-primary)",
-                      }}
-                      labelStyle={{ color: "var(--color-text-tertiary)", fontSize: 11 }}
-                      formatter={(value) => [
-                        formatCurrency(typeof value === "number" ? value : Number(value ?? 0)),
-                        "Fatturato",
-                      ]}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="value"
-                      stroke="url(#revenueLine)"
-                      strokeWidth={2.2}
-                      dot={false}
-                      activeDot={{ r: 4, fill: "var(--color-accent-green)" }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex items-center justify-center h-full text-sm text-text-tertiary">
-                  Nessun fatturato registrato negli ultimi 30 giorni.
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="px-2 pb-3">
-              <AreaChart data={chartData} height={220} color="var(--color-accent-orange)" />
-            </div>
-          )}
-        </DarkCard>
-
-        <DarkCard>
-          <DarkCardHeader>
-            <DarkCardTitle>Azioni rapide</DarkCardTitle>
-          </DarkCardHeader>
-          <div className="space-y-2">
-            <QuickAction href="/supplier/catalogo/nuovo" label="Aggiungi prodotto" description="Nuovo nel catalogo" icon={Plus} index={0} />
-            <QuickAction href="/supplier/impostazioni/zone" label="Zone consegna" description="Gestisci aree" icon={MapPin} index={1} />
-            <QuickAction href="/supplier/analytics" label="Analytics" description="Dati avanzati" icon={BarChart3} index={2} />
-            <QuickAction href="/supplier/recensioni" label="Recensioni" description="Feedback clienti" icon={Star} index={3} />
-          </div>
-        </DarkCard>
-      </div>
-
-      {/* Row 3: Orders + Products + Clients */}
-      <div className="cq-section grid grid-cols-1 @[900px]:grid-cols-3 gap-4">
-        {/* Recent Orders */}
-        <DarkCard className="@[900px]:col-span-2" noPadding>
-          <div className="p-5 pb-0">
-            <DarkCardHeader>
-              <DarkCardTitle>Ordini recenti</DarkCardTitle>
-              <button
-                onClick={() => router.push("/supplier/ordini")}
-                className="text-xs text-text-link hover:text-accent-green transition-colors"
-              >
-                Vedi tutti →
-              </button>
-            </DarkCardHeader>
-          </div>
-          <DataTable
-            columns={orderColumns}
-            data={recentOrders}
-            getRowKey={(row) => row.id}
-            onRowClick={(row) => router.push(`/supplier/ordini/${row.id}`)}
-            emptyMessage="Nessun ordine ricevuto ancora."
-          />
-        </DarkCard>
-
-        {/* Top Products */}
-        <DarkCard>
-          <DarkCardHeader>
-            <DarkCardTitle>Prodotti piu richiesti</DarkCardTitle>
-          </DarkCardHeader>
-          {topProducts.length > 0 ? (
-            <MiniBar items={topProducts} color="var(--color-accent-green)" />
-          ) : (
-            <p className="text-sm text-text-tertiary py-6 text-center">
-              I dati saranno disponibili dopo i primi ordini.
-            </p>
-          )}
-        </DarkCard>
-      </div>
-
-      {/* Row 4: Top Clienti + Top Prodotti (Task 12) */}
-      {(topClientsList.length > 0 || topProductsList.length > 0) && (
-        <div
-          className="cq-section grid gap-4"
-          style={{
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(min(340px, 100%), 1fr))",
-          }}
-        >
-          {/* Top Clienti ranked */}
-          <DarkCard>
-            <DarkCardHeader>
-              <DarkCardTitle>Top clienti (mese)</DarkCardTitle>
-              <span className="text-xs text-text-tertiary">
-                {topClientsList.length > 0 ? `Top ${topClientsList.length}` : ""}
-              </span>
-            </DarkCardHeader>
-            {topClientsList.length > 0 ? (
-              <ul className="space-y-2">
-                {topClientsList.map((c, i) => {
-                  const pct = topClientsMax > 0 ? (c.revenue / topClientsMax) * 100 : 0;
-                  return (
-                    <li
-                      key={c.restaurant_id}
-                      className="relative rounded-xl bg-surface-hover/40 border border-border-subtle/50 p-3 overflow-hidden"
-                    >
-                      <div
-                        className="absolute inset-y-0 left-0 bg-accent-blue/10"
-                        style={{ width: `${pct}%` }}
-                      />
-                      <div className="relative flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-lg bg-accent-blue-muted flex items-center justify-center shrink-0">
-                          <span className="text-[11px] font-bold text-accent-blue">
-                            {i + 1}
-                          </span>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-text-primary truncate">
-                            {c.name}
-                          </p>
-                          <p className="text-xs text-text-tertiary">
-                            {c.orders} ordin{c.orders === 1 ? "e" : "i"}
-                          </p>
-                        </div>
-                        <span className="text-sm font-mono font-semibold text-text-primary whitespace-nowrap">
-                          {formatCurrency(c.revenue)}
-                        </span>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className="text-sm text-text-tertiary py-6 text-center">
-                Nessun ordine questo mese.
-              </p>
-            )}
-          </DarkCard>
-
-          {/* Top Prodotti ranked */}
-          <DarkCard>
-            <DarkCardHeader>
-              <DarkCardTitle>Top prodotti (mese)</DarkCardTitle>
-              <span className="text-xs text-text-tertiary">
-                {topProductsList.length > 0 ? `Top ${topProductsList.length}` : ""}
-              </span>
-            </DarkCardHeader>
-            {topProductsList.length > 0 ? (
-              <ul className="space-y-2">
-                {topProductsList.map((p, i) => {
-                  const pct = topProductsMax > 0 ? (p.revenue / topProductsMax) * 100 : 0;
-                  return (
-                    <li
-                      key={p.product_id}
-                      className="relative rounded-xl bg-surface-hover/40 border border-border-subtle/50 p-3 overflow-hidden"
-                    >
-                      <div
-                        className="absolute inset-y-0 left-0 bg-accent-green/10"
-                        style={{ width: `${pct}%` }}
-                      />
-                      <div className="relative flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-lg bg-accent-green-muted flex items-center justify-center shrink-0">
-                          <span className="text-[11px] font-bold text-accent-green">
-                            {i + 1}
-                          </span>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-text-primary truncate">
-                            {p.name}
-                          </p>
-                          <p className="text-xs text-text-tertiary">
-                            {p.quantity.toLocaleString("it-IT", {
-                              maximumFractionDigits: 2,
-                            })} unità
-                          </p>
-                        </div>
-                        <span className="text-sm font-mono font-semibold text-text-primary whitespace-nowrap">
-                          {formatCurrency(p.revenue)}
-                        </span>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : (
-              <p className="text-sm text-text-tertiary py-6 text-center">
-                Nessun prodotto venduto questo mese.
-              </p>
-            )}
-          </DarkCard>
-        </div>
-      )}
-
-      {/* Row 5: Consegne recenti (Task 12) */}
-      {recentDeliveriesList.length > 0 && (
-        <DarkCard>
-          <DarkCardHeader>
-            <DarkCardTitle>Consegne recenti</DarkCardTitle>
-            <Link
-              href="/supplier/consegne"
-              className="text-xs text-text-link hover:text-accent-green transition-colors"
-            >
-              Vedi tutte →
-            </Link>
-          </DarkCardHeader>
-          <ul className="divide-y divide-border-subtle/60">
-            {recentDeliveriesList.map((d) => {
-              const meta = DELIVERY_STATUS_META[d.status] ?? DELIVERY_STATUS_META.planned;
-              const isDelivered = d.status === "delivered";
-              const isInTransit = d.status === "in_transit";
-              return (
-                <li
-                  key={d.id}
-                  className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"
-                >
-                  <div className="h-8 w-8 rounded-lg bg-surface-hover flex items-center justify-center shrink-0">
-                    {isDelivered ? (
-                      <CelebrationCheck size={20} />
-                    ) : (
-                      <Truck className="h-4 w-4 text-text-tertiary" />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-text-primary truncate">
-                      {d.restaurant_name}
-                    </p>
-                    <p className="text-xs text-text-tertiary">
-                      {formatDeliveryWhen(d)}
-                    </p>
-                  </div>
-                  <span
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${meta.text} ${meta.bg}`}
-                  >
-                    {isInTransit ? (
-                      <PulseDot variant="live" size={6} />
-                    ) : (
-                      <span className={`h-1.5 w-1.5 rounded-full ${meta.dot}`} />
-                    )}
-                    {meta.label}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
-        </DarkCard>
-      )}
-
-      {/* Fallback: legacy topClients (empty state backward compat) */}
-      {topClientsList.length === 0 && topClients.length > 0 && (
-        <DarkCard>
-          <DarkCardHeader>
-            <DarkCardTitle>Top Clienti</DarkCardTitle>
-          </DarkCardHeader>
+  // Legacy fallback — fewer fields
+  return (
+    <ul className="flex flex-col">
+      {legacy.map((c, i) => (
+        <li key={c.name}>
           <div
-            className="cq-card grid gap-3"
-            style={{
-              gridTemplateColumns:
-                "repeat(auto-fit, minmax(min(180px, 100%), 1fr))",
-            }}
+            className="group grid w-full grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-x-3 border-l-2 border-transparent px-2 text-left transition-colors hover:border-accent-blue hover:bg-surface-hover"
+            style={{ minHeight: 40 }}
           >
-            {topClients.map((client, i) => (
-              <motion.div
-                key={client.name}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.05 }}
-                className="flex items-center gap-3 p-3 rounded-xl bg-surface-hover/50"
-              >
-                <div className="h-9 w-9 rounded-lg bg-accent-blue-muted flex items-center justify-center shrink-0">
-                  <span className="text-xs font-bold text-accent-blue">
-                    {client.name.slice(0, 2).toUpperCase()}
-                  </span>
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-text-primary truncate">{client.name}</p>
-                  <p className="text-xs text-text-tertiary">
-                    {client.orders} ordini · {formatCurrency(client.total)}
-                  </p>
-                </div>
-              </motion.div>
-            ))}
+            <span className="font-mono text-[11px] tabular-nums text-text-tertiary">
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="truncate text-[13px] text-text-primary">
+                {c.name}
+              </span>
+              <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+                {c.orders} ord
+              </span>
+            </span>
+            <span className="font-mono text-[13px] tabular-nums text-text-primary">
+              {formatCurrency(c.total)}
+            </span>
           </div>
-        </DarkCard>
-      )}
-      </motion.div>
-    </>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function TopProductsList({
+  rich,
+  legacy,
+  max,
+}: {
+  rich: TopProductRich[];
+  legacy: TopProduct[];
+  max: number;
+}) {
+  if (rich.length === 0 && legacy.length === 0) {
+    return (
+      <p className="px-3 py-6 text-center font-mono text-[11px] uppercase tracking-[0.1em] text-text-tertiary">
+        Nessun prodotto venduto questo mese
+      </p>
+    );
+  }
+
+  if (rich.length > 0) {
+    return (
+      <ul className="flex flex-col">
+        {rich.map((p, i) => {
+          const pct = max > 0 ? (p.revenue / max) * 100 : 0;
+          return (
+            <li key={p.product_id}>
+              <div
+                className="group relative grid w-full grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-x-3 border-l-2 border-transparent px-2 text-left transition-colors hover:border-accent-green hover:bg-surface-hover"
+                style={{ minHeight: 40 }}
+              >
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-y-0 left-0 bg-accent-green/10"
+                  style={{ width: `${pct}%` }}
+                />
+                <span className="relative font-mono text-[11px] tabular-nums text-text-tertiary">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="relative flex min-w-0 items-center gap-3">
+                  <span className="truncate text-[13px] text-text-primary">
+                    {p.name}
+                  </span>
+                  <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+                    {p.quantity.toLocaleString("it-IT", {
+                      maximumFractionDigits: 2,
+                    })}{" "}
+                    unità
+                  </span>
+                </span>
+                <span className="relative font-mono text-[13px] tabular-nums text-text-primary">
+                  {formatCurrency(p.revenue)}
+                </span>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    );
+  }
+
+  // Legacy fallback — just label + value
+  return (
+    <ul className="flex flex-col">
+      {legacy.map((p, i) => (
+        <li key={p.label}>
+          <div
+            className="group grid w-full grid-cols-[28px_minmax(0,1fr)_auto] items-center gap-x-3 border-l-2 border-transparent px-2 text-left transition-colors hover:border-accent-green hover:bg-surface-hover"
+            style={{ minHeight: 40 }}
+          >
+            <span className="font-mono text-[11px] tabular-nums text-text-tertiary">
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="truncate text-[13px] text-text-primary">
+                {p.label}
+              </span>
+            </span>
+            <span className="font-mono text-[11px] text-text-tertiary">
+              {p.subtitle}
+            </span>
+          </div>
+        </li>
+      ))}
+    </ul>
   );
 }

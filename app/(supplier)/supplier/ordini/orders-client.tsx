@@ -1,25 +1,28 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
-import { Search, LayoutGrid, List } from "lucide-react";
-import { CelebrationCheck, PulseDot } from "@/components/supplier/signature";
-import { useFlashOnSplitUpdate } from "@/components/supplier/realtime/flash-highlight";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Keyboard, LayoutGrid, List, Search, X } from "lucide-react";
+import { formatCurrency } from "@/lib/utils/formatters";
 import { SupplierOrdersClientMobile } from "./orders-client-mobile";
+import { SupplierStatusChips } from "./_components/status-chips";
+import { SupplierTimeline } from "./_components/timeline";
+import { SupplierOrderPeek } from "./_components/order-peek";
+import type {
+  SupplierOrderStats,
+  SupplierTimelineRow,
+} from "./_lib/types";
+import { readUrlState, writeUrlState } from "./_lib/url-state";
 
-export type SupplierOrderRow = {
-  splitId: string;
-  orderId: string;
-  orderNumber: string | null;
-  restaurantName: string;
-  zoneName: string | null;
-  createdAt: string;
-  expectedDeliveryDate: string | null;
-  subtotal: number;
-  workflowState: string;
-  rawStatus: string;
-};
+export type SupplierOrderRow = SupplierTimelineRow;
 
 type Filters = {
   state: string;
@@ -34,328 +37,298 @@ type Props = {
   total: number;
 };
 
-const STATE_OPTIONS: { value: string; label: string }[] = [
-  { value: "", label: "Tutti gli stati" },
-  { value: "submitted", label: "Nuovo" },
-  { value: "pending_customer_confirmation", label: "Attesa cliente" },
-  { value: "confirmed", label: "Confermato" },
-  { value: "preparing", label: "In preparazione" },
-  { value: "packed", label: "Imballato" },
-  { value: "stock_conflict", label: "Conflitto stock" },
-  { value: "shipping", label: "In spedizione" },
-  { value: "delivered", label: "Consegnato" },
-  { value: "rejected", label: "Rifiutato" },
-  { value: "cancelled", label: "Annullato" },
-];
+function normalize(s: string): string {
+  return s
+    .toLocaleLowerCase("it")
+    .normalize("NFKD")
+    .replace(/[̀-ͯ]/g, "")
+    .trim();
+}
 
-const STATE_META: Record<string, { label: string; className: string }> = {
-  draft: { label: "Bozza", className: "bg-surface-base text-text-secondary" },
-  submitted: { label: "Nuovo", className: "bg-accent-amber/15 text-accent-amber" },
-  pending_customer_confirmation: {
-    label: "Attesa cliente",
-    className: "bg-accent-amber/15 text-accent-amber",
-  },
-  stock_conflict: {
-    label: "Conflitto stock",
-    className: "bg-accent-red/15 text-accent-red",
-  },
-  confirmed: {
-    label: "Confermato",
-    className: "bg-accent-green/15 text-accent-green",
-  },
-  preparing: {
-    label: "In preparazione",
-    className: "bg-accent-blue/15 text-accent-blue",
-  },
-  packed: {
-    label: "Imballato",
-    className: "bg-accent-blue/15 text-accent-blue",
-  },
-  shipping: {
-    label: "In spedizione",
-    className: "bg-accent-purple/15 text-accent-purple",
-  },
-  delivered: {
-    label: "Consegnato",
-    className: "bg-accent-green/15 text-accent-green",
-  },
-  rejected: { label: "Rifiutato", className: "bg-accent-red/15 text-accent-red" },
-  cancelled: {
-    label: "Annullato",
-    className: "bg-accent-red/15 text-accent-red",
-  },
-};
-
-const euroFmt = new Intl.NumberFormat("it-IT", {
-  style: "currency",
-  currency: "EUR",
-});
-
-const dateFmt = new Intl.DateTimeFormat("it-IT", {
-  day: "2-digit",
-  month: "2-digit",
-  year: "numeric",
-});
-
-function formatDate(iso: string | null | undefined): string {
-  if (!iso) return "—";
-  try {
-    return dateFmt.format(new Date(iso));
-  } catch {
-    return iso;
+function computeStats(rows: SupplierOrderRow[]): SupplierOrderStats {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  let monthTotal = 0;
+  const statusCounts: Record<string, number> = {};
+  for (const r of rows) {
+    const d = new Date(r.createdAt);
+    if (!Number.isNaN(d.getTime()) && d >= monthStart) {
+      monthTotal += Number(r.subtotal || 0);
+    }
+    statusCounts[r.workflowState] = (statusCounts[r.workflowState] ?? 0) + 1;
   }
-}
-
-function StateBadge({ state }: { state: string }) {
-  const meta = STATE_META[state] ?? {
-    label: state,
-    className: "bg-surface-base text-text-secondary",
-  };
-  return (
-    <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${meta.className}`}
-    >
-      {state === "delivered" && <CelebrationCheck size={18} />}
-      {(state === "in_transit" || state === "shipping") && (
-        <PulseDot variant="live" size={6} />
-      )}
-      {meta.label}
-    </span>
-  );
-}
-
-function buildHref(pathname: string, next: Partial<Filters>, current: Filters): string {
-  const merged: Filters = { ...current, ...next };
-  const sp = new URLSearchParams();
-  if (merged.state) sp.set("state", merged.state);
-  if (merged.restaurant) sp.set("restaurant", merged.restaurant);
-  if (merged.from) sp.set("from", merged.from);
-  if (merged.to) sp.set("to", merged.to);
-  const qs = sp.toString();
-  return qs ? `${pathname}?${qs}` : pathname;
+  return { totalCount: rows.length, monthTotal, statusCounts };
 }
 
 export function SupplierOrdersClient({ orders, filters, total }: Props) {
   const router = useRouter();
-  const pathname = usePathname();
-  const [pending, startTransition] = useTransition();
+  const sp = useSearchParams();
 
-  const [localState, setLocalState] = useState(filters.state);
-  const [localRestaurant, setLocalRestaurant] = useState(filters.restaurant);
-  const [localFrom, setLocalFrom] = useState(filters.from);
-  const [localTo, setLocalTo] = useState(filters.to);
+  const initial = useMemo(
+    () => readUrlState(new URLSearchParams(sp.toString())),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
 
-  const applyFilters = () => {
-    startTransition(() => {
-      router.replace(
-        buildHref(
-          pathname,
-          {
-            state: localState,
-            restaurant: localRestaurant,
-            from: localFrom,
-            to: localTo,
-          },
-          filters,
-        ),
-        { scroll: false },
-      );
+  const [query, setQuery] = useState(initial.query || filters.restaurant);
+  const [statuses, setStatuses] = useState<Set<string>>(() => {
+    const s = new Set(initial.statuses);
+    if (filters.state) s.add(filters.state);
+    return s;
+  });
+  const [selectedId, setSelectedId] = useState<string | null>(initial.selectedId);
+  const [fromDate, setFromDate] = useState(initial.from || filters.from);
+  const [toDate, setToDate] = useState(initial.to || filters.to);
+  const [peekOpenMobile, setPeekOpenMobile] = useState(false);
+
+  const deferredQuery = useDeferredValue(query);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const stats = useMemo(() => computeStats(orders), [orders]);
+
+  // Client-side filter (status + free-text).
+  // Server has already filtered by state + restaurant + from/to, but keeping
+  // client-side filters lets user refine without a round trip once loaded.
+  const filtered = useMemo(() => {
+    const q = normalize(deferredQuery);
+    return orders.filter((o) => {
+      if (statuses.size > 0 && !statuses.has(o.workflowState)) return false;
+      if (!q) return true;
+      const hay = [
+        o.splitId,
+        o.orderNumber ?? "",
+        o.restaurantName,
+        o.zoneName ?? "",
+      ]
+        .map((s) => normalize(s))
+        .join(" ");
+      return hay.includes(q);
     });
-  };
+  }, [orders, statuses, deferredQuery]);
 
-  const resetFilters = () => {
-    setLocalState("");
-    setLocalRestaurant("");
-    setLocalFrom("");
-    setLocalTo("");
-    startTransition(() => {
-      router.replace(pathname, { scroll: false });
+  const selectedRow = useMemo(
+    () =>
+      selectedId ? orders.find((o) => o.splitId === selectedId) ?? null : null,
+    [orders, selectedId],
+  );
+
+  useEffect(() => {
+    if (selectedId && !orders.some((o) => o.splitId === selectedId)) {
+      setSelectedId(null);
+    }
+  }, [orders, selectedId]);
+
+  // URL sync (debounced) — preserves server-driven params (state/from/to/restaurant).
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const params = writeUrlState({
+        query,
+        statuses,
+        selectedId,
+        from: fromDate,
+        to: toDate,
+      });
+      // Keep the single-state server param in sync for page.tsx server query.
+      const firstStatus = [...statuses][0] ?? "";
+      if (firstStatus) params.set("state", firstStatus);
+      else params.delete("state");
+      // page.tsx reads `restaurant`, mirror the client free-text query there.
+      if (query) params.set("restaurant", query);
+      else params.delete("restaurant");
+
+      const qs = params.toString();
+      router.replace(qs ? `/supplier/ordini?${qs}` : "/supplier/ordini", {
+        scroll: false,
+      });
+    }, 300);
+    return () => clearTimeout(t);
+  }, [query, statuses, selectedId, fromDate, toDate, router]);
+
+  const toggleStatus = useCallback((s: string) => {
+    setStatuses((prev) => {
+      const next = new Set(prev);
+      if (next.has(s)) next.delete(s);
+      else next.add(s);
+      return next;
     });
-  };
+  }, []);
 
-  const shown = useMemo(() => orders, [orders]);
+  const clearStatuses = useCallback(() => setStatuses(new Set()), []);
+
+  const onSelect = useCallback((id: string) => {
+    setSelectedId(id);
+    setPeekOpenMobile(true);
+  }, []);
 
   return (
     <>
-      {/* Mobile Apple-app view */}
+      {/* Mobile Apple-app view — untouched */}
       <div className="lg:hidden">
         <SupplierOrdersClientMobile orders={orders} total={total} />
       </div>
 
-      {/* Desktop */}
-      <div className="hidden lg:block space-y-4">
-      {/* Toggle vista + titolo */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="inline-flex rounded-md border border-border-subtle bg-surface-card p-0.5">
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 rounded-sm bg-accent-green px-3 py-1.5 text-xs font-medium text-charcoal"
-            aria-pressed="true"
-          >
-            <List className="h-3.5 w-3.5" aria-hidden />
-            Tabella
-          </button>
-          <Link
-            href="/supplier/ordini/kanban"
-            className="inline-flex items-center gap-1.5 rounded-sm px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-surface-hover"
-          >
-            <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
-            Kanban
-          </Link>
-        </div>
-        <span className="text-xs text-text-secondary">
-          {total} {total === 1 ? "ordine" : "ordini"}
-        </span>
-      </div>
-
-      {/* Filtri */}
-      <div className="rounded-xl border border-border-subtle bg-surface-card p-4">
-        <div className="cq-section grid grid-cols-1 @[520px]:grid-cols-2 @[900px]:grid-cols-5 gap-3">
-          <label className="text-sm">
-            <span className="mb-1 block text-xs text-text-secondary">Stato</span>
-            <select
-              value={localState}
-              onChange={(e) => setLocalState(e.target.value)}
-              className="w-full rounded-md border border-border-subtle bg-surface-base px-3 py-3 @[900px]:py-2 text-base @[900px]:text-sm text-text-primary min-h-[44px] @[900px]:min-h-0 focus:border-accent-green focus:outline-none focus:ring-1 focus:ring-accent-green"
-            >
-              {STATE_OPTIONS.map((o) => (
-                <option key={o.value || "__all__"} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="text-sm @[520px]:col-span-2 @[900px]:col-span-2">
-            <span className="mb-1 block text-xs text-text-secondary">
-              Ristorante
+      {/* Desktop terminal-dense command timeline */}
+      <div className="hidden lg:flex h-[calc(100vh-var(--chrome-top,64px))] flex-col">
+        {/* Top bar: title + stats + view toggle */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-4 py-3">
+          <div className="flex min-w-0 items-baseline gap-3">
+            <h1 className="font-mono text-[12px] uppercase tracking-[0.12em] text-text-primary">
+              Ordini
+            </h1>
+            <span className="font-mono text-[11px] tabular-nums text-text-tertiary">
+              {stats.totalCount} totali
             </span>
-            <div className="relative">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary"
-                aria-hidden
-              />
-              <input
-                type="search"
-                value={localRestaurant}
-                onChange={(e) => setLocalRestaurant(e.target.value)}
-                placeholder="Cerca per nome…"
-                className="w-full rounded-md border border-border-subtle bg-surface-base pl-9 pr-3 py-3 @[900px]:py-2 text-base @[900px]:text-sm text-text-primary min-h-[44px] @[900px]:min-h-0 placeholder:text-text-secondary focus:border-accent-green focus:outline-none focus:ring-1 focus:ring-accent-green"
-              />
+            <span aria-hidden className="text-text-tertiary">
+              ·
+            </span>
+            <span className="font-mono text-[11px] tabular-nums text-text-tertiary">
+              {formatCurrency(stats.monthTotal)}{" "}
+              <span className="uppercase tracking-[0.06em]">questo mese</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="inline-flex rounded-md border border-border-subtle bg-surface-card p-0.5">
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 rounded-sm bg-accent-green/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.08em] text-accent-green"
+                aria-pressed="true"
+              >
+                <List className="h-3 w-3" aria-hidden />
+                Timeline
+              </button>
+              <Link
+                href="/supplier/ordini/kanban"
+                className="inline-flex items-center gap-1.5 rounded-sm px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.08em] text-text-secondary hover:bg-surface-hover"
+              >
+                <LayoutGrid className="h-3 w-3" aria-hidden />
+                Kanban
+              </Link>
             </div>
-          </label>
+            <button
+              className="hidden items-center gap-1 rounded-lg border border-border-subtle px-2 py-1.5 font-mono text-[10px] uppercase tracking-wide text-text-tertiary hover:bg-surface-hover md:inline-flex"
+              title="Scorciatoie"
+              disabled
+            >
+              <Keyboard className="h-3.5 w-3.5" /> ?
+            </button>
+          </div>
+        </div>
 
-          <label className="text-sm">
-            <span className="mb-1 block text-xs text-text-secondary">Dal</span>
+        {/* Chips row */}
+        <div className="border-b border-border-subtle px-4 py-2.5">
+          <SupplierStatusChips
+            counts={stats.statusCounts}
+            selected={statuses}
+            onToggle={toggleStatus}
+            onClear={clearStatuses}
+          />
+        </div>
+
+        {/* Search + date range row */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-border-subtle px-4 py-2">
+          <div className="relative flex flex-1 items-center min-w-[240px]">
+            <Search
+              aria-hidden
+              className="absolute left-2 h-3.5 w-3.5 text-text-tertiary"
+            />
+            <input
+              ref={searchInputRef}
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Cerca per id, ristorante, zona..."
+              className="w-full rounded-md border border-border-subtle bg-surface-base py-1.5 pl-7 pr-7 font-mono text-[12px] text-text-primary placeholder:text-text-tertiary focus:border-accent-green focus:outline-none"
+              aria-label="Cerca split"
+            />
+            {query && (
+              <button
+                onClick={() => setQuery("")}
+                className="absolute right-1.5 rounded-sm p-0.5 text-text-tertiary hover:bg-surface-hover hover:text-text-primary"
+                aria-label="Pulisci ricerca"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+          <label className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+            <span>Dal</span>
             <input
               type="date"
-              value={localFrom}
-              onChange={(e) => setLocalFrom(e.target.value)}
-              className="w-full rounded-md border border-border-subtle bg-surface-base px-3 py-3 @[900px]:py-2 text-base @[900px]:text-sm text-text-primary min-h-[44px] @[900px]:min-h-0 focus:border-accent-green focus:outline-none focus:ring-1 focus:ring-accent-green"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="rounded-md border border-border-subtle bg-surface-base px-2 py-1 font-mono text-[11px] text-text-primary focus:border-accent-green focus:outline-none"
             />
           </label>
-
-          <label className="text-sm">
-            <span className="mb-1 block text-xs text-text-secondary">Al</span>
+          <label className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+            <span>Al</span>
             <input
               type="date"
-              value={localTo}
-              onChange={(e) => setLocalTo(e.target.value)}
-              className="w-full rounded-md border border-border-subtle bg-surface-base px-3 py-3 @[900px]:py-2 text-base @[900px]:text-sm text-text-primary min-h-[44px] @[900px]:min-h-0 focus:border-accent-green focus:outline-none focus:ring-1 focus:ring-accent-green"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              className="rounded-md border border-border-subtle bg-surface-base px-2 py-1 font-mono text-[11px] text-text-primary focus:border-accent-green focus:outline-none"
             />
           </label>
+          <span className="font-mono text-[10px] tabular-nums text-text-tertiary">
+            {filtered.length}/{orders.length}
+          </span>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={resetFilters}
-            disabled={pending}
-            className="rounded-md border border-border-subtle px-3 py-2 text-sm text-text-secondary hover:bg-surface-hover disabled:opacity-60"
-          >
-            Azzera
-          </button>
-          <button
-            type="button"
-            onClick={applyFilters}
-            disabled={pending}
-            className="rounded-md bg-accent-green px-3 py-2 text-sm font-medium text-charcoal hover:bg-accent-green/90 disabled:opacity-60"
-          >
-            Applica filtri
-          </button>
-        </div>
-      </div>
+        {/* Main: timeline (left) + peek (right) */}
+        <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px]">
+          <div className="min-h-0 overflow-y-auto">
+            <SupplierTimeline
+              rows={filtered}
+              selectedId={selectedId}
+              onSelect={onSelect}
+              emptyLabel={
+                orders.length > 0
+                  ? "Nessun ordine corrisponde ai filtri"
+                  : "Nessun ordine ricevuto"
+              }
+            />
+            {filtered.length === 0 && orders.length > 0 && (
+              <div className="px-4 pb-8 pt-4 text-center">
+                <button
+                  onClick={() => {
+                    setQuery("");
+                    setStatuses(new Set());
+                  }}
+                  className="font-mono text-[10px] uppercase tracking-[0.08em] text-accent-green hover:underline"
+                >
+                  Pulisci filtri
+                </button>
+              </div>
+            )}
+          </div>
 
-      {/* Tabella ordini */}
-      <div className="rounded-xl border border-border-subtle bg-surface-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-surface-base/40 text-left text-xs uppercase tracking-wider text-text-secondary">
-              <tr>
-                <th className="px-4 py-3 font-semibold">#</th>
-                <th className="px-4 py-3 font-semibold">Ristorante</th>
-                <th className="px-4 py-3 font-semibold">Ricevuto</th>
-                <th className="px-4 py-3 font-semibold">Zona</th>
-                <th className="px-4 py-3 font-semibold">Consegna prevista</th>
-                <th className="px-4 py-3 font-semibold text-right">Totale</th>
-                <th className="px-4 py-3 font-semibold">Stato</th>
-                <th className="px-4 py-3 font-semibold text-right">Azioni</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border-subtle">
-              {shown.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={8}
-                    className="px-4 py-12 text-center text-sm text-text-secondary"
-                  >
-                    Nessun ordine corrisponde ai filtri.
-                  </td>
-                </tr>
-              ) : (
-                shown.map((r) => <OrderRow key={r.splitId} row={r} />)
-              )}
-            </tbody>
-          </table>
+          <div className="hidden border-l border-border-subtle lg:block">
+            <SupplierOrderPeek
+              row={selectedRow}
+              onClose={() => setSelectedId(null)}
+            />
+          </div>
+
+          {selectedRow && peekOpenMobile && (
+            <div
+              className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+              onClick={() => setPeekOpenMobile(false)}
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="absolute inset-y-0 right-0 w-full max-w-md bg-surface-card shadow-2xl"
+              >
+                <SupplierOrderPeek
+                  row={selectedRow}
+                  onClose={() => {
+                    setPeekOpenMobile(false);
+                    setSelectedId(null);
+                  }}
+                />
+              </div>
+            </div>
+          )}
         </div>
-      </div>
       </div>
     </>
-  );
-}
-
-function OrderRow({ row: r }: { row: SupplierOrderRow }) {
-  const flash = useFlashOnSplitUpdate(r.splitId);
-  return (
-    <tr
-      data-split-id={r.splitId}
-      className={`hover:bg-surface-hover/40 transition-colors ${flash}`}
-    >
-      <td className="whitespace-nowrap px-4 py-3 font-mono text-xs text-text-primary">
-        {r.orderNumber ?? `#${r.splitId.slice(0, 8)}`}
-      </td>
-      <td className="px-4 py-3 text-text-primary">{r.restaurantName}</td>
-      <td className="whitespace-nowrap px-4 py-3 text-text-secondary">
-        {formatDate(r.createdAt)}
-      </td>
-      <td className="px-4 py-3 text-text-secondary">{r.zoneName ?? "—"}</td>
-      <td className="whitespace-nowrap px-4 py-3 text-text-secondary">
-        {formatDate(r.expectedDeliveryDate)}
-      </td>
-      <td className="whitespace-nowrap px-4 py-3 text-right font-mono tabular-nums text-text-primary">
-        {euroFmt.format(Number(r.subtotal || 0))}
-      </td>
-      <td className="px-4 py-3">
-        <StateBadge state={r.workflowState} />
-      </td>
-      <td className="whitespace-nowrap px-4 py-3 text-right">
-        <Link
-          href={`/supplier/ordini/${r.splitId}`}
-          className="text-accent-blue hover:underline text-xs"
-        >
-          Apri
-        </Link>
-      </td>
-    </tr>
   );
 }
