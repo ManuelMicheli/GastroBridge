@@ -1,7 +1,6 @@
 "use client";
 
-import { Euro, Percent, Receipt, Users } from "lucide-react";
-import { KPICard } from "@/components/dashboard/cards/kpi-card";
+import { TerminalKPICard } from "@/components/dashboard/cards/terminal-kpi-card";
 import { formatCentsCompact, formatPct } from "@/lib/fiscal/format";
 
 type Props = {
@@ -18,36 +17,59 @@ export function FinanzeKpis({
   covers,
 }: Props) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <KPICard
-        label="Incasso 30gg"
-        value={formatCentsCompact(revenueCents)}
-        numericValue={Math.round(revenueCents / 100)}
-        icon={Euro}
-      />
-      <KPICard
-        label="Food cost %"
-        value={formatPct(foodCostPct)}
-        numericValue={foodCostPct ?? undefined}
-        icon={Percent}
-        accentColor={
-          (foodCostPct ?? 0) > 35
-            ? "var(--color-accent-orange)"
-            : "var(--color-accent-green)"
-        }
-      />
-      <KPICard
-        label="Scontrini 30gg"
-        value={receipts.toLocaleString("it-IT")}
-        numericValue={receipts}
-        icon={Receipt}
-      />
-      <KPICard
-        label="Coperti 30gg"
-        value={covers.toLocaleString("it-IT")}
-        numericValue={covers}
-        icon={Users}
-      />
-    </div>
+    <section aria-label="KPI finanze">
+      <div className="flex items-center gap-3">
+        <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+          KPI · Ultimi 30 giorni
+        </span>
+        <span aria-hidden className="h-px flex-1 bg-border-subtle" />
+        <span className="font-mono text-[10px] uppercase tracking-[0.08em] tabular-nums text-text-tertiary">
+          {receipts > 0 ? `${receipts.toLocaleString("it-IT")} scontr.` : "—"}
+        </span>
+      </div>
+      <div
+        className="mt-3 grid gap-3"
+        style={{
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(min(220px, 100%), 1fr))",
+        }}
+      >
+        <TerminalKPICard
+          index="01"
+          label="Incasso 30gg"
+          value={formatCentsCompact(revenueCents)}
+          numericValue={Math.round(revenueCents / 100)}
+          hint="POS collegati"
+        />
+        <TerminalKPICard
+          index="02"
+          label="Food cost %"
+          value={formatPct(foodCostPct)}
+          numericValue={foodCostPct ?? undefined}
+          positiveIsGood={false}
+          hint={
+            foodCostPct === null
+              ? "in attesa dati"
+              : (foodCostPct ?? 0) > 35
+                ? "sopra soglia"
+                : "sotto soglia"
+          }
+        />
+        <TerminalKPICard
+          index="03"
+          label="Scontrini 30gg"
+          value={receipts.toLocaleString("it-IT")}
+          numericValue={receipts}
+          hint="ricevuti"
+        />
+        <TerminalKPICard
+          index="04"
+          label="Coperti 30gg"
+          value={covers.toLocaleString("it-IT")}
+          numericValue={covers}
+          hint="serviti"
+        />
+      </div>
+    </section>
   );
 }

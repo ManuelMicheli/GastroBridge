@@ -7,8 +7,7 @@
 
 "use client";
 
-import { BarChart3, ShoppingCart, Wallet, Receipt } from "lucide-react";
-import { KPICard } from "@/components/dashboard/cards/kpi-card";
+import { TerminalKPICard } from "@/components/dashboard/cards/terminal-kpi-card";
 import { SectionFrame } from "@/components/dashboard/restaurant/_awwwards/section-frame";
 import { LargeTitle } from "@/components/ui/large-title";
 import { formatCurrency } from "@/lib/utils/formatters";
@@ -112,32 +111,35 @@ export function AnalyticsContent({ data }: Props) {
               "repeat(auto-fit, minmax(min(220px, 100%), 1fr))",
           }}
         >
-          <KPICard
+          <TerminalKPICard
+            index="01"
             label="Spesa periodo"
             value={formatCurrency(data.currentSpending)}
             numericValue={data.currentSpending}
             previousValue={data.previousSpending}
-            icon={Wallet}
             sparklineData={data.spendingSparkline}
+            positiveIsGood={false}
           />
-          <KPICard
+          <TerminalKPICard
+            index="02"
             label="Ordini"
             value={data.currentOrderCount.toString()}
             numericValue={data.currentOrderCount}
             previousValue={data.previousOrderCount}
-            icon={ShoppingCart}
           />
-          <KPICard
+          <TerminalKPICard
+            index="03"
             label="Ticket medio"
             value={formatCurrency(data.avgTicket)}
             numericValue={data.avgTicket}
-            icon={Receipt}
+            hint="media periodo"
           />
-          <KPICard
+          <TerminalKPICard
+            index="04"
             label="Fornitori attivi"
             value={data.supplierBreakdown.length.toString()}
             numericValue={data.supplierBreakdown.length}
-            icon={BarChart3}
+            hint="nel periodo"
           />
         </div>
       </section>
