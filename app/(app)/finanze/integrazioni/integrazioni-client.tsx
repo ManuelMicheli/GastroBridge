@@ -3,17 +3,20 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus, Pause, Play, Trash2, AlertTriangle, FileUp } from "lucide-react";
+import { Plus, Pause, Play, Trash2, AlertTriangle, FileUp, KeyRound } from "lucide-react";
 import {
   createFiscalIntegration,
   deleteFiscalIntegration,
   pauseFiscalIntegration,
   resumeFiscalIntegration,
+  setFiscalApiKey,
   setFiscalEnabled,
 } from "@/lib/fiscal/actions";
 import type { IntegrationRow } from "@/lib/fiscal/queries";
 import { providerLabel } from "@/lib/fiscal/format";
 import type { FiscalProvider } from "@/lib/fiscal/types";
+
+const API_KEY_PROVIDERS: FiscalProvider[] = ["cassa_in_cloud", "scloby"];
 
 const CONNECTABLE: FiscalProvider[] = [
   "tilby",
@@ -47,6 +50,10 @@ export function IntegrazioniClient({
   const [displayName, setDisplayName] = useState("");
   const [deviceId, setDeviceId] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [apiKeyTarget, setApiKeyTarget] = useState<IntegrationRow | null>(null);
+  const [apiKeyValue, setApiKeyValue] = useState("");
+  const [apiKeyShopId, setApiKeyShopId] = useState("");
+  const [apiKeyJustSaved, setApiKeyJustSaved] = useState<string | null>(null);
 
   async function toggleEnabled(next: boolean) {
     setError(null);
@@ -78,6 +85,35 @@ export function IntegrazioniClient({
         setDisplayName("");
         setDeviceId("");
         router.refresh();
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      }
+    });
+  }
+
+  function openApiKeyModal(i: IntegrationRow) {
+    setError(null);
+    setApiKeyValue("");
+    const existingShop = i.config?.shop_id;
+    setApiKeyShopId(typeof existingShop === "string" ? existingShop : "");
+    setApiKeyTarget(i);
+  }
+
+  async function submitApiKey() {
+    if (!apiKeyTarget) return;
+    setError(null);
+    startTransition(async () => {
+      try {
+        await setFiscalApiKey(apiKeyTarget.id, {
+          api_key: apiKeyValue,
+          shop_id: apiKeyShopId || undefined,
+        });
+        setApiKeyJustSaved(apiKeyTarget.id);
+        setApiKeyTarget(null);
+        setApiKeyValue("");
+        setApiKeyShopId("");
+        router.refresh();
+        setTimeout(() => setApiKeyJustSaved(null), 4000);
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       }
@@ -229,11 +265,28 @@ export function IntegrazioniClient({
                       {i.last_error}
                     </p>
                   )}
+                  {apiKeyJustSaved === i.id && (
+                    <p className="text-xs text-accent-green mt-1">
+                      API key salvata. Prima sync entro 2 minuti.
+                    </p>
+                  )}
                   <p className="text-xs text-text-tertiary mt-1 font-mono">
                     {i.id}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
+                  {API_KEY_PROVIDERS.includes(i.provider) && (
+                    <button
+                      type="button"
+                      onClick={() => openApiKeyModal(i)}
+                      disabled={pending}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle px-2.5 py-1.5 text-xs font-medium text-text-secondary hover:text-text-primary hover:border-border-accent"
+                      title="Inserisci / aggiorna API key"
+                    >
+                      <KeyRound className="h-3.5 w-3.5" />
+                      {i.status === "pending_auth" ? "Inserisci API key" : "Aggiorna API key"}
+                    </button>
+                  )}
                   {i.status === "paused" ? (
                     <button
                       type="button"
@@ -348,6 +401,72 @@ export function IntegrazioniClient({
                 className="bg-accent-green text-surface-base text-sm font-medium rounded-lg px-4 py-2 hover:bg-accent-green/90 disabled:opacity-50"
               >
                 Crea integrazione
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {apiKeyTarget && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-surface-card border border-border-subtle rounded-2xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-text-primary mb-1">
+              API key — {providerLabel(apiKeyTarget.provider)}
+            </h3>
+            <p className="text-xs text-text-tertiary mb-5">
+              Incolla la chiave copiata dal pannello admin del POS. Viene
+              cifrata AES-256 lato server.
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider text-text-tertiary mb-1">
+                  API key
+                </label>
+                <input
+                  value={apiKeyValue}
+                  onChange={(e) => setApiKeyValue(e.target.value)}
+                  placeholder="incolla qui la chiave"
+                  autoFocus
+                  className="w-full bg-surface-base border border-border-subtle rounded-lg px-3 py-2 text-sm text-text-primary font-mono"
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] uppercase tracking-wider text-text-tertiary mb-1">
+                  {apiKeyTarget.provider === "cassa_in_cloud"
+                    ? "Shop ID"
+                    : "Shop ID (opzionale)"}
+                </label>
+                <input
+                  value={apiKeyShopId}
+                  onChange={(e) => setApiKeyShopId(e.target.value)}
+                  placeholder={
+                    apiKeyTarget.provider === "cassa_in_cloud"
+                      ? "id negozio (richiesto da Cassa in Cloud)"
+                      : "lascia vuoto se non richiesto"
+                  }
+                  className="w-full bg-surface-base border border-border-subtle rounded-lg px-3 py-2 text-sm text-text-primary font-mono"
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-end gap-2 mt-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setApiKeyTarget(null);
+                  setApiKeyValue("");
+                  setApiKeyShopId("");
+                }}
+                className="px-3 py-2 text-sm text-text-secondary hover:text-text-primary"
+              >
+                Annulla
+              </button>
+              <button
+                type="button"
+                onClick={submitApiKey}
+                disabled={pending || !apiKeyValue.trim()}
+                className="bg-accent-green text-surface-base text-sm font-medium rounded-lg px-4 py-2 hover:bg-accent-green/90 disabled:opacity-50"
+              >
+                Salva
               </button>
             </div>
           </div>

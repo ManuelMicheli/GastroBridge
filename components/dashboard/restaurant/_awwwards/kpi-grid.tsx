@@ -1,193 +1,325 @@
 // components/dashboard/restaurant/_awwwards/kpi-grid.tsx
 //
-// Terminal KPI hero: big monthly-spending number on top + 4 sub-stats below.
-// Pure presentational — takes already-formatted values + delta objects.
+// Monthly summary grid for the restaurant dashboard. Two typographic groups:
+//   01 · ACQUISTI     — Ordini / Spesa media / Risparmio / Fornitori
+//   02 · INCASSI POS  — Incasso / Food cost % / Scontrini / Coperti
+// Cells reuse TerminalKPICard for count-up, delta chip, sparkline, corner
+// brackets and the bottom scan-line hover detail. Group headers are pure
+// typography — no coloured chips — to keep the terminal aesthetic restrained.
+// The big aggregate spending number was intentionally dropped: the spend
+// trend chart below the card already surfaces it.
 
-import { ArrowDownRight, ArrowUpRight } from "lucide-react";
+"use client";
+
+import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
+import { TerminalKPICard } from "@/components/dashboard/cards/terminal-kpi-card";
 import { formatCurrency } from "@/lib/utils/formatters";
+import { formatCentsCompact, formatPct } from "@/lib/fiscal/format";
 
 export type Delta = {
   sign: "+" | "-" | "";
   pct: string;
-  positive: boolean; // true when current >= previous
+  positive: boolean;
+};
+
+type FiscalSummary = {
+  enabled: boolean;
+  revenueCents: number;
+  foodCostPct: number | null;
+  receipts: number;
+  covers: number;
+  restaurantId: string | null;
+  revenueSpark: number[];
+  receiptsSpark: number[];
+  coversSpark: number[];
+  foodCostSpark: number[];
 };
 
 export type KpiGridProps = {
-  spending: number;
-  spendingDelta: Delta;
   ordersThisMonth: number;
+  prevMonthOrders: number;
   ordersDelta: Delta;
-  avgOrder: number; // 0 when no orders this month
+  avgOrder: number;
   prevAvgOrder: number;
   savings: number;
   activeSuppliers: number;
-  /**
-   * Optional "HH:mm" caption rendered top-right of the hero. When the grid
-   * is wrapped in a SectionFrame that already shows AS OF in its header,
-   * leave this undefined to avoid duplication.
-   */
-  asOf?: string;
+  fiscal: FiscalSummary;
 };
 
-function DeltaChip({
-  delta,
-  // When true, a positive delta is *good* (e.g. more orders, higher savings).
-  // When false, a positive delta is *warning* (e.g. spending more than last month).
-  positiveIsGood,
-  suffix = "",
-}: {
-  delta: Delta;
-  positiveIsGood: boolean;
-  suffix?: string;
-}) {
-  if (delta.pct === "—") {
-    return (
-      <span className="font-mono text-[11px] text-text-tertiary">—</span>
-    );
-  }
-  const isGood = positiveIsGood ? delta.positive : !delta.positive;
-  const color = isGood ? "var(--color-success)" : "var(--color-text-warning)";
-  const Icon = delta.positive ? ArrowUpRight : ArrowDownRight;
-  return (
-    <span
-      className="inline-flex items-center gap-0.5 font-mono tabular-nums text-[11px]"
-      style={{ color }}
-    >
-      <Icon className="h-3 w-3" aria-hidden />
-      {delta.pct}
-      {suffix ? <span className="ml-1 text-text-tertiary">{suffix}</span> : null}
-    </span>
-  );
-}
-
-function StatCell({
+/**
+ * Typographic group header. Big faded index → bold label → muted subtitle
+ * on one line, divided from the cells below by a hairline rule with a small
+ * tick cap on each end (awwwards terminal detail). Optional `right` accessory
+ * sits flush-right on the rule.
+ */
+function GroupHeader({
+  index,
   label,
-  value,
-  children,
+  subtitle,
+  accent,
+  right,
 }: {
+  index: string;
   label: string;
-  value: string;
-  children?: React.ReactNode;
+  subtitle: string;
+  accent: string; // CSS var reference, e.g. "var(--color-accent-amber)"
+  right?: React.ReactNode;
 }) {
   return (
-    <div className="flex min-w-0 flex-col gap-1">
-      <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
-        {label}
-      </span>
-      <span className="font-mono tabular-nums text-[18px] text-text-primary">
-        {value}
-      </span>
-      <span className="min-h-[14px] text-[11px]">{children}</span>
+    <div className="flex flex-col gap-2">
+      <div className="flex items-end gap-4 flex-wrap">
+        <span
+          aria-hidden
+          className="font-mono tabular-nums leading-none select-none"
+          style={{
+            fontSize: "30px",
+            fontWeight: 300,
+            letterSpacing: "-0.02em",
+            color: `color-mix(in srgb, ${accent} 70%, transparent)`,
+          }}
+        >
+          {index}
+        </span>
+        <div className="flex flex-col gap-0.5 min-w-0">
+          <span
+            className="font-mono text-[11px] uppercase tracking-[0.18em]"
+            style={{ color: accent }}
+          >
+            {label}
+          </span>
+          <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary truncate">
+            {subtitle}
+          </span>
+        </div>
+        <span aria-hidden className="flex-1 min-w-[24px]" />
+        {right ? (
+          <span className="flex items-center gap-2 pb-0.5">{right}</span>
+        ) : null}
+      </div>
+      {/* Hairline rule with tick caps — faint accent gradient cap on the left */}
+      <div className="relative">
+        <span
+          aria-hidden
+          className="block h-px w-full"
+          style={{
+            background: `linear-gradient(90deg, color-mix(in srgb, ${accent} 55%, transparent) 0%, color-mix(in srgb, ${accent} 18%, transparent) 12%, var(--color-border-subtle) 32%, var(--color-border-subtle) 100%)`,
+          }}
+        />
+        <span
+          aria-hidden
+          className="absolute left-0 -top-[3px] block h-[7px] w-px"
+          style={{ backgroundColor: accent }}
+        />
+        <span
+          aria-hidden
+          className="absolute right-0 -top-[3px] block h-[7px] w-px bg-border-subtle"
+        />
+      </div>
     </div>
   );
 }
 
 export function KpiGrid({
-  spending,
-  spendingDelta,
   ordersThisMonth,
-  ordersDelta,
+  prevMonthOrders,
   avgOrder,
   prevAvgOrder,
   savings,
   activeSuppliers,
-  asOf,
+  fiscal,
 }: KpiGridProps) {
-  // Build an avg-order delta locally (previous period only if we have data).
-  const avgDelta: Delta = (() => {
-    if (prevAvgOrder === 0) {
-      return { sign: "", pct: avgOrder === 0 ? "—" : "100%", positive: true };
-    }
-    const d = ((avgOrder - prevAvgOrder) / prevAvgOrder) * 100;
-    const positive = d >= 0;
-    return {
-      sign: positive ? "+" : "",
-      pct: `${Math.abs(Math.round(d))}%`,
-      positive,
-    };
-  })();
+  const foodCostHint =
+    fiscal.foodCostPct === null
+      ? "in attesa dati"
+      : fiscal.foodCostPct > 35
+        ? "sopra soglia 35%"
+        : "sotto soglia 35%";
 
   return (
-    <div className="relative">
-      {/* Optional AS OF caption, top-right (skipped when the wrapping frame
-          already renders it in its header). */}
-      {asOf ? (
-        <span className="pointer-events-none absolute right-0 top-0 font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
-          AS OF {asOf}
-        </span>
-      ) : null}
-
-      {/* Main number + delta */}
-      <div className="flex items-baseline gap-3 flex-wrap pr-20">
-        <span
-          className="font-mono tabular-nums"
+    <div className="flex flex-col gap-7">
+      {/* ── 01 · Acquisti ───────────────────────────────────────────────── */}
+      <section aria-labelledby="kpi-group-acquisti" className="flex flex-col gap-4">
+        <GroupHeader
+          index="01"
+          label="Acquisti"
+          subtitle="Questo mese · dai fornitori"
+          accent="var(--color-accent-amber)"
+        />
+        <div
+          className="grid gap-3"
           style={{
-            fontSize: "var(--text-display-2xl)",
-            lineHeight: "var(--text-display-2xl--line-height)",
-            letterSpacing: "var(--text-display-2xl--letter-spacing)",
-            fontWeight: 400,
-            color: "var(--color-text-primary)",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(min(200px, 100%), 1fr))",
           }}
         >
-          {formatCurrency(spending)}
-        </span>
-        {spendingDelta.pct !== "—" && (
-          <span
-            className="inline-flex items-center gap-0.5 font-mono tabular-nums"
+          <TerminalKPICard
+            index="01"
+            label="Ordini"
+            value={ordersThisMonth.toLocaleString("it-IT")}
+            numericValue={ordersThisMonth}
+            previousValue={prevMonthOrders}
+            positiveIsGood
+            hint="vs mese scorso"
+          />
+          <TerminalKPICard
+            index="02"
+            label="Spesa media"
+            value={avgOrder > 0 ? formatCurrency(avgOrder) : "—"}
+            numericValue={avgOrder > 0 ? avgOrder : undefined}
+            previousValue={prevAvgOrder > 0 ? prevAvgOrder : undefined}
+            positiveIsGood={false}
+            hint="per ordine"
+          />
+          <TerminalKPICard
+            index="03"
+            label="Risparmio"
+            value={formatCurrency(savings)}
+            numericValue={savings}
+            hint="stimato · confronto prezzi"
+          />
+          <TerminalKPICard
+            index="04"
+            label="Fornitori"
+            value={activeSuppliers.toLocaleString("it-IT")}
+            numericValue={activeSuppliers}
+            hint="attivi"
+          />
+        </div>
+      </section>
+
+      {/* ── 02 · Incassi POS ────────────────────────────────────────────── */}
+      <section aria-labelledby="kpi-group-incassi" className="flex flex-col gap-4">
+        <GroupHeader
+          index="02"
+          label="Incassi POS"
+          subtitle="Ultimi 30 giorni · scontrini casse"
+          accent="var(--color-accent-green)"
+          right={
+            fiscal.enabled && fiscal.restaurantId ? (
+              <Link
+                href={`/finanze?r=${fiscal.restaurantId}`}
+                className="group inline-flex items-center gap-1 font-mono text-[10px] uppercase tracking-[0.12em] text-text-tertiary hover:text-accent-green transition-colors"
+              >
+                <span>Finanze</span>
+                <ArrowUpRight className="h-3 w-3 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              </Link>
+            ) : null
+          }
+        />
+        {fiscal.enabled ? (
+          <div
+            className="grid gap-3"
             style={{
-              fontSize: "var(--text-body-sm)",
-              fontWeight: 600,
-              color: spendingDelta.positive
-                ? "var(--color-text-warning)"
-                : "var(--color-success)",
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(min(200px, 100%), 1fr))",
             }}
           >
-            {spendingDelta.positive ? (
-              <ArrowUpRight className="h-3.5 w-3.5" />
-            ) : (
-              <ArrowDownRight className="h-3.5 w-3.5" />
-            )}
-            {spendingDelta.pct}
-            <span className="ml-1 text-text-tertiary font-normal">
-              vs mese scorso
-            </span>
-          </span>
+            <TerminalKPICard
+              index="05"
+              label="Incasso"
+              value={formatCentsCompact(fiscal.revenueCents)}
+              numericValue={Math.round(fiscal.revenueCents / 100)}
+              sparklineData={
+                fiscal.revenueSpark.length > 1
+                  ? fiscal.revenueSpark
+                  : undefined
+              }
+              hint="POS collegati"
+            />
+            <TerminalKPICard
+              index="06"
+              label="Food cost %"
+              value={formatPct(fiscal.foodCostPct)}
+              numericValue={fiscal.foodCostPct ?? undefined}
+              sparklineData={
+                fiscal.foodCostSpark.length > 1
+                  ? fiscal.foodCostSpark
+                  : undefined
+              }
+              positiveIsGood={false}
+              hint={foodCostHint}
+            />
+            <TerminalKPICard
+              index="07"
+              label="Scontrini"
+              value={fiscal.receipts.toLocaleString("it-IT")}
+              numericValue={fiscal.receipts}
+              sparklineData={
+                fiscal.receiptsSpark.length > 1
+                  ? fiscal.receiptsSpark
+                  : undefined
+              }
+              hint="ricevuti"
+            />
+            <TerminalKPICard
+              index="08"
+              label="Coperti"
+              value={fiscal.covers.toLocaleString("it-IT")}
+              numericValue={fiscal.covers}
+              sparklineData={
+                fiscal.coversSpark.length > 1 ? fiscal.coversSpark : undefined
+              }
+              hint="serviti"
+            />
+          </div>
+        ) : (
+          <FiscalInactive restaurantId={fiscal.restaurantId} />
         )}
-      </div>
+      </section>
+    </div>
+  );
+}
 
-      {/* separator rule */}
-      <div
+/**
+ * Inactive state for the Incassi POS group. Deliberately quiet: a hairline
+ * frame, a pair of corner brackets, a small readable pitch and a single
+ * terminal-styled CTA. No coloured background, no icon chip.
+ */
+function FiscalInactive({ restaurantId }: { restaurantId: string | null }) {
+  return (
+    <div className="group relative overflow-hidden rounded-xl border border-border-subtle bg-surface-card px-5 py-5">
+      {/* Corner brackets — top-right & bottom-left (match TerminalKPICard) */}
+      <span
         aria-hidden
-        className="my-5 h-px w-full bg-border-subtle"
+        className="pointer-events-none absolute right-2.5 top-2.5 h-2.5 w-2.5 border-t border-r border-border-subtle opacity-60 transition-[opacity,border-color] duration-200 group-hover:border-accent-green group-hover:opacity-100"
+      />
+      <span
+        aria-hidden
+        className="pointer-events-none absolute bottom-2.5 left-2.5 h-2.5 w-2.5 border-b border-l border-border-subtle opacity-60 transition-[opacity,border-color] duration-200 group-hover:border-accent-green group-hover:opacity-100"
       />
 
-      {/* 4 sub-KPIs: 4 cols ≥640px, 2 cols ≥400px, 1 col below */}
-      <div className="grid grid-cols-1 gap-5 min-[400px]:grid-cols-2 sm:grid-cols-4 sm:gap-4">
-        <StatCell label="Ordini" value={String(ordersThisMonth)}>
-          <DeltaChip delta={ordersDelta} positiveIsGood suffix="vs prec." />
-        </StatCell>
-        <StatCell
-          label="Spesa media"
-          value={avgOrder > 0 ? formatCurrency(avgOrder) : "—"}
+      <div className="flex flex-wrap items-center gap-5">
+        <div className="flex flex-col gap-1 min-w-[240px] flex-1">
+          <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-text-tertiary">
+            Cassetto fiscale · inattivo
+          </span>
+          <span className="text-[13px] text-text-secondary leading-snug">
+            Collega una cassa POS per vedere{" "}
+            <span className="text-text-primary">
+              incasso, food cost, scontrini e coperti
+            </span>{" "}
+            qui in automatico.
+          </span>
+        </div>
+        <Link
+          href={
+            restaurantId
+              ? `/finanze/integrazioni?r=${restaurantId}`
+              : "/finanze"
+          }
+          className="inline-flex items-center gap-1.5 border-b border-border-subtle pb-1 font-mono text-[11px] uppercase tracking-[0.14em] text-text-primary hover:border-accent-green hover:text-accent-green transition-colors"
         >
-          {prevAvgOrder > 0 ? (
-            <DeltaChip delta={avgDelta} positiveIsGood={false} suffix="vs prec." />
-          ) : (
-            <span className="font-mono text-[11px] text-text-tertiary">
-              nessun confronto
-            </span>
-          )}
-        </StatCell>
-        <StatCell
-          label="Risparmio"
-          value={formatCurrency(savings)}
-        >
-          <span className="font-mono text-[11px] text-text-tertiary">stimato</span>
-        </StatCell>
-        <StatCell label="Fornitori" value={String(activeSuppliers)}>
-          <span className="font-mono text-[11px] text-text-tertiary">attivi</span>
-        </StatCell>
+          Attiva
+          <ArrowUpRight className="h-3 w-3 transition-transform duration-200 hover:translate-x-0.5 hover:-translate-y-0.5" />
+        </Link>
       </div>
+
+      {/* Scan line — awwwards signature detail */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-px scale-x-0 bg-gradient-to-r from-transparent via-accent-green to-transparent transition-transform duration-500 ease-out group-hover:scale-x-100"
+      />
     </div>
   );
 }

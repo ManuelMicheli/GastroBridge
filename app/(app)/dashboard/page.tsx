@@ -137,6 +137,18 @@ export default async function DashboardPage() {
           savingsGross: 0,
           activeSuppliers: 0,
         }}
+        fiscal={{
+          enabled: false,
+          revenueCents: 0,
+          foodCostPct: null,
+          receipts: 0,
+          covers: 0,
+          restaurantId: null,
+          revenueSpark: [],
+          receiptsSpark: [],
+          coversSpark: [],
+          foodCostSpark: [],
+        }}
         spendPoints={points}
         spendPointsGross={pointsGross}
         transactionsByDate={transactionsByDate}
@@ -244,6 +256,128 @@ export default async function DashboardPage() {
   const { points: spendPoints, pointsGross: spendPointsGross, transactionsByDate } =
     buildSpendPoints(trendOrdersRes.data ?? [], TREND_WINDOW_DAYS, vatByOrder);
 
+  // Fiscal aggregates (Cassetto Fiscale) for the dashboard summary — last 30
+  // days across every restaurant that has fiscal_enabled=true. When no sede
+  // is enabled we return a placeholder so the card can show the activation CTA.
+  const { data: prefsRows } = (await supabase
+    .from("restaurant_preferences")
+    .select("restaurant_id, fiscal_enabled")
+    .in("restaurant_id", restaurantIds)) as {
+    data: { restaurant_id: string; fiscal_enabled: boolean | null }[] | null;
+  };
+  const fiscalEnabledIds = (prefsRows ?? [])
+    .filter((r) => r.fiscal_enabled)
+    .map((r) => r.restaurant_id);
+
+  const primaryRestaurantId = restaurantIds[0] ?? null;
+
+  let fiscal: {
+    enabled: boolean;
+    revenueCents: number;
+    foodCostPct: number | null;
+    receipts: number;
+    covers: number;
+    restaurantId: string | null;
+    revenueSpark: number[];
+    receiptsSpark: number[];
+    coversSpark: number[];
+    foodCostSpark: number[];
+  };
+
+  if (fiscalEnabledIds.length > 0) {
+    const sinceDate = new Date();
+    sinceDate.setDate(sinceDate.getDate() - 30);
+    const sinceIso = sinceDate.toISOString().slice(0, 10);
+
+    const [dailyRes, foodCostRes] = await Promise.all([
+      supabase
+        .from("fiscal_daily_summary")
+        .select("revenue_cents, receipts_count, covers, business_day")
+        .in("restaurant_id", fiscalEnabledIds)
+        .gte("business_day", sinceIso) as unknown as Promise<{
+        data: {
+          revenue_cents: number;
+          receipts_count: number;
+          covers: number;
+          business_day: string;
+        }[] | null;
+      }>,
+      supabase
+        .from("fiscal_food_cost")
+        .select("food_cost_pct, business_day")
+        .in("restaurant_id", fiscalEnabledIds)
+        .gte("business_day", sinceIso)
+        .order("business_day", { ascending: true }) as unknown as Promise<{
+        data: { food_cost_pct: number | null; business_day: string }[] | null;
+      }>,
+    ]);
+
+    const dailyRows = dailyRes.data ?? [];
+    const revenueCents = dailyRows.reduce(
+      (s, r) => s + (r.revenue_cents || 0),
+      0,
+    );
+    const receipts = dailyRows.reduce(
+      (s, r) => s + (r.receipts_count || 0),
+      0,
+    );
+    const covers = dailyRows.reduce((s, r) => s + (r.covers || 0), 0);
+
+    // Build 30-day bucketed sparkline arrays (index 0 = 29 days ago ... 29 = today)
+    const bucketIndex = new Map<string, number>();
+    const revenueSpark = new Array<number>(30).fill(0);
+    const receiptsSpark = new Array<number>(30).fill(0);
+    const coversSpark = new Array<number>(30).fill(0);
+    for (let i = 0; i < 30; i++) {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() - (29 - i));
+      bucketIndex.set(d.toISOString().slice(0, 10), i);
+    }
+    for (const row of dailyRows) {
+      const idx = bucketIndex.get(row.business_day);
+      if (idx === undefined) continue;
+      revenueSpark[idx]! += row.revenue_cents || 0;
+      receiptsSpark[idx]! += row.receipts_count || 0;
+      coversSpark[idx]! += row.covers || 0;
+    }
+
+    const foodCostRows = foodCostRes.data ?? [];
+    const foodCostSpark = foodCostRows
+      .map((r) => r.food_cost_pct)
+      .filter((v): v is number => v !== null && !Number.isNaN(v));
+    const foodCostPct =
+      foodCostSpark.length > 0
+        ? foodCostSpark[foodCostSpark.length - 1]!
+        : null;
+
+    fiscal = {
+      enabled: true,
+      revenueCents,
+      foodCostPct,
+      receipts,
+      covers,
+      restaurantId: fiscalEnabledIds[0] ?? primaryRestaurantId,
+      revenueSpark,
+      receiptsSpark,
+      coversSpark,
+      foodCostSpark,
+    };
+  } else {
+    fiscal = {
+      enabled: false,
+      revenueCents: 0,
+      foodCostPct: null,
+      receipts: 0,
+      covers: 0,
+      restaurantId: primaryRestaurantId,
+      revenueSpark: [],
+      receiptsSpark: [],
+      coversSpark: [],
+      foodCostSpark: [],
+    };
+  }
+
   // Recent orders
   const recentOrders = (recentOrdersRes.data || []).map((o) => ({
     id: o.id,
@@ -269,6 +403,7 @@ export default async function DashboardPage() {
         savingsGross: Math.round(currentSpendingGross * 0.08),
         activeSuppliers: uniqueSuppliers,
       }}
+      fiscal={fiscal}
       spendPoints={spendPoints}
       spendPointsGross={spendPointsGross}
       transactionsByDate={transactionsByDate}

@@ -41,6 +41,19 @@ type OrderRow = {
   order_number: string;
 };
 
+type FiscalSummary = {
+  enabled: boolean;
+  revenueCents: number;
+  foodCostPct: number | null;
+  receipts: number;
+  covers: number;
+  restaurantId: string | null;
+  revenueSpark: number[];
+  receiptsSpark: number[];
+  coversSpark: number[];
+  foodCostSpark: number[];
+};
+
 type Props = {
   companyName: string;
   kpi: {
@@ -54,6 +67,7 @@ type Props = {
     savingsGross: number;
     activeSuppliers: number;
   };
+  fiscal: FiscalSummary;
   spendPoints: SpendTrendPoint[];
   spendPointsGross: SpendTrendPoint[];
   transactionsByDate: Record<string, number>;
@@ -85,6 +99,7 @@ function formatClock(d: Date): string {
 export function RestaurantDashboard({
   companyName,
   kpi,
+  fiscal,
   spendPoints,
   spendPointsGross,
   transactionsByDate,
@@ -115,7 +130,6 @@ export function RestaurantDashboard({
     [recentOrders, gross],
   );
 
-  const spendingDelta = formatDelta(effSpending, effPrevSpending);
   const ordersDelta = formatDelta(kpi.ordersThisMonth, kpi.prevMonthOrders);
 
   const avgOrder =
@@ -169,10 +183,10 @@ export function RestaurantDashboard({
         <QuickActionBar />
       </div>
 
-      {/* Block 3 — KPI hero + savings alert (same frame) */}
+      {/* Block 3 — KPI summary (acquisti + incassi POS) + savings alert */}
       <div className="animate-[fadeInUp_260ms_ease-out_both] [animation-delay:120ms]">
         <SectionFrame
-          label={`Spesa · Questo mese · ${gross ? "Con IVA" : "Senza IVA"}`}
+          label={`Sintesi · Questo mese · ${gross ? "Con IVA" : "Senza IVA"}`}
           trailing={
             <span className="inline-flex items-center gap-3">
               <VatToggle value={vatMode} onChange={handleVatChange} />
@@ -181,20 +195,19 @@ export function RestaurantDashboard({
           }
           padded={false}
         >
-          <div className="px-4 pt-3 pb-4">
+          <div className="px-5 pt-5 pb-6 sm:px-6 sm:pt-6 sm:pb-7">
             <KpiGrid
-              spending={effSpending}
-              spendingDelta={spendingDelta}
               ordersThisMonth={kpi.ordersThisMonth}
+              prevMonthOrders={kpi.prevMonthOrders}
               ordersDelta={ordersDelta}
               avgOrder={avgOrder}
               prevAvgOrder={prevAvgOrder}
               savings={effSavings}
               activeSuppliers={kpi.activeSuppliers}
-              /* AS OF lives on the SectionFrame header above */
+              fiscal={fiscal}
             />
           </div>
-          <div className="border-t border-border-subtle px-4 py-3">
+          <div className="border-t border-border-subtle px-5 py-3 sm:px-6">
             <SavingsAlert savings={effSavings} />
           </div>
         </SectionFrame>

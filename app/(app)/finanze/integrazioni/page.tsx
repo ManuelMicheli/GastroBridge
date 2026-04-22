@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, BookOpen } from "lucide-react";
 import {
   getFiscalEnabled,
   getRestaurantsForCurrentUser,
@@ -41,27 +41,35 @@ export default async function IntegrazioniPage({
     listIntegrations(selectedId),
   ]);
 
-  const webhookBaseUrl =
-    process.env.NEXT_PUBLIC_APP_URL ?? "https://<your-domain>";
+  const webhookBaseUrl = "https://gastro-bridge.vercel.app";
 
   return (
     <div className="p-4 lg:p-6 space-y-6 max-w-5xl">
-      <div className="flex items-center gap-3">
-        <Link
-          href={`/finanze?r=${selectedId}`}
-          className="text-text-tertiary hover:text-text-secondary"
-          aria-label="Torna al dashboard"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <div>
-          <p className="text-[10px] uppercase tracking-widest text-text-tertiary font-bold">
-            Cassetto Fiscale · Integrazioni
-          </p>
-          <h1 className="text-2xl font-semibold text-text-primary">
-            POS collegati
-          </h1>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3">
+          <Link
+            href={`/finanze?r=${selectedId}`}
+            className="text-text-tertiary hover:text-text-secondary"
+            aria-label="Torna al dashboard"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div>
+            <p className="text-[10px] uppercase tracking-widest text-text-tertiary font-bold">
+              Cassetto Fiscale · Integrazioni
+            </p>
+            <h1 className="text-2xl font-semibold text-text-primary">
+              POS collegati
+            </h1>
+          </div>
         </div>
+        <Link
+          href={`/finanze/guida?r=${selectedId}`}
+          className="inline-flex items-center gap-2 rounded-lg border border-border-subtle px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-text-primary hover:border-border-accent"
+        >
+          <BookOpen className="h-3.5 w-3.5" />
+          Guida collegamento
+        </Link>
       </div>
 
       <IntegrazioniClient

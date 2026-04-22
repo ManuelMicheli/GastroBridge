@@ -4,7 +4,13 @@ import { revalidatePath } from "next/cache";
 import { randomBytes } from "node:crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { saveCredentials } from "./credentials";
 import type { FiscalProvider } from "./types";
+
+const API_KEY_PROVIDERS: readonly FiscalProvider[] = [
+  "cassa_in_cloud",
+  "scloby",
+];
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Loose = any;
@@ -116,6 +122,47 @@ export async function resumeFiscalIntegration(
     .update({ status: "active", last_error: null })
     .eq("id", integrationId);
   revalidatePath("/finanze/integrazioni");
+}
+
+export async function setFiscalApiKey(
+  integrationId: string,
+  input: { api_key: string; shop_id?: string },
+): Promise<void> {
+  const admin = createAdminClient() as Loose;
+  const { data } = await admin
+    .from("fiscal_integrations")
+    .select("restaurant_id, provider, config")
+    .eq("id", integrationId)
+    .single();
+  if (!data) throw new Error("integration not found");
+  await requireOwner(data.restaurant_id as string);
+
+  const provider = data.provider as FiscalProvider;
+  if (!API_KEY_PROVIDERS.includes(provider)) {
+    throw new Error("provider non usa API key");
+  }
+  const apiKey = input.api_key.trim();
+  if (!apiKey) throw new Error("API key mancante");
+  const shopId = input.shop_id?.trim() || undefined;
+
+  await saveCredentials(integrationId, {
+    kind: "api_key",
+    api_key: apiKey,
+    ...(shopId ? { shop_id: shopId } : {}),
+  });
+
+  const prevConfig = (data.config ?? {}) as Record<string, unknown>;
+  const nextConfig = shopId
+    ? { ...prevConfig, shop_id: shopId }
+    : prevConfig;
+
+  await admin
+    .from("fiscal_integrations")
+    .update({ status: "active", last_error: null, config: nextConfig })
+    .eq("id", integrationId);
+
+  revalidatePath("/finanze/integrazioni");
+  revalidatePath("/finanze");
 }
 
 export async function deleteFiscalIntegration(
