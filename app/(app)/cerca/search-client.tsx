@@ -2,8 +2,8 @@
 "use client";
 
 import {
+  startTransition,
   useCallback,
-  useDeferredValue,
   useEffect,
   useMemo,
   useRef,
@@ -11,7 +11,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { BookMarked, Filter, Keyboard } from "lucide-react";
+import { BookMarked, Filter, Keyboard, ShoppingCart } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -31,6 +31,7 @@ import { buildIndex, searchGroups } from "./_lib/product-index";
 import {
   applyFacets,
   computeFacetCounts,
+  emptyFacets,
   hasActiveFacets,
 } from "./_lib/facets";
 import { readUrlState, writeUrlState, type Tab } from "./_lib/url-state";
@@ -80,7 +81,7 @@ export function SearchPageClient({
   const router = useRouter();
   const sp = useSearchParams();
   const prefs = preferences ?? defaultPrefs;
-  const { addItem } = useCart();
+  const { addItem, totalItems, totalAmount } = useCart();
   const connectedSet = useMemo(() => new Set(connectedSupplierIds), [connectedSupplierIds]);
 
   const addOfferToCart = useCallback(
@@ -106,6 +107,7 @@ export function SearchPageClient({
   const initial = useMemo(() => readUrlState(new URLSearchParams(sp.toString())), []); // eslint-disable-line react-hooks/exhaustive-deps
   const [tab, setTab] = useState<Tab>(initial.tab);
   const [query, setQuery] = useState(initial.query);
+  const [committedQuery, setCommittedQuery] = useState(initial.query);
   const [facets, setFacets] = useState(initial.facets);
   const [selectedKey, setSelectedKey] = useState<string | null>(initial.selectedKey);
   const [sort, setSort] = useState<SortMode>("relevance");
@@ -113,12 +115,13 @@ export function SearchPageClient({
   const [helpOpen, setHelpOpen] = useState(false);
   const [pendingAdd, setPendingAdd] = useState<OrderLine | null>(null);
 
-  const deferredQuery = useDeferredValue(query);
-  const isDeferring = query !== deferredQuery;
+  // committedQuery lags query only when we intentionally defer (non-empty typing).
+  // Empty query commits immediately so clearing is instant and deterministic.
+  const isSearching = query !== committedQuery;
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Build ranked Group[] + globalExcluded (same logic as legacy client).
+  // Build ranked Group[] + globalExcluded. Stable when items/suppliers/prefs unchanged.
   const { groups, globalExcluded } = useMemo<{
     groups: Group[];
     globalExcluded: ExcludedItem[];
@@ -191,11 +194,20 @@ export function SearchPageClient({
     return { groups: built, globalExcluded: excludedAll };
   }, [items, suppliers, prefs]);
 
-  const index = useMemo(() => buildIndex(groups), [groups]);
+  // Index stable by content signature so router.replace re-renders don't rebuild it.
+  const groupsSignature = useMemo(
+    () => groups.map((g) => g.key).join("|"),
+    [groups],
+  );
+  const index = useMemo(() => buildIndex(groups), [groupsSignature]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Search → ids → facet-filter → Group[]
+  // Fast-path for empty query + no facets — no search, no filter pass.
+  const facetsActive = hasActiveFacets(facets);
+  const trimmedQuery = committedQuery.trim();
+
   const searched = useMemo(() => {
-    const ids = searchGroups(index, groups, deferredQuery);
+    if (!trimmedQuery) return groups;
+    const ids = searchGroups(index, groups, trimmedQuery);
     const byKey = new Map(groups.map((g) => [g.key, g]));
     const ordered: Group[] = [];
     for (const id of ids) {
@@ -203,34 +215,65 @@ export function SearchPageClient({
       if (g) ordered.push(g);
     }
     return ordered;
-  }, [index, groups, deferredQuery]);
+  }, [index, groups, trimmedQuery]);
 
-  const filtered = useMemo(() => applyFacets(searched, facets), [searched, facets]);
-  const counts = useMemo(() => computeFacetCounts(searched, facets), [searched, facets]);
+  const filtered = useMemo(() => {
+    if (!facetsActive) return searched;
+    return applyFacets(searched, facets);
+  }, [searched, facets, facetsActive]);
+
+  const counts = useMemo(
+    () => computeFacetCounts(searched, facets),
+    [searched, facets],
+  );
   const selectedGroup = useMemo(
     () => groups.find((g) => g.key === selectedKey) ?? null,
     [groups, selectedKey],
   );
 
-  // Selection clamping when filtered changes
+  // Selection clamping — clear if completely gone from dataset.
   useEffect(() => {
     if (!selectedKey) return;
-    if (!filtered.some((g) => g.key === selectedKey)) {
-      // keep selection if it's still in unfiltered groups (user filtered it out);
-      // only clear if completely gone from dataset
-      if (!groups.some((g) => g.key === selectedKey)) setSelectedKey(null);
-    }
-  }, [filtered, groups, selectedKey]);
+    if (!groups.some((g) => g.key === selectedKey)) setSelectedKey(null);
+  }, [groups, selectedKey]);
 
-  // URL sync (debounced 300ms)
+  // Debounced URL sync — never blocks render.
   useEffect(() => {
     const t = setTimeout(() => {
-      const params = writeUrlState({ tab, query, facets, selectedKey });
+      const params = writeUrlState({ tab, query: committedQuery, facets, selectedKey });
       const qs = params.toString();
-      router.replace(qs ? `/cerca?${qs}` : "/cerca", { scroll: false });
-    }, 300);
+      startTransition(() => {
+        router.replace(qs ? `/cerca?${qs}` : "/cerca", { scroll: false });
+      });
+    }, 250);
     return () => clearTimeout(t);
-  }, [tab, query, facets, selectedKey, router]);
+  }, [tab, committedQuery, facets, selectedKey, router]);
+
+  // Query handler: commit immediately on empty, debounce commit when typing.
+  const commitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleSetQuery = useCallback((next: string) => {
+    setQuery(next);
+    if (commitTimer.current) clearTimeout(commitTimer.current);
+
+    if (next.trim() === "") {
+      // Immediate commit — restores full list without flicker.
+      setCommittedQuery(next);
+      return;
+    }
+    commitTimer.current = setTimeout(() => {
+      startTransition(() => setCommittedQuery(next));
+    }, 90);
+  }, []);
+
+  useEffect(() => () => {
+    if (commitTimer.current) clearTimeout(commitTimer.current);
+  }, []);
+
+  const clearQuery = useCallback(() => handleSetQuery(""), [handleSetQuery]);
+  const clearAllFilters = useCallback(() => {
+    setFacets(emptyFacets());
+    clearQuery();
+  }, [clearQuery]);
 
   // Keyboard wiring
   const focusSearch = useCallback(() => searchInputRef.current?.focus(), []);
@@ -254,8 +297,8 @@ export function SearchPageClient({
   }, [selectedKey, filtered]);
   const escape = useCallback(() => {
     if (selectedKey) setSelectedKey(null);
-    else if (query) setQuery("");
-  }, [selectedKey, query]);
+    else if (query) clearQuery();
+  }, [selectedKey, query, clearQuery]);
   const addSelected = useCallback(() => {
     if (!selectedGroup) return;
     const best = selectedGroup.offers[0];
@@ -275,8 +318,6 @@ export function SearchPageClient({
     },
     tab === "ricerca",
   );
-
-  const handleSetQuery = (next: string) => setQuery(next);
 
   if (suppliers.length === 0) {
     return (
@@ -305,30 +346,31 @@ export function SearchPageClient({
 
   return (
     <div className="flex h-[calc(100vh-var(--chrome-top,64px))] flex-col">
-      {/* Mobile compact tab strip — sits directly above search bar */}
+      {/* Mobile compact tab strip */}
       <div className="flex items-center justify-between gap-2 px-3 pt-2 pb-1 lg:hidden">
         <TabSwitch tab={tab} onChange={setTab} />
-        {tab === "ricerca" && (
-          <button
-            onClick={() => setFacetsOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle px-2.5 py-1.5 text-[12px] text-text-secondary"
-          >
-            <Filter className="h-3.5 w-3.5" />
-            {hasActiveFacets(facets) && (
-              <span className="inline-flex h-1.5 w-1.5 rounded-full bg-accent-green" />
-            )}
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {tab === "ricerca" && (
+            <button
+              onClick={() => setFacetsOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle px-2.5 py-1.5 text-[12px] text-text-secondary"
+            >
+              <Filter className="h-3.5 w-3.5" />
+              {facetsActive && (
+                <span className="inline-flex h-1.5 w-1.5 rounded-full bg-accent-green" />
+              )}
+            </button>
+          )}
+          <CartChip count={totalItems} total={totalAmount} compact />
+        </div>
       </div>
 
-      {/* Header row: title + tabs (desktop) */}
+      {/* Desktop header */}
       <div className="hidden lg:flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-4 py-3">
-        <PageHeader
-          title="Cerca prodotti"
-          subtitle={`${suppliers.length} cataloghi`}
-        />
+        <PageHeader title="Cerca prodotti" subtitle={`${suppliers.length} cataloghi`} />
         <div className="flex items-center gap-2">
           <TabSwitch tab={tab} onChange={setTab} />
+          <CartChip count={totalItems} total={totalAmount} />
           <button
             onClick={() => setHelpOpen(true)}
             className="hidden items-center gap-1 rounded-lg border border-border-subtle px-2 py-1.5 font-mono text-[10px] uppercase tracking-wide text-text-tertiary hover:bg-surface-hover md:inline-flex"
@@ -345,31 +387,32 @@ export function SearchPageClient({
 
       {tab === "ricerca" && (
         <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_420px]">
-          {/* Facet panel: desktop */}
           <div className="hidden lg:block">
             <FacetPanel facets={facets} counts={counts} onChange={setFacets} />
           </div>
 
-          {/* Middle column */}
           <div className="flex min-h-0 flex-col">
             <SearchBar
               ref={searchInputRef}
               value={query}
               onChange={handleSetQuery}
+              onClear={clearQuery}
               count={filtered.length}
               total={groups.length}
-              isDeferring={isDeferring}
+              isSearching={isSearching}
               listboxId="search-results-listbox"
             />
 
             <ResultsList
               groups={filtered}
-              query={deferredQuery}
+              query={committedQuery}
               selectedKey={selectedKey}
               onSelect={setSelectedKey}
               sort={sort}
               onSortChange={setSort}
-              isSearching={isDeferring}
+              isSearching={isSearching}
+              hasActiveFacets={facetsActive}
+              onClearFilters={clearAllFilters}
             />
 
             {globalExcluded.length > 0 && (
@@ -379,7 +422,6 @@ export function SearchPageClient({
             )}
           </div>
 
-          {/* Detail: desktop */}
           <div className="hidden lg:block">
             <DetailPane
               group={selectedGroup}
@@ -388,7 +430,6 @@ export function SearchPageClient({
             />
           </div>
 
-          {/* Facet drawer: mobile */}
           <MobileDrawer
             open={facetsOpen}
             onClose={() => setFacetsOpen(false)}
@@ -398,7 +439,6 @@ export function SearchPageClient({
             <FacetPanel facets={facets} counts={counts} onChange={setFacets} />
           </MobileDrawer>
 
-          {/* Detail sheet: mobile (md and below) */}
           {selectedGroup && (
             <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={() => setSelectedKey(null)}>
               <div
@@ -435,6 +475,50 @@ export function SearchPageClient({
 
       <CheatsheetOverlay open={helpOpen} onClose={() => setHelpOpen(false)} />
     </div>
+  );
+}
+
+function CartChip({
+  count,
+  total,
+  compact = false,
+}: {
+  count: number;
+  total: number;
+  compact?: boolean;
+}) {
+  const hasItems = count > 0;
+  return (
+    <Link
+      href="/carrello"
+      prefetch={false}
+      aria-label={`Vai al carrello${hasItems ? `, ${count} articoli, totale € ${total.toFixed(2)}` : ""}`}
+      className={`group relative inline-flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[12px] transition-colors ${
+        hasItems
+          ? "border-accent-green/50 bg-accent-green/10 text-accent-green hover:bg-accent-green/15"
+          : "border-border-subtle text-text-secondary hover:bg-surface-hover"
+      }`}
+    >
+      <span className="relative">
+        <ShoppingCart className="h-3.5 w-3.5" />
+        {hasItems && (
+          <span
+            className="absolute -right-1.5 -top-1.5 inline-flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-accent-green px-1 font-mono text-[9px] font-semibold leading-none text-brand-on-primary"
+            aria-hidden
+          >
+            {count > 99 ? "99+" : count}
+          </span>
+        )}
+      </span>
+      {!compact && hasItems && (
+        <span className="font-mono tabular-nums">€ {total.toFixed(2)}</span>
+      )}
+      {!compact && !hasItems && (
+        <span className="font-mono text-[11px] uppercase tracking-wide text-text-tertiary">
+          carrello
+        </span>
+      )}
+    </Link>
   );
 }
 
