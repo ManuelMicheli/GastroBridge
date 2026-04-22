@@ -5,8 +5,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, Pencil, Copy, Trash2, Star, FileText } from "lucide-react";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import {
   deletePriceList,
   duplicatePriceList,
@@ -14,6 +12,7 @@ import {
 } from "@/lib/supplier/pricing/actions";
 import { formatDate } from "@/lib/utils/formatters";
 import { LargeTitle } from "@/components/ui/large-title";
+import { SectionFrame } from "@/components/dashboard/supplier/_awwwards/section-frame";
 import type { Database } from "@/types/database";
 
 type PriceListRow = Database["public"]["Tables"]["price_lists"]["Row"];
@@ -124,48 +123,80 @@ export function ListiniClient({ initialLists }: Props) {
         />
       </div>
 
-      {/* Desktop header */}
-      <div className="hidden lg:flex items-center justify-between mb-6">
-        <div>
-          <h1 className="font-display text-3xl text-text-primary">
-            Listini<span className="text-brand-primary">.</span>
-          </h1>
-          <p className="text-sm text-text-secondary mt-1">
-            Gestisci i listini assegnabili a clienti specifici. Esattamente un
-            listino è predefinito.
-          </p>
-        </div>
-        <Link href="/supplier/listini/nuovo">
-          <Button size="sm">
-            <Plus className="h-4 w-4" /> Nuovo listino
-          </Button>
-        </Link>
-      </div>
+      {/* Desktop — terminal pricing console */}
+      <div className="hidden lg:block">
+        <div className="flex flex-col gap-6">
+          <header>
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+                Listini · pricing · assegnazioni per cliente
+              </span>
+              <span aria-hidden className="h-px flex-1 bg-border-subtle" />
+              <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+                <span className="tabular-nums text-text-primary">
+                  {initialLists.length}
+                </span>{" "}
+                configurati
+              </span>
+            </div>
+            <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <h1
+                  className="font-display"
+                  style={{
+                    fontSize: "var(--text-display-lg)",
+                    lineHeight: "var(--text-display-lg--line-height)",
+                    letterSpacing: "var(--text-display-lg--letter-spacing)",
+                    fontWeight: "var(--text-display-lg--font-weight)",
+                    color: "var(--color-text-primary)",
+                  }}
+                >
+                  Listini
+                </h1>
+                <p className="mt-1.5 text-sm text-text-secondary">
+                  Gestisci i listini assegnabili a clienti specifici. Esattamente
+                  un listino è predefinito.
+                </p>
+              </div>
+              <Link
+                href="/supplier/listini/nuovo"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-accent-green/40 bg-accent-green/10 px-3 py-2 font-mono text-[11px] uppercase tracking-[0.08em] text-accent-green transition-colors hover:bg-accent-green/20"
+              >
+                <Plus className="h-3.5 w-3.5" aria-hidden /> Nuovo listino
+              </Link>
+            </div>
+          </header>
 
       {initialLists.length === 0 ? (
-        <Card className="text-center py-16">
-          <FileText className="h-12 w-12 text-text-secondary mx-auto mb-4" />
-          <p className="text-text-secondary mb-4">
-            Nessun listino configurato.
+        <div className="rounded-xl border border-border-subtle bg-surface-card px-6 py-16 text-center">
+          <FileText className="mx-auto mb-3 h-7 w-7 text-text-tertiary" aria-hidden />
+          <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-text-tertiary">
+            Nessun listino configurato
           </p>
-          <Link href="/supplier/listini/nuovo">
-            <Button size="sm">
-              <Plus className="h-4 w-4" /> Crea il primo listino
-            </Button>
+          <Link
+            href="/supplier/listini/nuovo"
+            className="mt-5 inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-base px-3 py-2 font-mono text-[11px] uppercase tracking-[0.08em] text-text-primary transition-colors hover:border-accent-green hover:text-accent-green"
+          >
+            <Plus className="h-3.5 w-3.5" /> Crea il primo listino
           </Link>
-        </Card>
+        </div>
       ) : (
-        <div className="rounded-xl border border-border-subtle bg-surface-card overflow-hidden">
+        <SectionFrame
+          label={`Listini · ${initialLists.length}`}
+          trailing="default obbligatorio"
+          padded={false}
+        >
+        <div className="overflow-hidden">
           <table className="w-full">
             <thead>
-              <tr className="bg-surface-base text-left text-xs font-semibold text-text-secondary uppercase tracking-wider">
-                <th className="px-4 py-3">Nome</th>
-                <th className="px-4 py-3">Default</th>
-                <th className="px-4 py-3">Validità</th>
-                <th className="px-4 py-3 text-right">Prodotti</th>
-                <th className="px-4 py-3 text-right">Clienti</th>
-                <th className="px-4 py-3">Stato</th>
-                <th className="px-4 py-3 text-right">Azioni</th>
+              <tr className="border-b border-border-subtle text-left font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+                <th className="px-4 py-2 font-normal">Nome</th>
+                <th className="px-4 py-2 font-normal">Default</th>
+                <th className="px-4 py-2 font-normal">Validità</th>
+                <th className="px-4 py-2 text-right font-normal">Prodotti</th>
+                <th className="px-4 py-2 text-right font-normal">Clienti</th>
+                <th className="px-4 py-2 font-normal">Stato</th>
+                <th className="px-4 py-2 text-right font-normal">Azioni</th>
               </tr>
             </thead>
             <tbody>
@@ -265,7 +296,10 @@ export function ListiniClient({ initialLists }: Props) {
             </tbody>
           </table>
         </div>
+        </SectionFrame>
       )}
+        </div>
+      </div>
     </div>
   );
 }

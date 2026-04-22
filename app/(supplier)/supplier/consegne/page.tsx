@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { DeliveryCard } from "@/components/supplier/delivery/delivery-card";
 import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
 import {
@@ -12,8 +10,9 @@ import {
 } from "@/lib/supplier/delivery/queries";
 import { hasPermission } from "@/lib/supplier/permissions";
 import type { SupplierRole } from "@/types/database";
-import { Truck, Calendar } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, Truck } from "lucide-react";
 import { LargeTitle } from "@/components/ui/large-title";
+import { SectionFrame } from "@/components/dashboard/supplier/_awwwards/section-frame";
 
 export const metadata: Metadata = { title: "Consegne del giorno" };
 
@@ -24,10 +23,6 @@ function firstParam(v: string | string[] | undefined): string {
   return v ?? "";
 }
 
-/**
- * Ritorna la data odierna in timezone Europe/Rome in formato ISO yyyy-mm-dd.
- * Usiamo `Intl.DateTimeFormat` per evitare problemi di TZ sul server.
- */
 function todayRomeISO(): string {
   const fmt = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Rome",
@@ -52,6 +47,26 @@ function formatItalianDate(isoDate: string): string {
   }
 }
 
+function TerminalEmpty({
+  title,
+  body,
+  icon,
+}: {
+  title: string;
+  body?: string;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-xl border border-border-subtle bg-surface-card px-6 py-16 text-center">
+      {icon}
+      <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-text-tertiary">
+        {title}
+      </p>
+      {body && <p className="mt-2 text-[13px] text-text-secondary">{body}</p>}
+    </div>
+  );
+}
+
 export default async function SupplierConsegnePage({
   searchParams,
 }: {
@@ -67,13 +82,7 @@ export default async function SupplierConsegnePage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    return (
-      <Card className="py-16 text-center">
-        <p className="text-sage">Sessione non valida.</p>
-      </Card>
-    );
-  }
+  if (!user) return <TerminalEmpty title="Sessione non valida" />;
 
   const { data: member } = await supabase
     .from("supplier_members")
@@ -85,33 +94,48 @@ export default async function SupplierConsegnePage({
     .maybeSingle<{ id: string; role: SupplierRole; supplier_id: string }>();
 
   if (!member) {
-    return (
-      <Card className="py-16 text-center">
-        <p className="text-sage">Nessuna appartenenza attiva.</p>
-      </Card>
-    );
+    return <TerminalEmpty title="Nessuna appartenenza attiva" />;
   }
 
   if (!hasPermission(member.role, "delivery.execute")) {
     return (
-      <div>
-        <h1 className="mb-6 font-display text-3xl text-text-primary">
-          Consegne<span className="text-brand-primary">.</span>
-        </h1>
-        <Card className="py-16 text-center">
-          <Truck className="mx-auto mb-4 h-12 w-12 text-sage-muted" />
-          <p className="text-sage">
-            Il tuo ruolo non ha accesso alle consegne.
-          </p>
-        </Card>
+      <div className="flex flex-col gap-6">
+        <header>
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+              Consegne · pianificazione giornaliera
+            </span>
+            <span aria-hidden className="h-px flex-1 bg-border-subtle" />
+          </div>
+          <h1
+            className="mt-4 font-display"
+            style={{
+              fontSize: "var(--text-display-lg)",
+              lineHeight: "var(--text-display-lg--line-height)",
+              letterSpacing: "var(--text-display-lg--letter-spacing)",
+              fontWeight: "var(--text-display-lg--font-weight)",
+              color: "var(--color-text-primary)",
+            }}
+          >
+            Consegne
+          </h1>
+        </header>
+        <TerminalEmpty
+          icon={
+            <Truck
+              className="mx-auto mb-3 h-7 w-7 text-text-tertiary"
+              aria-hidden
+            />
+          }
+          title="Accesso limitato"
+          body="Il tuo ruolo non ha accesso alle consegne"
+        />
       </div>
     );
   }
 
   const canPlan = hasPermission(member.role, "delivery.plan");
 
-  // Driver senza delivery.plan → filtro forzato sulle proprie consegne.
-  // Admin/warehouse con delivery.plan → vedono tutte, con opzione di filtro driver.
   const effectiveDriverFilter = !canPlan
     ? member.id
     : driverParam
@@ -128,7 +152,7 @@ export default async function SupplierConsegnePage({
     getActiveMember(member.supplier_id),
   ]);
 
-  void activeMember; // usato implicitamente per coerenza sessione; utile in futuro.
+  void activeMember;
 
   const deliveries = deliveriesRes.ok ? deliveriesRes.data : [];
 
@@ -138,20 +162,19 @@ export default async function SupplierConsegnePage({
   const failed = deliveries.filter((d) => d.status === "failed").length;
 
   return (
-    <div className="space-y-6">
+    <>
       <RealtimeRefresh
         subscriptions={[
-          {
-            table: "deliveries",
-            filter: `scheduled_date=eq.${date}`,
-          },
+          { table: "deliveries", filter: `scheduled_date=eq.${date}` },
         ]}
       />
 
-      {/* Mobile hero */}
+      {/* Mobile — untouched */}
       <div className="lg:hidden">
         <LargeTitle
-          eyebrow={<span className="capitalize">{formatItalianDate(date)}</span>}
+          eyebrow={
+            <span className="capitalize">{formatItalianDate(date)}</span>
+          }
           title="Consegne"
           subtitle="Pianificazione giornaliera"
         />
@@ -179,121 +202,217 @@ export default async function SupplierConsegnePage({
             →
           </Link>
         </div>
+        {deliveries.length > 0 && (
+          <div className="mx-3 mt-3 grid gap-3 sm:grid-cols-2">
+            {deliveries.map((d) => (
+              <DeliveryCard key={d.id} delivery={d} />
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Desktop header */}
-      <div className="hidden lg:flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h1 className="font-display text-3xl text-text-primary">
-            Consegne<span className="text-brand-primary">.</span>
-          </h1>
-          <p className="mt-1 text-sm text-sage capitalize">
-            {formatItalianDate(date)}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Link
-            href={`/supplier/consegne?date=${previousDay(date)}${
-              driverParam ? `&driver=${driverParam}` : ""
-            }`}
-          >
-            <Button size="sm" variant="secondary">
-              ← Giorno prec.
-            </Button>
-          </Link>
-          <Link href={`/supplier/consegne?date=${todayRomeISO()}`}>
-            <Button size="sm" variant="ghost">
-              <Calendar className="h-4 w-4" /> Oggi
-            </Button>
-          </Link>
-          <Link
-            href={`/supplier/consegne?date=${nextDay(date)}${
-              driverParam ? `&driver=${driverParam}` : ""
-            }`}
-          >
-            <Button size="sm" variant="secondary">
-              Giorno succ. →
-            </Button>
-          </Link>
-        </div>
-      </div>
+      {/* Desktop — terminal delivery console */}
+      <div className="hidden lg:block">
+        <div className="flex flex-col gap-6">
+          <header>
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+                Consegne · pianificazione giornaliera · tracking
+              </span>
+              <span aria-hidden className="h-px flex-1 bg-border-subtle" />
+              <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+                {deliveries.length} totali
+              </span>
+            </div>
+            <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <h1
+                  className="font-display"
+                  style={{
+                    fontSize: "var(--text-display-lg)",
+                    lineHeight: "var(--text-display-lg--line-height)",
+                    letterSpacing: "var(--text-display-lg--letter-spacing)",
+                    fontWeight: "var(--text-display-lg--font-weight)",
+                    color: "var(--color-text-primary)",
+                  }}
+                >
+                  Consegne
+                </h1>
+                <p className="mt-1.5 text-sm text-text-secondary capitalize">
+                  {formatItalianDate(date)}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-1">
+                <Link
+                  href={`/supplier/consegne?date=${previousDay(date)}${
+                    driverParam ? `&driver=${driverParam}` : ""
+                  }`}
+                  className="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface-card px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-text-secondary transition-colors hover:border-accent-green hover:text-accent-green"
+                >
+                  <ChevronLeft className="h-3 w-3" aria-hidden /> prec
+                </Link>
+                <Link
+                  href={`/supplier/consegne?date=${todayRomeISO()}`}
+                  className="inline-flex items-center gap-1 rounded-md border border-accent-green/40 bg-accent-green/10 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-accent-green transition-colors hover:bg-accent-green/20"
+                >
+                  <Calendar className="h-3 w-3" aria-hidden /> oggi
+                </Link>
+                <Link
+                  href={`/supplier/consegne?date=${nextDay(date)}${
+                    driverParam ? `&driver=${driverParam}` : ""
+                  }`}
+                  className="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface-card px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-text-secondary transition-colors hover:border-accent-green hover:text-accent-green"
+                >
+                  succ <ChevronRight className="h-3 w-3" aria-hidden />
+                </Link>
+              </div>
+            </div>
+          </header>
 
-      {canPlan && driverOptions.length > 0 && (
-        <form method="get" className="flex flex-wrap items-end gap-3">
-          <input type="hidden" name="date" value={date} />
-          <label className="text-sm text-sage">
-            Filtra driver
-            <select
-              name="driver"
-              defaultValue={driverParam}
-              className="ml-2 rounded-md border border-sage-muted bg-white px-3 py-1.5 text-sm text-charcoal"
+          {canPlan && driverOptions.length > 0 && (
+            <form
+              method="get"
+              className="flex flex-wrap items-center gap-2 rounded-xl border border-border-subtle bg-surface-card px-3 py-2"
             >
-              <option value="">Tutti</option>
-              {driverOptions.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.display_name}
-                </option>
-              ))}
-            </select>
-          </label>
-          <Button size="sm" type="submit" variant="primary">
-            Applica
-          </Button>
-          {driverParam && (
-            <Link href={`/supplier/consegne?date=${date}`}>
-              <Button size="sm" variant="ghost" type="button">
-                Reset
-              </Button>
-            </Link>
+              <input type="hidden" name="date" value={date} />
+              <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+                Filtra driver
+              </span>
+              <select
+                name="driver"
+                defaultValue={driverParam}
+                className="rounded-md border border-border-subtle bg-surface-base px-2 py-1 font-mono text-[11px] text-text-primary focus:border-accent-green focus:outline-none"
+              >
+                <option value="">Tutti</option>
+                {driverOptions.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.display_name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="submit"
+                className="inline-flex items-center rounded-md border border-accent-green/40 bg-accent-green/10 px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.08em] text-accent-green hover:bg-accent-green/20"
+              >
+                Applica
+              </button>
+              {driverParam && (
+                <Link
+                  href={`/supplier/consegne?date=${date}`}
+                  className="inline-flex items-center rounded-md border border-border-subtle px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary hover:text-text-primary"
+                >
+                  reset
+                </Link>
+              )}
+            </form>
           )}
-        </form>
-      )}
 
-      <div
-        className="cq-section grid gap-3"
-        style={{
-          gridTemplateColumns:
-            "repeat(auto-fit, minmax(min(160px, 100%), 1fr))",
-        }}
-      >
-        <SummaryTile label="Pianificate" value={totalPlanned} />
-        <SummaryTile label="In transito" value={inTransit} />
-        <SummaryTile label="Consegnate" value={completed} />
-        <SummaryTile label="Fallite" value={failed} />
-      </div>
+          <SectionFrame label="Snapshot · giornata" padded={false}>
+            <div
+              className="grid gap-3 p-4"
+              style={{
+                gridTemplateColumns:
+                  "repeat(auto-fit, minmax(min(180px, 100%), 1fr))",
+              }}
+            >
+              <SummaryTile
+                index="01"
+                label="Pianificate"
+                value={totalPlanned}
+              />
+              <SummaryTile
+                index="02"
+                label="In transito"
+                value={inTransit}
+                tone="blue"
+              />
+              <SummaryTile
+                index="03"
+                label="Consegnate"
+                value={completed}
+                tone="green"
+              />
+              <SummaryTile
+                index="04"
+                label="Fallite"
+                value={failed}
+                tone="red"
+              />
+            </div>
+          </SectionFrame>
 
-      {!deliveriesRes.ok ? (
-        <Card className="py-16 text-center">
-          <p className="text-red-600">{deliveriesRes.error}</p>
-        </Card>
-      ) : deliveries.length === 0 ? (
-        <Card className="py-16 text-center">
-          <Truck className="mx-auto mb-4 h-12 w-12 text-sage-muted" />
-          <p className="text-sage">Nessuna consegna per questa data.</p>
-        </Card>
-      ) : (
-        <div
-          className="cq-section grid gap-4"
-          style={{
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(min(320px, 100%), 1fr))",
-          }}
-        >
-          {deliveries.map((d) => (
-            <DeliveryCard key={d.id} delivery={d} />
-          ))}
+          {!deliveriesRes.ok ? (
+            <TerminalEmpty title="Errore caricamento" body={deliveriesRes.error} />
+          ) : deliveries.length === 0 ? (
+            <TerminalEmpty
+              icon={
+                <Truck
+                  className="mx-auto mb-3 h-7 w-7 text-text-tertiary"
+                  aria-hidden
+                />
+              }
+              title="Nessuna consegna per questa data"
+              body="Usa la navigazione giorno per cambiare data."
+            />
+          ) : (
+            <SectionFrame
+              label={`Consegne · ${date} · ${deliveries.length}`}
+              padded={false}
+            >
+              <div
+                className="grid gap-4 p-4"
+                style={{
+                  gridTemplateColumns:
+                    "repeat(auto-fit, minmax(min(320px, 100%), 1fr))",
+                }}
+              >
+                {deliveries.map((d) => (
+                  <DeliveryCard key={d.id} delivery={d} />
+                ))}
+              </div>
+            </SectionFrame>
+          )}
         </div>
-      )}
-    </div>
+      </div>
+    </>
   );
 }
 
-function SummaryTile({ label, value }: { label: string; value: number }) {
+function SummaryTile({
+  index,
+  label,
+  value,
+  tone,
+}: {
+  index: string;
+  label: string;
+  value: number;
+  tone?: "blue" | "green" | "red";
+}) {
+  const toneClass =
+    tone === "blue"
+      ? "text-accent-blue"
+      : tone === "green"
+        ? "text-accent-green"
+        : tone === "red"
+          ? "text-accent-red"
+          : "text-text-primary";
   return (
-    <Card className="p-3">
-      <p className="text-xs uppercase tracking-wider text-sage">{label}</p>
-      <p className="mt-1 text-2xl font-bold text-charcoal">{value}</p>
-    </Card>
+    <div className="flex flex-col gap-1 rounded-xl border border-border-subtle bg-surface-card px-4 py-3">
+      <span className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+        <span className="text-text-tertiary/70 tabular-nums">{index}</span>
+        <span aria-hidden className="text-border-subtle">
+          ·
+        </span>
+        <span className="truncate">{label}</span>
+      </span>
+      <span
+        className={`font-mono tabular-nums ${toneClass}`}
+        style={{ fontSize: "22px", fontWeight: 500, letterSpacing: "-0.011em" }}
+      >
+        {value.toLocaleString("it-IT")}
+      </span>
+    </div>
   );
 }
 

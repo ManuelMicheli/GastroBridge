@@ -13,7 +13,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Card } from "@/components/ui/card";
 import { FileText } from "lucide-react";
 import { FeatureFlagGate } from "@/components/supplier/shared/feature-flag-gate";
 import { isPhase1Enabled } from "@/lib/supplier/feature-flags";
@@ -67,9 +66,11 @@ export default async function SupplierDdtBookPage({
 
   if (!user) {
     return (
-      <Card className="py-16 text-center">
-        <p className="text-sage">Sessione non valida.</p>
-      </Card>
+      <div className="rounded-xl border border-border-subtle bg-surface-card px-6 py-16 text-center">
+        <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-text-tertiary">
+          Sessione non valida
+        </p>
+      </div>
     );
   }
 
@@ -84,24 +85,49 @@ export default async function SupplierDdtBookPage({
 
   if (!member) {
     return (
-      <Card className="py-16 text-center">
-        <p className="text-sage">Nessuna appartenenza attiva.</p>
-      </Card>
+      <div className="rounded-xl border border-border-subtle bg-surface-card px-6 py-16 text-center">
+        <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-text-tertiary">
+          Nessuna appartenenza attiva
+        </p>
+      </div>
     );
   }
 
   if (!hasPermission(member.role, "ddt.generate")) {
     return (
-      <div>
-        <h1 className="mb-6 font-display text-3xl text-text-primary">
-          DDT<span className="text-brand-primary">.</span>
-        </h1>
-        <Card className="py-16 text-center">
-          <FileText className="mx-auto mb-4 h-12 w-12 text-sage-muted" />
-          <p className="text-sage">
+      <div className="flex flex-col gap-6">
+        <header>
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+              DDT · archivio documenti di trasporto
+            </span>
+            <span aria-hidden className="h-px flex-1 bg-border-subtle" />
+          </div>
+          <h1
+            className="mt-4 font-display"
+            style={{
+              fontSize: "var(--text-display-lg)",
+              lineHeight: "var(--text-display-lg--line-height)",
+              letterSpacing: "var(--text-display-lg--letter-spacing)",
+              fontWeight: "var(--text-display-lg--font-weight)",
+              color: "var(--color-text-primary)",
+            }}
+          >
+            DDT
+          </h1>
+        </header>
+        <div className="rounded-xl border border-border-subtle bg-surface-card px-6 py-16 text-center">
+          <FileText
+            className="mx-auto mb-3 h-7 w-7 text-text-tertiary"
+            aria-hidden
+          />
+          <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-text-tertiary">
+            Accesso non consentito
+          </p>
+          <p className="mt-2 text-[13px] text-text-secondary">
             Il tuo ruolo non consente l&apos;accesso al libro DDT.
           </p>
-        </Card>
+        </div>
       </div>
     );
   }
@@ -114,14 +140,36 @@ export default async function SupplierDdtBookPage({
   const phase1Enabled = isPhase1Enabled(supplier);
 
   const notEnabled = (
-    <div>
-      <h1 className="mb-6 font-display text-3xl text-text-primary">
-        DDT<span className="text-brand-primary">.</span>
-      </h1>
-      <Card className="py-16 text-center">
-        <FileText className="mx-auto mb-4 h-12 w-12 text-sage-muted" />
-        <p className="text-sage">Funzione non abilitata per questo account.</p>
-      </Card>
+    <div className="flex flex-col gap-6">
+      <header>
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+            DDT · archivio documenti di trasporto
+          </span>
+          <span aria-hidden className="h-px flex-1 bg-border-subtle" />
+        </div>
+        <h1
+          className="mt-4 font-display"
+          style={{
+            fontSize: "var(--text-display-lg)",
+            lineHeight: "var(--text-display-lg--line-height)",
+            letterSpacing: "var(--text-display-lg--letter-spacing)",
+            fontWeight: "var(--text-display-lg--font-weight)",
+            color: "var(--color-text-primary)",
+          }}
+        >
+          DDT
+        </h1>
+      </header>
+      <div className="rounded-xl border border-border-subtle bg-surface-card px-6 py-16 text-center">
+        <FileText
+          className="mx-auto mb-3 h-7 w-7 text-text-tertiary"
+          aria-hidden
+        />
+        <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-text-tertiary">
+          Funzione non abilitata per questo account
+        </p>
+      </div>
     </div>
   );
 
@@ -217,27 +265,53 @@ export default async function SupplierDdtBookPage({
             }
           />
         </div>
-        <div className="hidden lg:flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div>
-            <h1 className="font-display text-3xl text-text-primary">
-              DDT<span className="text-brand-primary">.</span>
-            </h1>
-            <p className="mt-1 text-sm text-sage">
-              Archivio dei Documenti di Trasporto emessi.
-            </p>
+        <div className="hidden lg:block">
+          <div className="flex items-center gap-3">
+            <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+              DDT · archivio · documenti di trasporto emessi
+            </span>
+            <span aria-hidden className="h-px flex-1 bg-border-subtle" />
+            <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+              <span className="tabular-nums text-text-primary">
+                {filtered.length}
+              </span>{" "}
+              in lista
+            </span>
           </div>
-          <Link
-            href="/supplier/ddt/templates"
-            className="text-sm font-semibold text-forest hover:underline"
-          >
-            Gestisci template →
-          </Link>
+          <div className="mt-4 flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h1
+                className="font-display"
+                style={{
+                  fontSize: "var(--text-display-lg)",
+                  lineHeight: "var(--text-display-lg--line-height)",
+                  letterSpacing: "var(--text-display-lg--letter-spacing)",
+                  fontWeight: "var(--text-display-lg--font-weight)",
+                  color: "var(--color-text-primary)",
+                }}
+              >
+                DDT
+              </h1>
+              <p className="mt-1.5 text-sm text-text-secondary">
+                Archivio dei documenti di trasporto emessi. Filtra per anno,
+                causale e destinatario.
+              </p>
+            </div>
+            <Link
+              href="/supplier/ddt/templates"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-card px-3 py-2 font-mono text-[11px] uppercase tracking-[0.08em] text-text-secondary transition-colors hover:border-accent-green/50 hover:text-text-primary"
+            >
+              Gestisci template →
+            </Link>
+          </div>
         </div>
 
         {error ? (
-          <Card className="py-16 text-center">
-            <p className="text-red-600">Errore caricamento: {error.message}</p>
-          </Card>
+          <div className="rounded-xl border border-accent-red/40 bg-accent-red/5 px-4 py-10 text-center">
+            <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-accent-red">
+              Errore caricamento: {error.message}
+            </p>
+          </div>
         ) : (
           <DdtBookClient
             initialRows={filtered}

@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
-import { Card } from "@/components/ui/card";
 import Link from "next/link";
-import { MapPin, CreditCard, ChevronRight, Warehouse, Bell, Sparkles } from "lucide-react";
+import {
+  Bell,
+  ChevronRight,
+  CreditCard,
+  MapPin,
+  Sparkles,
+  Warehouse,
+} from "lucide-react";
 import { LargeTitle } from "@/components/ui/large-title";
 import { GroupedList, GroupedListRow } from "@/components/ui/grouped-list";
 
@@ -36,7 +42,7 @@ export default function SupplierSettingsPage() {
     },
     {
       href: "/supplier/impostazioni/zone",
-      label: "Zone di Consegna",
+      label: "Zone di consegna",
       description: "Gestisci province e CAP di consegna",
       icon: MapPin,
       color: "#2B6F42",
@@ -66,7 +72,7 @@ export default function SupplierSettingsPage() {
 
   return (
     <>
-      {/* Mobile Apple-app view */}
+      {/* Mobile — untouched */}
       <div className="lg:hidden pb-4">
         <LargeTitle
           eyebrow="Account fornitore"
@@ -146,30 +152,107 @@ export default function SupplierSettingsPage() {
         </GroupedList>
       </div>
 
-      {/* Desktop view */}
+      {/* Desktop — settings terminal */}
       <div className="hidden lg:block">
-        <h1 className="font-display text-3xl text-text-primary mb-6">
-          Impostazioni<span className="text-brand-primary">.</span>
-        </h1>
-        <div className="space-y-3">
-          {sections.map((s) => (
-            <Link key={s.href} href={s.href}>
-              <Card className="hover:shadow-elevated transition-shadow">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-sage-muted/20 rounded-xl">
-                    <s.icon className="h-5 w-5 text-forest" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-charcoal">{s.label}</h3>
-                    <p className="text-sm text-sage">{s.description}</p>
-                  </div>
-                  <ChevronRight className="h-5 w-5 text-sage" />
-                </div>
-              </Card>
+        <div className="flex flex-col gap-8">
+          {/* Terminal header */}
+          <header>
+            <div className="flex items-center gap-3">
+              <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+                Impostazioni · account fornitore · configurazione
+              </span>
+              <span aria-hidden className="h-px flex-1 bg-border-subtle" />
+              <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+                {sections.length} sezioni
+              </span>
+            </div>
+            <h1
+              className="mt-4 font-display"
+              style={{
+                fontSize: "var(--text-display-lg)",
+                lineHeight: "var(--text-display-lg--line-height)",
+                letterSpacing: "var(--text-display-lg--letter-spacing)",
+                fontWeight: "var(--text-display-lg--font-weight)",
+                color: "var(--color-text-primary)",
+              }}
+            >
+              Impostazioni
+            </h1>
+            <p className="mt-1.5 text-sm text-text-secondary">
+              Configura profilo, sedi, zone di consegna, notifiche e
+              abbonamento.
+            </p>
+          </header>
+
+          <SettingsGroup index="01" title="Brand" items={brand} />
+          <SettingsGroup index="02" title="Operativo" items={operativo} />
+          <SettingsGroup index="03" title="Account" items={account} />
+
+          <div className="pt-2">
+            <Link
+              href="/logout"
+              className="inline-flex items-center gap-2 border-b border-border-subtle pb-1 font-mono text-[11px] uppercase tracking-[0.14em] text-text-secondary transition-colors hover:border-accent-red hover:text-accent-red"
+            >
+              Esci dalla sessione →
             </Link>
-          ))}
+          </div>
         </div>
       </div>
     </>
+  );
+}
+
+function SettingsGroup({
+  index,
+  title,
+  items,
+}: {
+  index: string;
+  title: string;
+  items: Section[];
+}) {
+  return (
+    <section aria-label={title} className="flex flex-col gap-3">
+      <header className="flex items-center gap-3">
+        <span
+          aria-hidden
+          className="font-mono tabular-nums leading-none select-none text-text-tertiary/70"
+          style={{ fontSize: "22px", fontWeight: 300, letterSpacing: "-0.02em" }}
+        >
+          {index}
+        </span>
+        <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-text-primary">
+          ▸ {title.toUpperCase()}
+        </span>
+        <span aria-hidden className="h-px flex-1 bg-border-subtle" />
+      </header>
+      <ul className="flex flex-col divide-y divide-border-subtle/60 rounded-xl border border-border-subtle bg-surface-card">
+        {items.map((s, i) => (
+          <li key={s.href}>
+            <Link
+              href={s.href}
+              className="group grid w-full grid-cols-[28px_minmax(0,1fr)_12px] items-center gap-x-4 border-l-2 border-transparent px-4 text-left transition-colors hover:border-accent-green hover:bg-surface-hover"
+              style={{ minHeight: 64 }}
+            >
+              <span className="font-mono text-[11px] tabular-nums text-text-tertiary">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="font-mono text-[12px] uppercase tracking-[0.08em] text-text-primary">
+                  {s.label}
+                </span>
+                <span className="truncate text-[13px] text-text-secondary">
+                  {s.description}
+                </span>
+              </span>
+              <ChevronRight
+                className="h-4 w-4 text-text-tertiary opacity-0 transition-opacity group-hover:opacity-100"
+                aria-hidden
+              />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
