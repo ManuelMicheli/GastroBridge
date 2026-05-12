@@ -1,9 +1,8 @@
 import { SplitHero } from "@/components/marketing/split-hero";
 import { TickerBar } from "@/components/marketing/_primitives/ticker-bar";
-import { Manifesto } from "@/components/marketing/manifesto";
+import { PromiseSection } from "@/components/marketing/promise";
+import { Mechanism } from "@/components/marketing/mechanism";
 import { GrowthGrid } from "@/components/marketing/growth-grid";
-import { HowItWorks } from "@/components/marketing/how-it-works";
-import { Capabilities } from "@/components/marketing/capabilities";
 import { DualSection } from "@/components/marketing/dual-section";
 import { Principles } from "@/components/marketing/principles";
 import { Testimonials } from "@/components/marketing/testimonials";
@@ -16,13 +15,11 @@ export default function HomePage() {
     <>
       <SplitHero />
       <TickerBar />
-      <Manifesto />
+      <PromiseSection />
+      <SectionRule />
+      <Mechanism />
       <SectionRule />
       <GrowthGrid />
-      <SectionRule />
-      <HowItWorks />
-      <SectionRule />
-      <Capabilities />
       <SectionRule />
       <DualSection />
       <SectionRule />
