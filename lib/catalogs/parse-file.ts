@@ -14,7 +14,8 @@ export type ParsedSheet = {
 export async function parseCsv(file: File, hasHeader = true): Promise<ParsedSheet> {
   return new Promise((resolve, reject) => {
     Papa.parse<string[]>(file, {
-      skipEmptyLines: true,
+      skipEmptyLines: "greedy",
+      delimitersToGuess: [",", ";", "\t", "|"],
       complete: (res) => {
         const rawRows = res.data as string[][];
         if (rawRows.length === 0) { reject(new Error("File vuoto")); return; }
@@ -93,8 +94,29 @@ const KNOWN_UNITS = new Set([
   "pezzo", "pezzi", "cadauno", "confezioni", "cartoni", "bottiglie",
 ]);
 
+// Embedded unit pattern matches "500g", "1,5 kg", "750 ML", "12x33 cl"
+const UNIT_TOKEN = "(?:kg|g|gr|grammi?|kilo|chil[oi]|hg|l|lt|litri?|ml|millilitri?|cl|pz|pezzi?|cad(?:auno?)?|cf|conf(?:ezione|ezioni)?|cartone|cartoni|bottigli[ae]|latt[ae])";
+const EMBEDDED_UNIT_RE = new RegExp(`\\b(\\d+(?:[.,]\\d+)?\\s*${UNIT_TOKEN})\\b`, "i");
+
 function lc(s: string) {
   return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+/**
+ * Extract a unit-like token from free-text product names.
+ * "Pomodori pelati 400 g" \u2192 "400g"; "Olio EVO 1L" \u2192 "1L".
+ */
+export function extractUnitFromText(text: string): string | null {
+  if (!text) return null;
+  const m = EMBEDDED_UNIT_RE.exec(text);
+  return m ? m[1]!.replace(/\s+/g, "") : null;
+}
+
+const SKU_RE = /^[A-Z0-9][A-Z0-9._/-]{1,15}$/i;
+
+function avgLen(values: string[]): number {
+  if (!values.length) return 0;
+  return values.reduce((a, v) => a + v.length, 0) / values.length;
 }
 
 function scoreColumn(
@@ -103,30 +125,47 @@ function scoreColumn(
 ): { name: number; unit: number; price: number } {
   const h = lc(header);
 
-  // Header keyword scores
+  // Header keyword scores — heavily weighted so a clear header always wins.
   const nameKeywords  = ["nome", "descrizione", "articolo", "prodotto", "descr", "item", "product", "denominazione", "desc", "artikel"];
-  const unitKeywords  = ["unita", "unità", "um", "u.m", "confezione", "conf", "unit", "uom", "misura", "udm", "imballo", "packaging", "peso", "grammatura", "formato", "size"];
-  const priceKeywords = ["prezzo", "costo", "€", "eur", "importo", "price", "cost", "listino", "tariffa", "valore", "pvp", "netto"];
+  const unitKeywords  = ["unita", "unità", "um", "u.m", "confezione", "conf", "unit", "uom", "misura", "udm", "imballo", "packaging", "peso", "grammatura", "formato", "size", "pezzatura"];
+  const priceKeywords = ["prezzo", "costo", "€", "eur", "importo", "price", "cost", "listino", "tariffa", "valore", "pvp", "netto", "lordo"];
 
-  const nameH  = nameKeywords.some((k)  => h.includes(lc(k))) ? 10 : 0;
-  const unitH  = unitKeywords.some((k)  => h.includes(lc(k))) ? 10 : 0;
-  const priceH = priceKeywords.some((k) => h.includes(lc(k))) ? 10 : 0;
+  const nameH  = nameKeywords.some((k)  => h.includes(lc(k))) ? 20 : 0;
+  const unitH  = unitKeywords.some((k)  => h.includes(lc(k))) ? 20 : 0;
+  const priceH = priceKeywords.some((k) => h.includes(lc(k))) ? 20 : 0;
 
-  if (!values.length) return { name: nameH, unit: unitH, price: priceH };
+  // Code/SKU columns should not be picked as name
+  const codePenalty = /\b(codice|cod\.?|sku|ean|gtin|barcode|id)\b/.test(h) ? -15 : 0;
+
+  if (!values.length) return { name: nameH + codePenalty, unit: unitH, price: priceH };
 
   // Content scores
   const priceHits = values.filter((v) => {
     const n = normalizePrice(v);
-    return n !== null && n > 0;
+    if (n === null || n <= 0) return false;
+    // Long all-digit values are SKUs/barcodes, not prices
+    if (/^\d{8,}$/.test(v.replace(/\D/g, ""))) return false;
+    return true;
   }).length;
-  const unitHits = values.filter((v) => KNOWN_UNITS.has(lc(v))).length;
-  const nameHits = values.filter((v) => v.length > 2 && normalizePrice(v) === null && !KNOWN_UNITS.has(lc(v))).length;
+  const unitHits = values.filter((v) => {
+    const t = lc(v);
+    if (KNOWN_UNITS.has(t)) return true;
+    return EMBEDDED_UNIT_RE.test(v);
+  }).length;
+  const skuHits  = values.filter((v) => SKU_RE.test(v) && normalizePrice(v) === null).length;
+  const nameHits = values.filter((v) => v.length > 3 && normalizePrice(v) === null && !KNOWN_UNITS.has(lc(v))).length;
 
   const ratio = (hits: number) => Math.round((hits / values.length) * 8);
 
+  // Length-based shape signal
+  const avg = avgLen(values);
+  const nameShape = avg >= 12 ? 4 : avg >= 6 ? 2 : 0;
+  const unitShape = avg > 0 && avg <= 10 ? 3 : 0;
+  const skuPenalty = skuHits / values.length > 0.7 ? -6 : 0;
+
   return {
-    name:  nameH  + ratio(nameHits),
-    unit:  unitH  + ratio(unitHits),
+    name:  nameH + ratio(nameHits) + nameShape + codePenalty + skuPenalty,
+    unit:  unitH + ratio(unitHits) + unitShape,
     price: priceH + ratio(priceHits),
   };
 }
@@ -176,12 +215,11 @@ export function suggestMapping(
   const unit  = pick("unit");
   const name  = pick("name");
 
-  // Strong signal = header keyword match (10) OR significant content ratio (≥6).
-  const STRONG = 10;
+  // Strong signal = header keyword (20) OR rich content combo (name/price ≥10, unit ≥6)
   const confident = Boolean(name && unit && price)
-    && finalScores.name  >= STRONG
-    && finalScores.unit  >= STRONG
-    && finalScores.price >= STRONG;
+    && finalScores.name  >= 10
+    && finalScores.unit  >= 6
+    && finalScores.price >= 10;
 
   return { name, unit, price, scores: finalScores, confident };
 }

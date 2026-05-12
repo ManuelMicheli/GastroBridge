@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { UploadCloud, Check, ArrowLeft, Download, Wand2, Pencil } from "lucide-react";
-import { parseCsv, parseXlsx, suggestMapping, type ParsedSheet } from "@/lib/catalogs/parse-file";
+import { parseCsv, parseXlsx, suggestMapping, extractUnitFromText, type ParsedSheet } from "@/lib/catalogs/parse-file";
 import { normalizePrice } from "@/lib/catalogs/normalize";
 import { importSupplierProducts, type ProductImportRow } from "@/lib/products/import-actions";
 
@@ -114,7 +114,7 @@ export function ProductImportWizard({ open, onClose, categories, onImported }: P
         price: suggested.price ?? "",
         brand, description, origin, min_quantity,
       });
-      const haveRequired = Boolean(suggested.name && suggested.unit && suggested.price);
+      const haveRequired = Boolean(suggested.name && suggested.price);
       setAutoDetected(haveRequired);
       setShowMappingEditor(!haveRequired);
       setStep("preview");
@@ -140,8 +140,17 @@ export function ProductImportWizard({ open, onClose, categories, onImported }: P
       };
 
       if (!name) return { ok: false, reason: "Nome vuoto", raw };
-      const unit = normalizeUnitToEnum(unitRaw);
-      if (!unit) return { ok: false, reason: `Unità non valida (${unitRaw || "—"})`, raw };
+      // Fallback chain: explicit cell → embedded in name → "pz".
+      let unit = normalizeUnitToEnum(unitRaw);
+      if (!unit) {
+        const fromName = extractUnitFromText(name);
+        if (fromName) {
+          // Strip leading number to expose the unit token
+          const onlyUnit = fromName.replace(/^\d+(?:[.,]\d+)?/, "");
+          unit = normalizeUnitToEnum(onlyUnit);
+        }
+      }
+      if (!unit) unit = "pz";
       const price = normalizePrice(priceRaw);
       if (price === null || price <= 0) return { ok: false, reason: "Prezzo non valido", raw };
 
@@ -168,7 +177,7 @@ export function ProductImportWizard({ open, onClose, categories, onImported }: P
 
   const validCount = validated.filter((v) => v.ok).length;
   const invalidCount = validated.length - validCount;
-  const mappingComplete = Boolean(mapping.name && mapping.unit && mapping.price);
+  const mappingComplete = Boolean(mapping.name && mapping.price);
 
   if (!open) return null;
 

@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { UploadCloud, Check, ArrowLeft, Download, Wand2, Pencil } from "lucide-react";
-import { parseCsv, parseXlsx, suggestMapping, type ParsedSheet } from "@/lib/catalogs/parse-file";
+import { parseCsv, parseXlsx, suggestMapping, extractUnitFromText, type ParsedSheet } from "@/lib/catalogs/parse-file";
 import { normalizePrice } from "@/lib/catalogs/normalize";
 import { importCatalogItems } from "@/lib/catalogs/actions";
 import type { CatalogItemInput } from "@/lib/catalogs/schemas";
@@ -63,8 +63,8 @@ export function CatalogImportWizard({ open, onClose, catalogId, onImported }: Pr
       };
       setSheet(parsed);
       setMapping(next);
-      setAutoDetected(Boolean(detected.name && detected.unit && detected.price));
-      setShowMappingEditor(!detected.name || !detected.unit || !detected.price);
+      setAutoDetected(Boolean(detected.name && detected.price));
+      setShowMappingEditor(!detected.name || !detected.price);
       setStep("preview");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Errore lettura file";
@@ -76,13 +76,16 @@ export function CatalogImportWizard({ open, onClose, catalogId, onImported }: Pr
     if (!sheet) return [];
     return sheet.rows.map((r) => {
       const name = (r[mapping.name] ?? "").trim();
-      const unit = (r[mapping.unit] ?? "").trim();
+      const unitCell = mapping.unit ? (r[mapping.unit] ?? "").trim() : "";
       const priceRaw = (r[mapping.price] ?? "").trim();
 
-      if (!name)  return { ok: false, reason: "Nome vuoto",  raw: { name, unit, price: priceRaw } };
-      if (!unit)  return { ok: false, reason: "Unità vuota", raw: { name, unit, price: priceRaw } };
+      if (!name) return { ok: false, reason: "Nome vuoto", raw: { name, unit: unitCell, price: priceRaw } };
+
+      // Fallback chain: explicit unit cell → embedded in name → "pz".
+      const unit = unitCell || extractUnitFromText(name) || "pz";
+
       const price = normalizePrice(priceRaw);
-      if (price === null) return { ok: false, reason: "Prezzo non valido", raw: { name, unit, price: priceRaw } };
+      if (price === null) return { ok: false, reason: "Prezzo non valido", raw: { name, unit: unitCell, price: priceRaw } };
 
       return { ok: true, data: { product_name: name, unit, price, notes: null } };
     });
@@ -90,7 +93,7 @@ export function CatalogImportWizard({ open, onClose, catalogId, onImported }: Pr
 
   const validCount = validated.filter((v) => v.ok).length;
   const invalidCount = validated.length - validCount;
-  const mappingComplete = Boolean(mapping.name && mapping.unit && mapping.price);
+  const mappingComplete = Boolean(mapping.name && mapping.price);
 
   if (!open) return null;
 
