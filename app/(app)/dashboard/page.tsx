@@ -4,7 +4,10 @@ import { RestaurantDashboard } from "@/components/dashboard/restaurant/restauran
 import type { SpendTrendPoint } from "@/components/dashboard/restaurant/spend-trend-chart/types";
 
 export const metadata: Metadata = { title: "Dashboard — GastroBridge" };
-export const dynamic = "force-dynamic";
+// Intentionally no `dynamic = "force-dynamic"`: the page reads cookies via
+// Supabase, so Next already treats it as dynamic. Letting Next decide keeps
+// the RSC payload eligible for the client router cache (staleTimes.dynamic),
+// which is what makes back/forward + sidebar nav feel instant.
 
 type OrderRow = {
   id: string;

@@ -6,7 +6,7 @@ import { BudgetForm } from "./budget-form";
 import { LargeTitle } from "@/components/ui/large-title";
 
 export const metadata: Metadata = { title: "Budget mensile — Impostazioni" };
-export const dynamic = "force-dynamic";
+// Implicit dynamic via auth cookies; no `force-dynamic` so client router cache works.
 
 export default async function BudgetSettingsPage() {
   const supabase = await createClient();

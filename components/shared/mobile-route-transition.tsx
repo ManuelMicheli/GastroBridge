@@ -60,6 +60,12 @@ export function MobileRouteTransition({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   useEffect(() => {
+    // Edge-swipe is a touch-only gesture. Skip attaching listeners entirely on
+    // desktop — saves 4 window listeners per navigation and shaves microtasks
+    // off every pointer event the user generates while moving the mouse.
+    if (typeof window === "undefined") return;
+    if (window.matchMedia(DESKTOP_MQ).matches) return;
+
     function onPointerDown(e: PointerEvent) {
       if (e.pointerType !== "touch") return;
       if (e.clientX > EDGE_SWIPE_WIDTH) return;

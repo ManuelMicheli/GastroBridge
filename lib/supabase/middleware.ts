@@ -1,7 +1,58 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const PROTECTED_PREFIXES = [
+  "/dashboard",
+  "/cerca",
+  "/cataloghi",
+  "/ordini",
+  "/carrello",
+  "/analytics",
+  "/impostazioni",
+  "/supplier",
+];
+
+const AUTH_ROUTES = new Set(["/login", "/signup"]);
+
+function hasAuthCookie(request: NextRequest): boolean {
+  // Supabase SSR stores tokens in `sb-<projectRef>-auth-token` (and `.0`/`.1`
+  // chunked variants). Probing all cookies is cheap and avoids paying for a
+  // Supabase client + getUser() round-trip on every anonymous prefetch.
+  for (const cookie of request.cookies.getAll()) {
+    if (cookie.name.startsWith("sb-") && cookie.name.includes("-auth-token")) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function isProtectedPath(pathname: string): boolean {
+  return PROTECTED_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(prefix + "/"),
+  );
+}
+
+function isPublicTokenRoute(pathname: string): boolean {
+  // Plan 1C Task 11: ordini/[id]/conferma uses HMAC in querystring as
+  // credential — must be reachable without session.
+  return /^\/ordini\/[^/]+\/conferma\/?$/.test(pathname);
+}
+
 export async function updateSession(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const protectedRoute = isProtectedPath(pathname);
+  const authRoute = AUTH_ROUTES.has(pathname);
+  const cookiePresent = hasAuthCookie(request);
+
+  // Fast path: anonymous request to a non-auth page → no Supabase client at all.
+  // The vast majority of asset requests in a session land here.
+  if (!cookiePresent && !authRoute) {
+    if (protectedRoute && !isPublicTokenRoute(pathname)) {
+      return NextResponse.redirect(new URL("/login", request.url));
+    }
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -22,60 +73,27 @@ export async function updateSession(request: NextRequest) {
           });
         },
       },
-    }
+    },
   );
 
-  // Refresh the auth token — this is the critical part
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Protect app routes — redirect to login if not authenticated
-  const protectedPrefixes = [
-    "/dashboard",
-    "/cerca",
-    "/cataloghi",
-    "/ordini",
-    "/carrello",
-    "/analytics",
-    "/impostazioni",
-    "/supplier",
-  ];
-
-  const isProtected = protectedPrefixes.some(
-    (prefix) =>
-      request.nextUrl.pathname === prefix ||
-      request.nextUrl.pathname.startsWith(prefix + "/")
-  );
-
-  // Rotte pubbliche autenticate via token magic-link (nessun login richiesto).
-  // Plan 1C Task 11: la pagina conferma cliente usa HMAC in querystring come
-  // credenziale, quindi deve essere raggiungibile anche senza sessione.
-  const isPublicTokenRoute =
-    /^\/ordini\/[^/]+\/conferma\/?$/.test(request.nextUrl.pathname);
-
-  if (!user && isProtected && !isPublicTokenRoute) {
+  if (!user && protectedRoute && !isPublicTokenRoute(pathname)) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Redirect authenticated users away from auth pages
-  if (user) {
-    const isAuthRoute =
-      request.nextUrl.pathname === "/login" ||
-      request.nextUrl.pathname === "/signup";
+  if (user && authRoute) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
 
-    if (isAuthRoute) {
-      // Check user role to redirect to correct dashboard
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-
-      const role = (profile as { role: string } | null)?.role;
-      const dest = role === "supplier" ? "/supplier/dashboard" : "/dashboard";
-      return NextResponse.redirect(new URL(dest, request.url));
-    }
+    const role = (profile as { role: string } | null)?.role;
+    const dest = role === "supplier" ? "/supplier/dashboard" : "/dashboard";
+    return NextResponse.redirect(new URL(dest, request.url));
   }
 
   return supabaseResponse;

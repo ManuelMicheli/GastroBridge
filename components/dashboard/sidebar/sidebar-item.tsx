@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils/formatters";
 import { useSidebar } from "./sidebar-provider";
-import { motion, AnimatePresence } from "motion/react";
 import { resolveIcon } from "../icons";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { useSupplierRealtime } from "@/lib/realtime/supplier-provider";
@@ -16,7 +15,6 @@ export type NavItem = {
   label: string;
   iconName: string;
   section?: string;
-  /** Numero da mostrare come pallino rosso accanto all'icona (omesso se 0). */
   badge?: number;
 };
 
@@ -37,23 +35,20 @@ function pickBadgeKey(href: string): keyof Badges | null {
   return null;
 }
 
-export function SidebarItem({ href, label, iconName, badge, role }: SidebarItemProps) {
+function SidebarItemBase({ href, label, iconName, badge, role }: SidebarItemProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const { isCollapsed } = useSidebar();
   const isActive = pathname === href || pathname.startsWith(href + "/");
   const Icon = resolveIcon(iconName);
   const isSupplier = role === "supplier";
 
-  // Prefer live badge from provider context when the item is a known supplier badge slot.
-  // When the provider is not mounted (e.g. restaurant area, unauthenticated) we
-  // fall back to the SSR-seeded `badge` prop.
   const realtime = useSupplierRealtime();
   const badgeKey = isSupplier ? pickBadgeKey(href) : null;
   const liveBadge =
     realtime && badgeKey ? realtime.badges[badgeKey] : undefined;
   const effectiveBadge = liveBadge !== undefined ? liveBadge : badge;
 
-  // Pulse animation on value bump
   const prevBadge = useRef(effectiveBadge ?? 0);
   const [pulseKey, setPulseKey] = useState(0);
   useEffect(() => {
@@ -62,49 +57,49 @@ export function SidebarItem({ href, label, iconName, badge, role }: SidebarItemP
     prevBadge.current = current;
   }, [effectiveBadge]);
 
-  // Hide the notification badge when the user is already inside that section —
-  // the counter is intended to pull attention, not decorate the active item.
   const badgeVisible = effectiveBadge !== undefined && effectiveBadge > 0 && !isActive;
+
+  // Eagerly prime the route on intent (hover / touch). Next prefetches links
+  // when visible, but warming on hover halves perceived latency on first click.
+  const primeRoute = useCallback(() => {
+    if (!isActive) router.prefetch(href);
+  }, [href, isActive, router]);
 
   return (
     <Link
       href={href}
+      prefetch
+      onMouseEnter={primeRoute}
+      onTouchStart={primeRoute}
+      onFocus={primeRoute}
       className={cn(
-        "group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all",
+        "group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-colors duration-150",
         isCollapsed ? "justify-center px-3 py-2.5" : "px-3 py-2.5",
         isActive
           ? isSupplier
             ? "bg-brand-primary-subtle text-brand-primary"
             : "bg-accent-green-muted text-accent-green"
-          : isSupplier
-            ? "text-text-secondary hover:text-text-primary hover:bg-surface-hover"
-            : "text-text-secondary hover:text-text-primary hover:bg-surface-hover"
+          : "text-text-secondary hover:text-text-primary hover:bg-surface-hover",
       )}
       title={isCollapsed ? label : undefined}
     >
-      {/* Active indicator — left glow bar */}
       {isActive && (
-        isSupplier ? (
-          <motion.div
-            layoutId="sidebar-active"
-            className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-r-full bg-brand-primary dark:[box-shadow:var(--glow-brand)]"
-            transition={{ type: "spring", stiffness: 350, damping: 30 }}
-          />
-        ) : (
-          <motion.div
-            layoutId="sidebar-active"
-            className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-accent-green"
-            style={{ boxShadow: "var(--glow-forest-strong)" }}
-            transition={{ type: "spring", stiffness: 350, damping: 30 }}
-          />
-        )
+        <span
+          aria-hidden
+          className={cn(
+            "absolute left-0 top-1/2 -translate-y-1/2 h-5 rounded-r-full",
+            isSupplier
+              ? "w-0.5 bg-brand-primary dark:[box-shadow:var(--glow-brand)]"
+              : "w-[3px] bg-accent-green [box-shadow:var(--glow-forest-strong)]",
+          )}
+        />
       )}
 
       <div className="relative shrink-0">
         <Icon
           className={cn(
             "h-5 w-5 transition-colors duration-150",
-            isSupplier && !isActive && "group-hover:text-brand-primary"
+            isSupplier && !isActive && "group-hover:text-brand-primary",
           )}
         />
         {badgeVisible && isCollapsed && (
@@ -116,19 +111,14 @@ export function SidebarItem({ href, label, iconName, badge, role }: SidebarItemP
         )}
       </div>
 
-      <AnimatePresence mode="wait">
-        {!isCollapsed && (
-          <motion.span
-            initial={{ opacity: 0, width: 0 }}
-            animate={{ opacity: 1, width: "auto" }}
-            exit={{ opacity: 0, width: 0 }}
-            transition={{ duration: 0.15 }}
-            className="overflow-hidden whitespace-nowrap"
-          >
-            {label}
-          </motion.span>
+      <span
+        className={cn(
+          "overflow-hidden whitespace-nowrap transition-[max-width,opacity] duration-200",
+          isCollapsed ? "max-w-0 opacity-0" : "max-w-[180px] opacity-100",
         )}
-      </AnimatePresence>
+      >
+        {label}
+      </span>
 
       {badgeVisible && !isCollapsed && (
         isSupplier ? (
@@ -152,7 +142,6 @@ export function SidebarItem({ href, label, iconName, badge, role }: SidebarItemP
         )
       )}
 
-      {/* Tooltip for collapsed state */}
       {isCollapsed && (
         <div className="absolute left-full ml-2 px-2.5 py-1.5 rounded-lg bg-surface-elevated border border-border-default text-xs text-text-primary opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-elevated-dark">
           {label}
@@ -161,3 +150,5 @@ export function SidebarItem({ href, label, iconName, badge, role }: SidebarItemP
     </Link>
   );
 }
+
+export const SidebarItem = memo(SidebarItemBase);

@@ -6,16 +6,18 @@ import { ThemeProvider } from "@/components/providers/theme-provider";
 import { WebVitalsReporter } from "@/components/shared/web-vitals-reporter";
 import "./globals.css";
 
+// Body font is the only one needed on first paint. Display + mono are used
+// in <80% of routes and are fine to load lazily — preload them and the browser
+// blocks the LCP path waiting on woff2 it does not use.
 const dmSerifDisplay = DM_Serif_Display({
   weight: "400",
   subsets: ["latin"],
   variable: "--font-display",
   display: "swap",
+  preload: false,
+  adjustFontFallback: false,
 });
 
-// Using Inter as body font fallback until Satoshi font files are added
-// To use Satoshi: download from fontshare.com, place woff2 files in public/fonts/,
-// then switch to next/font/local with Satoshi-Regular/Medium/Bold.woff2
 const bodyFont = Inter({
   subsets: ["latin"],
   variable: "--font-body",
@@ -26,7 +28,18 @@ const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
   display: "swap",
+  preload: false,
+  adjustFontFallback: false,
 });
+
+const SUPABASE_ORIGIN = (() => {
+  try {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    return url ? new URL(url).origin : null;
+  } catch {
+    return null;
+  }
+})();
 
 export const metadata: Metadata = {
   title: {
@@ -84,6 +97,14 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${dmSerifDisplay.variable} ${bodyFont.variable} ${jetbrainsMono.variable}`}
     >
+      <head>
+        {SUPABASE_ORIGIN && (
+          <>
+            <link rel="preconnect" href={SUPABASE_ORIGIN} crossOrigin="anonymous" />
+            <link rel="dns-prefetch" href={SUPABASE_ORIGIN} />
+          </>
+        )}
+      </head>
       <body className="font-body antialiased bg-cream text-charcoal">
         <ThemeProvider>
           <PostHogProvider>

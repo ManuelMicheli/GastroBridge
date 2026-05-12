@@ -163,13 +163,16 @@ export default async function SupplierLayout({ children }: { children: ReactNode
   const currentRole: SupplierRole | null = member?.role ?? null;
   const supplierId: string | null = member?.supplier_id ?? null;
 
-  // Tier 2 — depends on supplier_id
+  // Tier 2 — single parallel wave once supplier_id is known.
+  // Stock alert counts run unconditionally and get zeroed if phase1 is off —
+  // running them in the same wave as suppliers/orders shaves one full RTT off
+  // the layout TTFB versus serializing on `phase1Enabled`.
   let phase1Enabled = false;
   let stockBadge = 0;
   let ordersBadge = 0;
 
   if (supplierId) {
-    const [supplierRes, pendingOrders] = await Promise.all([
+    const [supplierRes, pendingOrders, stockCounts] = await Promise.all([
       supabase
         .from("suppliers")
         .select("feature_flags")
@@ -178,21 +181,15 @@ export default async function SupplierLayout({ children }: { children: ReactNode
       getSectionSeenAt("supplier_orders")
         .then((seen) => getPendingOrdersCount(supplierId, seen))
         .catch(() => 0),
+      getStockAlertCounts(supplierId, 7).catch(() => ({
+        lowStockCount: 0,
+        expiringCount: 0,
+      })),
     ]);
     phase1Enabled = isPhase1Enabled(supplierRes.data);
     ordersBadge = pendingOrders;
-
-    // Tier 3 — stock counts only when phase1 is enabled
     if (phase1Enabled) {
-      try {
-        const { lowStockCount, expiringCount } = await getStockAlertCounts(
-          supplierId,
-          7,
-        );
-        stockBadge = lowStockCount + expiringCount;
-      } catch {
-        stockBadge = 0;
-      }
+      stockBadge = stockCounts.lowStockCount + stockCounts.expiringCount;
     }
   }
 
