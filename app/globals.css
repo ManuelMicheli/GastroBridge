@@ -958,13 +958,62 @@ body {
   color: var(--color-marketing-ink);
 }
 
-/* Supplier palette flip within marketing. Amber replaces bordeaux. */
-[data-area="marketing"] [data-side="supplier"] {
+/* Supplier palette flip within marketing. Amber replaces bordeaux.
+   Two paths: legacy per-section [data-side], AND new root-level
+   [data-persona] on <html> (set by PersonaProvider for reactive switch). */
+[data-area="marketing"] [data-side="supplier"],
+:root[data-persona="supplier"] [data-area="marketing"] {
   --color-marketing-primary: var(--color-marketing-accent-warm);
   --color-marketing-primary-hover: var(--color-marketing-accent-warm-deep);
   --color-marketing-primary-deep: var(--color-marketing-accent-warm-deep);
   --color-marketing-primary-subtle: var(--color-marketing-accent-warm-subtle);
   --color-marketing-on-primary: var(--color-marketing-on-warm);
+  --color-marketing-bg: #FBF8F1;
+  --color-marketing-bg-soft: #F1ECDF;
+}
+
+/* Dark theme tokens for the public landing (next-themes adds .dark on <html>). */
+.dark [data-area="marketing"] {
+  --color-marketing-bg: #09090F;
+  --color-marketing-bg-soft: #11111A;
+  --color-marketing-ink: #F5F4EE;
+  --color-marketing-ink-muted: #B4B3AE;
+  --color-marketing-ink-subtle: #6E6D69;
+  --color-marketing-rule: rgba(245, 244, 238, 0.10);
+  --color-marketing-rule-strong: rgba(245, 244, 238, 0.20);
+  --color-marketing-primary: #E84560;
+  --color-marketing-primary-hover: #F25A73;
+  --color-marketing-primary-deep: #B91C3C;
+  --color-marketing-primary-subtle: rgba(232, 69, 96, 0.14);
+  --color-marketing-on-primary: #09090F;
+  --color-marketing-accent-warm: #E8A355;
+  --color-marketing-accent-warm-deep: #B8791F;
+  --color-marketing-accent-warm-subtle: rgba(232, 163, 85, 0.14);
+}
+
+.dark :root[data-persona="supplier"] [data-area="marketing"],
+.dark [data-area="marketing"] [data-side="supplier"] {
+  --color-marketing-primary: var(--color-marketing-accent-warm);
+  --color-marketing-primary-hover: var(--color-marketing-accent-warm-deep);
+  --color-marketing-primary-deep: var(--color-marketing-accent-warm-deep);
+  --color-marketing-primary-subtle: var(--color-marketing-accent-warm-subtle);
+}
+
+/* Smooth palette swap on persona change (view-transition fallback). */
+@media (prefers-reduced-motion: no-preference) {
+  [data-area="marketing"],
+  [data-area="marketing"] * {
+    transition-property: background-color, color, border-color, fill, stroke;
+    transition-duration: 320ms;
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+}
+
+/* View-Transitions root cross-fade for persona swap. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 360ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 [data-area="marketing"] ::selection {
