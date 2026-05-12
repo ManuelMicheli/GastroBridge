@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { gsap, SplitText, ScrollTrigger } from "@/lib/gsap-config";
 import { EditorialEyebrow } from "./_primitives/editorial-eyebrow";
 import { MOTION, prefersReducedMotion } from "@/lib/marketing-motion";
@@ -21,7 +21,7 @@ export function PromiseSection() {
   const metaRef = useRef<HTMLDivElement>(null);
   const { persona } = usePersona();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (prefersReducedMotion()) {
       [headRef, numberRef, labelRef, metaRef].forEach((r) => {
         if (r.current) r.current.style.opacity = "1";
@@ -29,6 +29,7 @@ export function PromiseSection() {
       return;
     }
 
+    const splits: SplitText[] = [];
     const ctx = gsap.context(() => {
       const tlScroll = {
         trigger: sectionRef.current,
@@ -38,6 +39,7 @@ export function PromiseSection() {
 
       if (headRef.current) {
         const split = new SplitText(headRef.current, { type: "lines", linesClass: "pr-line" });
+        splits.push(split);
         gsap.set(headRef.current, { opacity: 1 });
         gsap.fromTo(
           split.lines,
@@ -96,8 +98,17 @@ export function PromiseSection() {
       ScrollTrigger.refresh();
     }, sectionRef);
 
-    return () => ctx.revert();
-  }, []);
+    return () => {
+      splits.forEach((s) => {
+        try {
+          s.revert();
+        } catch {
+          // ignore
+        }
+      });
+      ctx.revert();
+    };
+  }, [persona]);
 
   const accentLine =
     persona === "supplier" ? "e per chi la rifornisce." : "per chi vive in cucina";
@@ -120,6 +131,7 @@ export function PromiseSection() {
           <EditorialEyebrow number="— 01">LA PROMESSA</EditorialEyebrow>
 
           <h2
+            key={persona}
             ref={headRef}
             className="font-display opacity-0 mt-[clamp(24px,3vw,40px)]"
             style={{
@@ -128,6 +140,7 @@ export function PromiseSection() {
               letterSpacing: "var(--type-marketing-h2-ls)",
               color: "var(--color-marketing-ink)",
             }}
+            suppressHydrationWarning
           >
             Una piattaforma{" "}
             <span style={{ color: "var(--color-marketing-primary)" }}>{accentLine}</span>{" "}

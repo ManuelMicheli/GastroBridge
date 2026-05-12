@@ -1,14 +1,12 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import Link from "next/link";
 import { gsap, SplitText } from "@/lib/gsap-config";
 import { MOTION, prefersReducedMotion } from "@/lib/marketing-motion";
 import { usePersona } from "@/lib/marketing-persona-context";
 import { useMagnetic } from "@/lib/hooks/use-magnetic";
 import { Grain } from "./_primitives/grain";
-
-const HEADLINE = "Pronto a smettere di telefonare?";
 
 export function Closer() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -20,7 +18,7 @@ export function Closer() {
   const ctaPrimaryRef = useMagnetic<HTMLAnchorElement>({ strength: 0.3, radius: 110 });
   const { persona, setPersona } = usePersona();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (prefersReducedMotion()) {
       [yearRef, subRef, ctaRef, footRef].forEach((r) => {
         if (r.current) r.current.style.opacity = "1";
@@ -28,6 +26,7 @@ export function Closer() {
       if (headlineRef.current) headlineRef.current.style.opacity = "1";
       return;
     }
+    const splits: SplitText[] = [];
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({
         defaults: { ease: MOTION.easeEditorial },
@@ -41,9 +40,12 @@ export function Closer() {
         0
       );
 
-      if (headlineRef.current) {
-        gsap.set(headlineRef.current, { opacity: 1 });
-        const split = new SplitText(headlineRef.current, { type: "words" });
+      const splitTarget =
+        headlineRef.current?.querySelector<HTMLElement>("[data-split-target]");
+      if (splitTarget) {
+        gsap.set(splitTarget, { opacity: 1 });
+        const split = new SplitText(splitTarget, { type: "words" });
+        splits.push(split);
         tl.fromTo(
           split.words,
           { opacity: 0, y: 56, rotateX: 45 },
@@ -79,7 +81,16 @@ export function Closer() {
       );
     }, sectionRef);
 
-    return () => ctx.revert();
+    return () => {
+      splits.forEach((s) => {
+        try {
+          s.revert();
+        } catch {
+          // ignore
+        }
+      });
+      ctx.revert();
+    };
   }, []);
 
   const restaurantActive = persona === "restaurant";
@@ -134,13 +145,14 @@ export function Closer() {
             wordBreak: "keep-all",
           }}
         >
-          {HEADLINE.split(" ").map((w, i, arr) => (
-            <span key={i} className="inline-block">
-              {w}
-              {i < arr.length - 1 ? " " : ""}
-              {(w === "Pronto" || w === "smettere") && i < arr.length - 1 && <br />}
-            </span>
-          ))}
+          <span
+            data-split-target
+            className="block"
+            style={{ whiteSpace: "pre-line" }}
+            suppressHydrationWarning
+          >
+            {"Pronto\na smettere\ndi telefonare?"}
+          </span>
         </h2>
 
         <p

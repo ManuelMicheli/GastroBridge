@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { gsap, SplitText } from "@/lib/gsap-config";
 import { EditorialEyebrow } from "./_primitives/editorial-eyebrow";
@@ -44,7 +44,7 @@ export function SplitHero() {
   const [hovered, setHovered] = useState<Persona | null>(null);
   const { persona, setPersona } = usePersona();
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (prefersReducedMotion()) {
       sectionRef.current
         ?.querySelectorAll<HTMLElement>("[data-reveal]")
@@ -52,10 +52,15 @@ export function SplitHero() {
       return;
     }
 
+    // Track every SplitText so we can revert BEFORE React unmounts the host
+    // h1. Without explicit revert, SplitText leaves its <div>-wrapped words
+    // in place and React's removeChild fails on the original JSX children
+    // it expects but no longer exist in the DOM.
+    const splits: SplitText[] = [];
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({ defaults: { ease: MOTION.easeEditorial } });
       const eyebrows = sectionRef.current?.querySelectorAll<HTMLElement>("[data-reveal='eyebrow']");
-      const heads = sectionRef.current?.querySelectorAll<HTMLHeadingElement>("[data-reveal='head']");
+      const heads = sectionRef.current?.querySelectorAll<HTMLElement>("[data-split-target]");
       const metrics = sectionRef.current?.querySelectorAll<HTMLElement>("[data-reveal='metric']");
       const ctas = sectionRef.current?.querySelectorAll<HTMLElement>("[data-reveal='cta']");
 
@@ -69,6 +74,7 @@ export function SplitHero() {
       }
       heads?.forEach((h, i) => {
         const split = new SplitText(h, { type: "words" });
+        splits.push(split);
         tl.fromTo(
           split.words,
           { opacity: 0, y: 50 },
@@ -99,7 +105,16 @@ export function SplitHero() {
       }
     }, sectionRef);
 
-    return () => ctx.revert();
+    return () => {
+      splits.forEach((s) => {
+        try {
+          s.revert();
+        } catch {
+          // ignore — already reverted
+        }
+      });
+      ctx.revert();
+    };
   }, []);
 
   return (
@@ -201,10 +216,10 @@ function Side({ data, active, dimmed, expanded, onHover, onLeave, onChoose }: Si
         )}
       </div>
 
-      {/* headline */}
+      {/* headline — inner span owns split target so React never reconciles
+          children that SplitText has mutated. */}
       <h1
-        data-reveal="head"
-        className="font-display opacity-0 mt-[clamp(28px,5vw,72px)] mb-[clamp(28px,4vw,56px)]"
+        className="font-display mt-[clamp(28px,5vw,72px)] mb-[clamp(28px,4vw,56px)]"
         style={{
           fontSize: "var(--type-marketing-display)",
           lineHeight: "var(--type-marketing-display-lh)",
@@ -212,11 +227,15 @@ function Side({ data, active, dimmed, expanded, onHover, onLeave, onChoose }: Si
           color: "var(--color-marketing-ink)",
         }}
       >
-        {data.headline.map((line) => (
-          <span key={line} className="block">
-            {line}
-          </span>
-        ))}
+        <span
+          data-reveal="head"
+          data-split-target
+          className="block opacity-0"
+          style={{ whiteSpace: "pre-line" }}
+          suppressHydrationWarning
+        >
+          {data.headline.join("\n")}
+        </span>
       </h1>
 
       {/* metric + cta footer */}
