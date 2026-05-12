@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { UploadCloud, Check, ArrowLeft, Download } from "lucide-react";
+import { UploadCloud, Check, ArrowLeft, Download, Wand2, Pencil } from "lucide-react";
 import { parseCsv, parseXlsx, suggestMapping, type ParsedSheet } from "@/lib/catalogs/parse-file";
 import { normalizePrice } from "@/lib/catalogs/normalize";
 import { importCatalogItems } from "@/lib/catalogs/actions";
@@ -12,7 +12,7 @@ const MAX_BYTES = 2 * 1024 * 1024;
 const MAX_ROWS = 5000;
 
 type Mapping = { name: string; unit: string; price: string };
-type Step = "upload" | "map" | "preview";
+type Step = "upload" | "preview";
 type ValidatedRow =
   | { ok: true; data: CatalogItemInput }
   | { ok: false; reason: string; raw: { name: string; unit: string; price: string } };
@@ -29,10 +29,18 @@ export function CatalogImportWizard({ open, onClose, catalogId, onImported }: Pr
   const [hasHeader, setHasHeader] = useState(true);
   const [sheet, setSheet]     = useState<ParsedSheet | null>(null);
   const [mapping, setMapping] = useState<Mapping>({ name: "", unit: "", price: "" });
+  const [autoDetected, setAutoDetected] = useState(false);
+  const [showMappingEditor, setShowMappingEditor] = useState(false);
   const [mode, setMode]       = useState<"replace" | "append">("append");
   const [pending, startTransition] = useTransition();
 
-  const reset = () => { setStep("upload"); setSheet(null); setMapping({ name: "", unit: "", price: "" }); };
+  const reset = () => {
+    setStep("upload");
+    setSheet(null);
+    setMapping({ name: "", unit: "", price: "" });
+    setAutoDetected(false);
+    setShowMappingEditor(false);
+  };
   const closeAll = () => { reset(); onClose(); };
 
   const handleFile = async (file: File) => {
@@ -47,14 +55,17 @@ export function CatalogImportWizard({ open, onClose, catalogId, onImported }: Pr
       if (parsed.rows.length === 0) { toast.error("Nessuna riga di dati nel file"); return; }
       if (parsed.rows.length > MAX_ROWS) { toast.error(`Troppe righe (max ${MAX_ROWS})`); return; }
 
+      const detected = suggestMapping(parsed.headers, parsed.rows);
+      const next: Mapping = {
+        name:  detected.name  ?? "",
+        unit:  detected.unit  ?? "",
+        price: detected.price ?? "",
+      };
       setSheet(parsed);
-      const suggested = suggestMapping(parsed.headers);
-      setMapping({
-        name:  suggested.name  ?? parsed.headers[0] ?? "",
-        unit:  suggested.unit  ?? parsed.headers[1] ?? "",
-        price: suggested.price ?? parsed.headers[2] ?? "",
-      });
-      setStep("map");
+      setMapping(next);
+      setAutoDetected(Boolean(detected.name && detected.unit && detected.price));
+      setShowMappingEditor(!detected.name || !detected.unit || !detected.price);
+      setStep("preview");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Errore lettura file";
       toast.error(msg);
@@ -79,6 +90,7 @@ export function CatalogImportWizard({ open, onClose, catalogId, onImported }: Pr
 
   const validCount = validated.filter((v) => v.ok).length;
   const invalidCount = validated.length - validCount;
+  const mappingComplete = Boolean(mapping.name && mapping.unit && mapping.price);
 
   if (!open) return null;
 
@@ -101,24 +113,28 @@ export function CatalogImportWizard({ open, onClose, catalogId, onImported }: Pr
       >
         <header className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-text-primary">Importa catalogo da file</h2>
-          <div className="text-xs text-text-tertiary">
-            {step === "upload" ? "1/3 Upload" : step === "map" ? "2/3 Mappa colonne" : "3/3 Anteprima"}
-          </div>
+          <div className="text-xs text-text-tertiary">{step === "upload" ? "1/2 Carica" : "2/2 Anteprima"}</div>
         </header>
 
         {step === "upload" && (
           <div className="space-y-4">
-            <label className="flex items-center gap-2 text-sm text-text-secondary">
-              <input type="checkbox" checked={hasHeader} onChange={(e) => setHasHeader(e.target.checked)} />
-              Il file ha un&apos;intestazione sulla prima riga
-            </label>
             <label className="block rounded-xl border-2 border-dashed border-border-subtle p-12 text-center cursor-pointer hover:border-accent-green/40">
               <UploadCloud className="mx-auto h-8 w-8 text-text-tertiary" />
-              <p className="mt-3 text-text-primary">Clicca per scegliere un file</p>
+              <p className="mt-3 text-text-primary">Trascina o clicca per caricare il tuo catalogo</p>
               <p className="mt-1 text-xs text-text-tertiary">CSV, XLS, XLSX · max 2MB · max 5000 righe</p>
+              <p className="mt-2 text-xs text-text-tertiary">
+                Riconosce automaticamente <strong>nome</strong>, <strong>unità/peso</strong> e <strong>prezzo</strong>.
+              </p>
               <input type="file" accept=".csv,.xls,.xlsx" className="hidden"
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
             </label>
+            <details className="text-sm text-text-tertiary">
+              <summary className="cursor-pointer hover:text-text-secondary">Opzioni avanzate</summary>
+              <label className="mt-2 flex items-center gap-2">
+                <input type="checkbox" checked={hasHeader} onChange={(e) => setHasHeader(e.target.checked)} />
+                Il file ha un&apos;intestazione sulla prima riga
+              </label>
+            </details>
             <a href="/template-catalogo.csv" download
               className="inline-flex items-center gap-1 text-sm text-accent-green hover:underline">
               <Download className="h-4 w-4" /> Scarica template CSV
@@ -126,56 +142,71 @@ export function CatalogImportWizard({ open, onClose, catalogId, onImported }: Pr
           </div>
         )}
 
-        {step === "map" && sheet && (
+        {step === "preview" && sheet && (
           <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {(["name", "unit", "price"] as const).map((field) => (
-                <label key={field} className="block">
-                  <span className="text-sm text-text-secondary capitalize">
-                    {field === "name" ? "Nome prodotto" : field === "unit" ? "Unità" : "Prezzo"} *
-                  </span>
-                  <select
-                    value={mapping[field]}
-                    onChange={(e) => setMapping((m) => ({ ...m, [field]: e.target.value }))}
-                    className="mt-1 w-full rounded-lg bg-surface-base border border-border-subtle px-3 py-2 text-text-primary"
-                  >
-                    <option value="">—</option>
-                    {sheet.headers.map((h) => <option key={h} value={h}>{h}</option>)}
-                  </select>
-                </label>
-              ))}
-            </div>
-            <div className="rounded-lg border border-border-subtle overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-surface-base text-text-tertiary">
-                  <tr>{sheet.headers.map((h) => <th key={h} className="text-left px-2 py-1 font-medium">{h}</th>)}</tr>
-                </thead>
-                <tbody>
-                  {sheet.rows.slice(0, 5).map((r, i) => (
-                    <tr key={i} className="border-t border-border-subtle">
-                      {sheet.headers.map((h) => <td key={h} className="px-2 py-1 text-text-secondary">{r[h]}</td>)}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="flex justify-between">
-              <button onClick={() => setStep("upload")} className="inline-flex items-center gap-1 text-text-secondary hover:text-text-primary">
-                <ArrowLeft className="h-4 w-4" /> Indietro
-              </button>
+            <div className={`rounded-lg border px-3 py-2 text-sm flex items-start justify-between gap-3 ${
+              autoDetected
+                ? "bg-accent-green/5 border-accent-green/30 text-text-primary"
+                : "bg-amber-500/5 border-amber-500/40 text-text-primary"
+            }`}>
+              <div className="flex items-start gap-2 min-w-0">
+                <Wand2 className="h-4 w-4 mt-0.5 shrink-0 text-accent-green" />
+                <div className="min-w-0">
+                  <p className="font-medium">
+                    {autoDetected ? "Colonne riconosciute automaticamente" : "Colonne da confermare"}
+                  </p>
+                  <p className="mt-0.5 text-text-tertiary truncate">
+                    Nome: <span className="text-text-secondary">{mapping.name || "—"}</span>
+                    {" · "}Unità: <span className="text-text-secondary">{mapping.unit || "—"}</span>
+                    {" · "}Prezzo: <span className="text-text-secondary">{mapping.price || "—"}</span>
+                  </p>
+                </div>
+              </div>
               <button
-                onClick={() => setStep("preview")}
-                disabled={!mapping.name || !mapping.unit || !mapping.price}
-                className="px-4 py-2 rounded-lg bg-accent-green text-surface-base font-medium disabled:opacity-50"
+                type="button"
+                onClick={() => setShowMappingEditor((s) => !s)}
+                className="inline-flex items-center gap-1 text-xs text-accent-green hover:underline shrink-0"
               >
-                Continua
+                <Pencil className="h-3 w-3" /> {showMappingEditor ? "Chiudi" : "Modifica"}
               </button>
             </div>
-          </div>
-        )}
 
-        {step === "preview" && (
-          <div className="space-y-4">
+            {showMappingEditor && (
+              <div className="rounded-lg border border-border-subtle p-3 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {(["name", "unit", "price"] as const).map((field) => (
+                    <label key={field} className="block">
+                      <span className="text-sm text-text-secondary">
+                        {field === "name" ? "Nome prodotto" : field === "unit" ? "Unità" : "Prezzo"} *
+                      </span>
+                      <select
+                        value={mapping[field]}
+                        onChange={(e) => setMapping((m) => ({ ...m, [field]: e.target.value }))}
+                        className="mt-1 w-full rounded-lg bg-surface-base border border-border-subtle px-3 py-2 text-text-primary"
+                      >
+                        <option value="">—</option>
+                        {sheet.headers.map((h) => <option key={h} value={h}>{h}</option>)}
+                      </select>
+                    </label>
+                  ))}
+                </div>
+                <div className="rounded-lg border border-border-subtle overflow-x-auto">
+                  <table className="min-w-full text-xs">
+                    <thead className="bg-surface-base text-text-tertiary">
+                      <tr>{sheet.headers.map((h) => <th key={h} className="text-left px-2 py-1 font-medium">{h}</th>)}</tr>
+                    </thead>
+                    <tbody>
+                      {sheet.rows.slice(0, 3).map((r, i) => (
+                        <tr key={i} className="border-t border-border-subtle">
+                          {sheet.headers.map((h) => <td key={h} className="px-2 py-1 text-text-secondary">{r[h]}</td>)}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center gap-4 text-sm">
               <span className="inline-flex items-center gap-1 text-accent-green"><Check className="h-4 w-4" /> {validCount} valide</span>
               <span className="text-red-400">{invalidCount} scartate</span>
@@ -228,12 +259,12 @@ export function CatalogImportWizard({ open, onClose, catalogId, onImported }: Pr
             </fieldset>
 
             <div className="flex justify-between">
-              <button onClick={() => setStep("map")} className="inline-flex items-center gap-1 text-text-secondary hover:text-text-primary">
-                <ArrowLeft className="h-4 w-4" /> Indietro
+              <button onClick={() => setStep("upload")} className="inline-flex items-center gap-1 text-text-secondary hover:text-text-primary">
+                <ArrowLeft className="h-4 w-4" /> Cambia file
               </button>
               <button
                 onClick={confirmImport}
-                disabled={pending || validCount === 0}
+                disabled={pending || validCount === 0 || !mappingComplete}
                 className="px-4 py-2 rounded-lg bg-accent-green text-surface-base font-medium disabled:opacity-50"
               >
                 {pending ? "Importo..." : `Conferma (${validCount} righe)`}

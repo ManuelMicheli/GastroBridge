@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { UploadCloud, Check, ArrowLeft, Download } from "lucide-react";
+import { UploadCloud, Check, ArrowLeft, Download, Wand2, Pencil } from "lucide-react";
 import { parseCsv, parseXlsx, suggestMapping, type ParsedSheet } from "@/lib/catalogs/parse-file";
 import { normalizePrice } from "@/lib/catalogs/normalize";
 import { importSupplierProducts, type ProductImportRow } from "@/lib/products/import-actions";
@@ -42,7 +42,7 @@ type Mapping = {
   min_quantity: string;
 };
 
-type Step = "upload" | "map" | "preview";
+type Step = "upload" | "preview";
 type ValidatedRow =
   | { ok: true; data: ProductImportRow }
   | { ok: false; reason: string; raw: Record<string, string> };
@@ -56,13 +56,17 @@ type Props = {
   onImported?: () => void;
 };
 
+const EMPTY_MAPPING: Mapping = {
+  name: "", unit: "", price: "", brand: "", description: "", origin: "", min_quantity: "",
+};
+
 export function ProductImportWizard({ open, onClose, categories, onImported }: Props) {
   const [step, setStep] = useState<Step>("upload");
   const [hasHeader, setHasHeader] = useState(true);
   const [sheet, setSheet] = useState<ParsedSheet | null>(null);
-  const [mapping, setMapping] = useState<Mapping>({
-    name: "", unit: "", price: "", brand: "", description: "", origin: "", min_quantity: "",
-  });
+  const [mapping, setMapping] = useState<Mapping>(EMPTY_MAPPING);
+  const [autoDetected, setAutoDetected] = useState(false);
+  const [showMappingEditor, setShowMappingEditor] = useState(false);
   const [categoryId, setCategoryId] = useState<string>(categories[0]?.id ?? "");
   const [skipDuplicates, setSkipDuplicates] = useState(true);
   const [pending, startTransition] = useTransition();
@@ -70,7 +74,9 @@ export function ProductImportWizard({ open, onClose, categories, onImported }: P
   const reset = () => {
     setStep("upload");
     setSheet(null);
-    setMapping({ name: "", unit: "", price: "", brand: "", description: "", origin: "", min_quantity: "" });
+    setMapping(EMPTY_MAPPING);
+    setAutoDetected(false);
+    setShowMappingEditor(false);
   };
   const closeAll = () => { reset(); onClose(); };
 
@@ -86,20 +92,32 @@ export function ProductImportWizard({ open, onClose, categories, onImported }: P
       if (parsed.rows.length === 0) { toast.error("Nessuna riga di dati nel file"); return; }
       if (parsed.rows.length > MAX_ROWS) { toast.error(`Troppe righe (max ${MAX_ROWS})`); return; }
 
+      const suggested = suggestMapping(parsed.headers, parsed.rows);
+      const lc = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const findByKeywords = (keys: string[], skip: Set<string>): string => {
+        const found = parsed.headers.find((h) => !skip.has(h) && keys.some((k) => lc(h).includes(lc(k))));
+        return found ?? "";
+      };
+      const reserved = new Set<string>([suggested.name, suggested.unit, suggested.price].filter(Boolean) as string[]);
+      const brand = findByKeywords(["brand", "marca", "produttore"], reserved);
+      if (brand) reserved.add(brand);
+      const origin = findByKeywords(["origine", "provenienza", "paese"], reserved);
+      if (origin) reserved.add(origin);
+      const description = findByKeywords(["descrizione", "descr", "note", "ingredient"], reserved);
+      if (description) reserved.add(description);
+      const min_quantity = findByKeywords(["min", "q.ta min", "qta min", "quantita min", "minimum"], reserved);
+
       setSheet(parsed);
-      const suggested = suggestMapping(parsed.headers);
-      const findByKeywords = (keys: string[]) =>
-        parsed.headers.find((h) => keys.some((k) => h.toLowerCase().includes(k))) ?? "";
       setMapping({
-        name:         suggested.name  ?? parsed.headers[0] ?? "",
-        unit:         suggested.unit  ?? parsed.headers[1] ?? "",
-        price:        suggested.price ?? parsed.headers[2] ?? "",
-        brand:        findByKeywords(["brand", "marca", "produttore"]),
-        description:  findByKeywords(["descrizione", "descr", "note"]),
-        origin:       findByKeywords(["origine", "provenienza", "paese"]),
-        min_quantity: findByKeywords(["min", "q.ta min", "qta min", "quantita min"]),
+        name:  suggested.name  ?? "",
+        unit:  suggested.unit  ?? "",
+        price: suggested.price ?? "",
+        brand, description, origin, min_quantity,
       });
-      setStep("map");
+      const haveRequired = Boolean(suggested.name && suggested.unit && suggested.price);
+      setAutoDetected(haveRequired);
+      setShowMappingEditor(!haveRequired);
+      setStep("preview");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Errore lettura file";
       toast.error(msg);
@@ -150,6 +168,7 @@ export function ProductImportWizard({ open, onClose, categories, onImported }: P
 
   const validCount = validated.filter((v) => v.ok).length;
   const invalidCount = validated.length - validCount;
+  const mappingComplete = Boolean(mapping.name && mapping.unit && mapping.price);
 
   if (!open) return null;
 
@@ -191,24 +210,29 @@ export function ProductImportWizard({ open, onClose, categories, onImported }: P
       >
         <header className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-charcoal">Importa prodotti da file</h2>
-          <div className="text-xs text-sage">
-            {step === "upload" ? "1/3 Upload" : step === "map" ? "2/3 Mappa colonne" : "3/3 Anteprima"}
-          </div>
+          <div className="text-xs text-sage">{step === "upload" ? "1/2 Carica" : "2/2 Anteprima"}</div>
         </header>
 
         {step === "upload" && (
           <div className="space-y-4">
-            <label className="flex items-center gap-2 text-sm text-sage">
-              <input type="checkbox" checked={hasHeader} onChange={(e) => setHasHeader(e.target.checked)} />
-              Il file ha un&apos;intestazione sulla prima riga
-            </label>
             <label className="block rounded-xl border-2 border-dashed border-sage/30 p-12 text-center cursor-pointer hover:border-forest/40">
               <UploadCloud className="mx-auto h-8 w-8 text-sage" />
-              <p className="mt-3 text-charcoal">Clicca per scegliere un file</p>
+              <p className="mt-3 text-charcoal">Trascina o clicca per caricare il tuo listino</p>
               <p className="mt-1 text-xs text-sage">CSV, XLS, XLSX · max 2MB · max 5000 righe</p>
+              <p className="mt-2 text-xs text-sage">
+                Riconosce automaticamente <strong>nome</strong>, <strong>unità/peso</strong>, <strong>prezzo</strong>,
+                brand, origine e quantità minima.
+              </p>
               <input type="file" accept=".csv,.xls,.xlsx" className="hidden"
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
             </label>
+            <details className="text-sm text-sage">
+              <summary className="cursor-pointer hover:text-charcoal">Opzioni avanzate</summary>
+              <label className="mt-2 flex items-center gap-2">
+                <input type="checkbox" checked={hasHeader} onChange={(e) => setHasHeader(e.target.checked)} />
+                Il file ha un&apos;intestazione sulla prima riga
+              </label>
+            </details>
             <a href="/template-prodotti.csv" download
               className="inline-flex items-center gap-1 text-sm text-forest hover:underline">
               <Download className="h-4 w-4" /> Scarica template CSV
@@ -216,85 +240,95 @@ export function ProductImportWizard({ open, onClose, categories, onImported }: P
           </div>
         )}
 
-        {step === "map" && sheet && (
+        {step === "preview" && sheet && (
           <div className="space-y-4">
-            <div>
-              <p className="text-sm font-medium text-charcoal mb-2">Colonne obbligatorie</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {(["name", "unit", "price"] as const).map((field) => (
-                  <label key={field} className="block">
-                    <span className="text-sm text-sage">
-                      {field === "name" ? "Nome prodotto" : field === "unit" ? "Unità" : "Prezzo"} *
-                    </span>
-                    <select
-                      value={mapping[field]}
-                      onChange={(e) => setMapping((m) => ({ ...m, [field]: e.target.value }))}
-                      className="mt-1 w-full rounded-lg bg-white border border-sage/30 px-3 py-2 text-charcoal"
-                    >
-                      <option value="">—</option>
-                      {sheet.headers.map((h) => <option key={h} value={h}>{h}</option>)}
-                    </select>
-                  </label>
-                ))}
+            <div className={`rounded-lg border px-3 py-2 text-sm flex items-start justify-between gap-3 ${
+              autoDetected
+                ? "bg-forest/5 border-forest/30 text-charcoal"
+                : "bg-amber-50 border-amber-300 text-charcoal"
+            }`}>
+              <div className="flex items-start gap-2 min-w-0">
+                <Wand2 className="h-4 w-4 mt-0.5 shrink-0 text-forest" />
+                <div className="min-w-0">
+                  <p className="font-medium">
+                    {autoDetected ? "Colonne riconosciute automaticamente" : "Colonne da confermare"}
+                  </p>
+                  <p className="mt-0.5 text-sage truncate">
+                    Nome: <span className="text-charcoal">{mapping.name || "—"}</span>
+                    {" · "}Unità: <span className="text-charcoal">{mapping.unit || "—"}</span>
+                    {" · "}Prezzo: <span className="text-charcoal">{mapping.price || "—"}</span>
+                  </p>
+                </div>
               </div>
-            </div>
-
-            <div>
-              <p className="text-sm font-medium text-charcoal mb-2">Colonne opzionali</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {optionalField("brand", "Brand / Marca")}
-                {optionalField("origin", "Origine")}
-                {optionalField("description", "Descrizione")}
-                {optionalField("min_quantity", "Quantità minima")}
-              </div>
-            </div>
-
-            <div>
-              <label className="block">
-                <span className="text-sm font-medium text-charcoal">Categoria di default *</span>
-                <select
-                  value={categoryId}
-                  onChange={(e) => setCategoryId(e.target.value)}
-                  className="mt-1 w-full rounded-lg bg-white border border-sage/30 px-3 py-2 text-charcoal"
-                >
-                  {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-                <span className="mt-1 block text-xs text-sage">Applicata a tutte le righe importate.</span>
-              </label>
-            </div>
-
-            <div className="rounded-lg border border-sage/20 overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead className="bg-cream text-sage">
-                  <tr>{sheet.headers.map((h) => <th key={h} className="text-left px-2 py-1 font-medium">{h}</th>)}</tr>
-                </thead>
-                <tbody>
-                  {sheet.rows.slice(0, 5).map((r, i) => (
-                    <tr key={i} className="border-t border-sage/10">
-                      {sheet.headers.map((h) => <td key={h} className="px-2 py-1 text-charcoal">{r[h]}</td>)}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="flex justify-between">
-              <button onClick={() => setStep("upload")} className="inline-flex items-center gap-1 text-sage hover:text-charcoal">
-                <ArrowLeft className="h-4 w-4" /> Indietro
-              </button>
               <button
-                onClick={() => setStep("preview")}
-                disabled={!mapping.name || !mapping.unit || !mapping.price || !categoryId}
-                className="px-4 py-2 rounded-lg bg-forest text-white font-medium disabled:opacity-50"
+                type="button"
+                onClick={() => setShowMappingEditor((s) => !s)}
+                className="inline-flex items-center gap-1 text-xs text-forest hover:underline shrink-0"
               >
-                Continua
+                <Pencil className="h-3 w-3" /> {showMappingEditor ? "Chiudi" : "Modifica"}
               </button>
             </div>
-          </div>
-        )}
 
-        {step === "preview" && (
-          <div className="space-y-4">
+            {showMappingEditor && (
+              <div className="rounded-lg border border-sage/20 p-3 space-y-3">
+                <div>
+                  <p className="text-sm font-medium text-charcoal mb-2">Colonne obbligatorie</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {(["name", "unit", "price"] as const).map((field) => (
+                      <label key={field} className="block">
+                        <span className="text-sm text-sage">
+                          {field === "name" ? "Nome prodotto" : field === "unit" ? "Unità" : "Prezzo"} *
+                        </span>
+                        <select
+                          value={mapping[field]}
+                          onChange={(e) => setMapping((m) => ({ ...m, [field]: e.target.value }))}
+                          className="mt-1 w-full rounded-lg bg-white border border-sage/30 px-3 py-2 text-charcoal"
+                        >
+                          <option value="">—</option>
+                          {sheet.headers.map((h) => <option key={h} value={h}>{h}</option>)}
+                        </select>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-charcoal mb-2">Colonne opzionali</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {optionalField("brand", "Brand / Marca")}
+                    {optionalField("origin", "Origine")}
+                    {optionalField("description", "Descrizione")}
+                    {optionalField("min_quantity", "Quantità minima")}
+                  </div>
+                </div>
+                <div className="rounded-lg border border-sage/20 overflow-x-auto">
+                  <table className="min-w-full text-xs">
+                    <thead className="bg-cream text-sage">
+                      <tr>{sheet.headers.map((h) => <th key={h} className="text-left px-2 py-1 font-medium">{h}</th>)}</tr>
+                    </thead>
+                    <tbody>
+                      {sheet.rows.slice(0, 3).map((r, i) => (
+                        <tr key={i} className="border-t border-sage/10">
+                          {sheet.headers.map((h) => <td key={h} className="px-2 py-1 text-charcoal">{r[h]}</td>)}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            <label className="block">
+              <span className="text-sm font-medium text-charcoal">Categoria di default *</span>
+              <select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className="mt-1 w-full rounded-lg bg-white border border-sage/30 px-3 py-2 text-charcoal"
+              >
+                {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+              <span className="mt-1 block text-xs text-sage">Applicata a tutte le righe importate.</span>
+            </label>
+
             <div className="flex items-center gap-4 text-sm">
               <span className="inline-flex items-center gap-1 text-forest"><Check className="h-4 w-4" /> {validCount} valide</span>
               <span className="text-red-600">{invalidCount} scartate</span>
@@ -343,12 +377,12 @@ export function ProductImportWizard({ open, onClose, categories, onImported }: P
             </label>
 
             <div className="flex justify-between">
-              <button onClick={() => setStep("map")} className="inline-flex items-center gap-1 text-sage hover:text-charcoal">
-                <ArrowLeft className="h-4 w-4" /> Indietro
+              <button onClick={() => setStep("upload")} className="inline-flex items-center gap-1 text-sage hover:text-charcoal">
+                <ArrowLeft className="h-4 w-4" /> Cambia file
               </button>
               <button
                 onClick={confirmImport}
-                disabled={pending || validCount === 0}
+                disabled={pending || validCount === 0 || !mappingComplete}
                 className="px-4 py-2 rounded-lg bg-forest text-white font-medium disabled:opacity-50"
               >
                 {pending ? "Importo..." : `Conferma (${validCount} righe)`}

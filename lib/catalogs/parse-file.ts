@@ -105,7 +105,7 @@ function scoreColumn(
 
   // Header keyword scores
   const nameKeywords  = ["nome", "descrizione", "articolo", "prodotto", "descr", "item", "product", "denominazione", "desc", "artikel"];
-  const unitKeywords  = ["unita", "unità", "um", "u.m", "confezione", "conf", "unit", "uom", "misura", "udm", "imballo", "packaging"];
+  const unitKeywords  = ["unita", "unità", "um", "u.m", "confezione", "conf", "unit", "uom", "misura", "udm", "imballo", "packaging", "peso", "grammatura", "formato", "size"];
   const priceKeywords = ["prezzo", "costo", "€", "eur", "importo", "price", "cost", "listino", "tariffa", "valore", "pvp", "netto"];
 
   const nameH  = nameKeywords.some((k)  => h.includes(lc(k))) ? 10 : 0;
@@ -131,6 +131,15 @@ function scoreColumn(
   };
 }
 
+export type DetectedMapping = {
+  name?: string;
+  unit?: string;
+  price?: string;
+  scores: { name: number; unit: number; price: number };
+  /** All required fields detected AND each above strong-signal threshold. */
+  confident: boolean;
+};
+
 /**
  * Suggest best header matches for each target field.
  * When rows are provided, also scores columns by cell content.
@@ -139,7 +148,7 @@ function scoreColumn(
 export function suggestMapping(
   headers: string[],
   rows: ParsedRow[] = [],
-): { name?: string; unit?: string; price?: string } {
+): DetectedMapping {
   const sample = rows.slice(0, 30);
 
   const scores = headers.map((h) => {
@@ -148,6 +157,7 @@ export function suggestMapping(
   });
 
   const assigned = new Set<string>();
+  const finalScores = { name: 0, unit: 0, price: 0 };
 
   const pick = (field: "name" | "unit" | "price"): string | undefined => {
     const best = scores
@@ -155,6 +165,7 @@ export function suggestMapping(
       .sort((a, b) => b[field] - a[field])[0];
     if (best && best[field] > 0) {
       assigned.add(best.h);
+      finalScores[field] = best[field];
       return best.h;
     }
     return undefined;
@@ -165,5 +176,26 @@ export function suggestMapping(
   const unit  = pick("unit");
   const name  = pick("name");
 
-  return { name, unit, price };
+  // Strong signal = header keyword match (10) OR significant content ratio (≥6).
+  const STRONG = 10;
+  const confident = Boolean(name && unit && price)
+    && finalScores.name  >= STRONG
+    && finalScores.unit  >= STRONG
+    && finalScores.price >= STRONG;
+
+  return { name, unit, price, scores: finalScores, confident };
+}
+
+/**
+ * Heuristic header detection. Header row when most cells are non-empty,
+ * non-numeric, and short (< 40 chars). Cheap fallback to user toggle.
+ */
+export function looksLikeHeader(firstRow: string[]): boolean {
+  if (firstRow.length === 0) return false;
+  const nonEmpty = firstRow.filter((c) => c && c.trim().length > 0);
+  if (nonEmpty.length < Math.ceil(firstRow.length * 0.6)) return false;
+  const numeric = nonEmpty.filter((c) => normalizePrice(c) !== null).length;
+  if (numeric > nonEmpty.length / 2) return false;
+  const tooLong = nonEmpty.filter((c) => c.length > 40).length;
+  return tooLong < nonEmpty.length / 2;
 }
