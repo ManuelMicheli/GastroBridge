@@ -25,7 +25,12 @@
       "Read(//tmp/**)",
       "Bash(grep -E \"\\(supplier/ddt|supplier\\\\\\\\\\\\\\\\ddt|ddt-book|ddt-preview\\)\")",
       "Bash(grep -rn \"Suppliers\\\\|anon\" D:/Manum/GastroBridge/.env*)",
-      "Bash(vercel --version)"
+      "Bash(vercel --version)",
+      "PowerShell($data = Get-Content \"C:\\\\Users\\\\Manum\\\\.claude\\\\projects\\\\D--Manum-GastroBridge\\\\9ba27e89-cd7c-4742-954c-61b243d8890e\\\\tool-results\\\\mcp-claude_ai_Supabase-get_advisors-1778585939943.txt\" -Raw; $j = $data | ConvertFrom-Json; $inner = $j[0].text | ConvertFrom-Json; $inner.result.lints | Group-Object name | Select-Object Count,@{n='name';e={$_.Name}},@{n='level';e={$_.Group[0].level}} | Sort-Object Count -Descending | Format-Table -AutoSize)",
+      "PowerShell($data = Get-Content \"C:\\\\Users\\\\Manum\\\\.claude\\\\projects\\\\D--Manum-GastroBridge\\\\9ba27e89-cd7c-4742-954c-61b243d8890e\\\\tool-results\\\\mcp-claude_ai_Supabase-get_advisors-1778585939943.txt\" -Raw; $j = $data | ConvertFrom-Json; $inner = $j[0].text | ConvertFrom-Json; $inner.result.lints | Where-Object { $_.level -in @\\('ERROR','WARN'\\) -and $_.name -notin @\\('anon_security_definer_function_executable','authenticated_security_definer_function_executable','function_search_path_mutable'\\) } | ForEach-Object { \"$\\($_.level\\) | $\\($_.name\\) | $\\($_.detail\\)\" })",
+      "PowerShell($data = Get-Content \"C:\\\\Users\\\\Manum\\\\.claude\\\\projects\\\\D--Manum-GastroBridge\\\\9ba27e89-cd7c-4742-954c-61b243d8890e\\\\tool-results\\\\mcp-claude_ai_Supabase-get_advisors-1778585939943.txt\" -Raw; $j = $data | ConvertFrom-Json; $inner = $j[0].text | ConvertFrom-Json; $inner.result.lints | Where-Object { $_.name -in @\\('rls_enabled_no_policy','auth_otp_long_expiry','auth_mfa_disabled'\\) } | ForEach-Object { \"$\\($_.level\\) | $\\($_.name\\) | $\\($_.detail\\)\" })",
+      "PowerShell($data = Get-Content \"C:\\\\Users\\\\Manum\\\\.claude\\\\projects\\\\D--Manum-GastroBridge\\\\9ba27e89-cd7c-4742-954c-61b243d8890e\\\\tool-results\\\\mcp-claude_ai_Supabase-get_advisors-1778585939943.txt\" -Raw; $j = $data | ConvertFrom-Json; $inner = $j[0].text | ConvertFrom-Json; $inner.result.lints | Where-Object { $_.name -eq 'function_search_path_mutable' } | ForEach-Object { $_.detail })",
+      "PowerShell($data = Get-Content \"C:\\\\Users\\\\Manum\\\\.claude\\\\projects\\\\D--Manum-GastroBridge\\\\9ba27e89-cd7c-4742-954c-61b243d8890e\\\\tool-results\\\\mcp-claude_ai_Supabase-get_advisors-1778585939943.txt\" -Raw; $j = $data | ConvertFrom-Json; $inner = $j[0].text | ConvertFrom-Json; $inner.result.lints | Where-Object { $_.name -eq 'anon_security_definer_function_executable' } | ForEach-Object { $_.detail } | Select-Object -First 25)"
     ]
   }
 }
