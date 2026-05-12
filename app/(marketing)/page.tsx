@@ -1,4 +1,5 @@
-import { Hero } from "@/components/marketing/hero";
+import { SplitHero } from "@/components/marketing/split-hero";
+import { TickerBar } from "@/components/marketing/_primitives/ticker-bar";
 import { Manifesto } from "@/components/marketing/manifesto";
 import { GrowthGrid } from "@/components/marketing/growth-grid";
 import { HowItWorks } from "@/components/marketing/how-it-works";
@@ -13,8 +14,8 @@ import { SectionRule } from "@/components/marketing/_primitives/section-rule";
 export default function HomePage() {
   return (
     <>
-      <Hero />
-      <SectionRule />
+      <SplitHero />
+      <TickerBar />
       <Manifesto />
       <SectionRule />
       <GrowthGrid />
