@@ -169,6 +169,39 @@ export function Proof() {
   );
 
   useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    let startX = 0;
+    let startY = 0;
+    let active = false;
+
+    function onDown(e: PointerEvent) {
+      if (e.pointerType !== "touch") return;
+      active = true;
+      startX = e.clientX;
+      startY = e.clientY;
+    }
+    function onUp(e: PointerEvent) {
+      if (!active) return;
+      active = false;
+      if (e.pointerType !== "touch") return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy)) return;
+      if (dx < 0) next();
+      else prev();
+    }
+
+    el.addEventListener("pointerdown", onDown, { passive: true });
+    el.addEventListener("pointerup", onUp, { passive: true });
+    el.addEventListener("pointercancel", () => (active = false));
+    return () => {
+      el.removeEventListener("pointerdown", onDown);
+      el.removeEventListener("pointerup", onUp);
+    };
+  }, [next, prev]);
+
+  useEffect(() => {
     if (playing) intervalRef.current = setInterval(next, 7500);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);

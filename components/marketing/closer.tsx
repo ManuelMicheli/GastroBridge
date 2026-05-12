@@ -126,11 +126,12 @@ export function Closer() {
           ref={headlineRef}
           className="font-display opacity-0"
           style={{
-            fontSize: "clamp(56px, 10vw, 160px)",
-            lineHeight: "0.94",
-            letterSpacing: "-0.03em",
+            fontSize: "clamp(44px, 10vw, 160px)",
+            lineHeight: "0.96",
+            letterSpacing: "-0.028em",
             color: "var(--color-marketing-ink)",
             perspective: "800px",
+            wordBreak: "keep-all",
           }}
         >
           {HEADLINE.split(" ").map((w, i, arr) => (

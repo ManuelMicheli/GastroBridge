@@ -81,13 +81,16 @@ export function TickerBar() {
       }}
     >
       <div
-        className="mx-auto flex flex-wrap items-center gap-x-8 gap-y-3 py-3.5"
+        className="mx-auto flex items-center gap-x-8 gap-y-3 py-3.5 overflow-x-auto md:overflow-visible md:flex-wrap ticker-row"
         style={{
           paddingLeft: "var(--gutter-marketing)",
           paddingRight: "var(--gutter-marketing)",
           fontSize: "11px",
           letterSpacing: "0.14em",
           color: "var(--color-marketing-ink-muted)",
+          scrollbarWidth: "none",
+          WebkitOverflowScrolling: "touch",
+          whiteSpace: "nowrap",
         }}
       >
         <span className="flex items-center gap-2 uppercase">
@@ -136,6 +139,9 @@ export function TickerBar() {
           100% {
             box-shadow: 0 0 0 0 rgba(27, 107, 74, 0);
           }
+        }
+        .ticker-row::-webkit-scrollbar {
+          display: none;
         }
         @media (prefers-reduced-motion: reduce) {
           .ticker-pulse {

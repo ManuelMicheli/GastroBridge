@@ -114,31 +114,33 @@ export function SplitHero() {
       }}
       data-hovered={hovered ?? undefined}
     >
-      {SIDES.map((s) => (
-        <Side
-          key={s.persona}
-          data={s}
-          active={persona === s.persona}
-          dimmed={hovered !== null && hovered !== s.persona}
-          expanded={hovered === s.persona}
-          onHover={() => setHovered(s.persona)}
-          onLeave={() => setHovered(null)}
-          onChoose={() => setPersona(s.persona)}
-        />
-      ))}
+      <Side
+        key={SIDES[0].persona}
+        data={SIDES[0]}
+        active={persona === SIDES[0].persona}
+        dimmed={hovered !== null && hovered !== SIDES[0].persona}
+        expanded={hovered === SIDES[0].persona}
+        onHover={() => setHovered(SIDES[0].persona)}
+        onLeave={() => setHovered(null)}
+        onChoose={() => setPersona(SIDES[0].persona)}
+      />
 
-      {/* central divider */}
+      {/* divider: horizontal rule on mobile, vertical line on desktop */}
       <div
         aria-hidden
-        className="hidden md:block self-stretch w-px order-2 md:order-none"
+        className="h-px w-full md:h-auto md:w-px md:self-stretch"
         style={{ background: "var(--color-marketing-rule-strong)" }}
       />
 
-      {/* mobile horizontal rule between sides */}
-      <hr
-        aria-hidden
-        className="md:hidden border-0 border-t"
-        style={{ borderColor: "var(--color-marketing-rule-strong)" }}
+      <Side
+        key={SIDES[1].persona}
+        data={SIDES[1]}
+        active={persona === SIDES[1].persona}
+        dimmed={hovered !== null && hovered !== SIDES[1].persona}
+        expanded={hovered === SIDES[1].persona}
+        onHover={() => setHovered(SIDES[1].persona)}
+        onLeave={() => setHovered(null)}
+        onChoose={() => setPersona(SIDES[1].persona)}
       />
     </section>
   );
