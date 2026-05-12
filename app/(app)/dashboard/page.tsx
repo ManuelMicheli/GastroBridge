@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { RestaurantDashboard } from "@/components/dashboard/restaurant/restaurant-dashboard";
+import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
 import type { SpendTrendPoint } from "@/components/dashboard/restaurant/spend-trend-chart/types";
 
 export const metadata: Metadata = { title: "Dashboard — GastroBridge" };
@@ -127,36 +128,44 @@ export default async function DashboardPage() {
       new Map(),
     );
     return (
-      <RestaurantDashboard
-        companyName={profile?.company_name || "Ristoratore"}
-        kpi={{
-          ordersThisMonth: 0,
-          prevMonthOrders: 0,
-          spending: 0,
-          spendingGross: 0,
-          prevSpending: 0,
-          prevSpendingGross: 0,
-          savings: 0,
-          savingsGross: 0,
-          activeSuppliers: 0,
-        }}
-        fiscal={{
-          enabled: false,
-          revenueCents: 0,
-          foodCostPct: null,
-          receipts: 0,
-          covers: 0,
-          restaurantId: null,
-          revenueSpark: [],
-          receiptsSpark: [],
-          coversSpark: [],
-          foodCostSpark: [],
-        }}
-        spendPoints={points}
-        spendPointsGross={pointsGross}
-        transactionsByDate={transactionsByDate}
-        recentOrders={[]}
-      />
+      <>
+        <RealtimeRefresh
+          subscriptions={[
+            { table: "restaurant_suppliers" },
+            { table: "orders" },
+          ]}
+        />
+        <RestaurantDashboard
+          companyName={profile?.company_name || "Ristoratore"}
+          kpi={{
+            ordersThisMonth: 0,
+            prevMonthOrders: 0,
+            spending: 0,
+            spendingGross: 0,
+            prevSpending: 0,
+            prevSpendingGross: 0,
+            savings: 0,
+            savingsGross: 0,
+            activeSuppliers: 0,
+          }}
+          fiscal={{
+            enabled: false,
+            revenueCents: 0,
+            foodCostPct: null,
+            receipts: 0,
+            covers: 0,
+            restaurantId: null,
+            revenueSpark: [],
+            receiptsSpark: [],
+            coversSpark: [],
+            foodCostSpark: [],
+          }}
+          spendPoints={points}
+          spendPointsGross={pointsGross}
+          transactionsByDate={transactionsByDate}
+          recentOrders={[]}
+        />
+      </>
     );
   }
 
@@ -393,24 +402,33 @@ export default async function DashboardPage() {
   }));
 
   return (
-    <RestaurantDashboard
-      companyName={profile?.company_name || "Ristoratore"}
-      kpi={{
-        ordersThisMonth: currentOrderCount,
-        prevMonthOrders: prevOrderCount,
-        spending: currentSpending,
-        spendingGross: currentSpendingGross,
-        prevSpending,
-        prevSpendingGross,
-        savings: Math.round(currentSpending * 0.08),
-        savingsGross: Math.round(currentSpendingGross * 0.08),
-        activeSuppliers: uniqueSuppliers,
-      }}
-      fiscal={fiscal}
-      spendPoints={spendPoints}
-      spendPointsGross={spendPointsGross}
-      transactionsByDate={transactionsByDate}
-      recentOrders={recentOrders}
-    />
+    <>
+      <RealtimeRefresh
+        subscriptions={[
+          { table: "orders" },
+          { table: "order_splits" },
+          { table: "restaurant_suppliers" },
+        ]}
+      />
+      <RestaurantDashboard
+        companyName={profile?.company_name || "Ristoratore"}
+        kpi={{
+          ordersThisMonth: currentOrderCount,
+          prevMonthOrders: prevOrderCount,
+          spending: currentSpending,
+          spendingGross: currentSpendingGross,
+          prevSpending,
+          prevSpendingGross,
+          savings: Math.round(currentSpending * 0.08),
+          savingsGross: Math.round(currentSpendingGross * 0.08),
+          activeSuppliers: uniqueSuppliers,
+        }}
+        fiscal={fiscal}
+        spendPoints={spendPoints}
+        spendPointsGross={spendPointsGross}
+        transactionsByDate={transactionsByDate}
+        recentOrders={recentOrders}
+      />
+    </>
   );
 }
