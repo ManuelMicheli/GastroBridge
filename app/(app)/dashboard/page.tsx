@@ -132,6 +132,7 @@ export default async function DashboardPage() {
         <RealtimeRefresh
           subscriptions={[
             { table: "restaurant_suppliers" },
+            { table: "restaurant_catalogs" },
             { table: "orders" },
           ]}
         />
@@ -242,16 +243,34 @@ export default async function DashboardPage() {
     0,
   );
 
-  // Count active partnerships (restaurant_suppliers with status=active).
-  // Fallback to unique suppliers from order_items when the partnership table
-  // is unavailable or RLS hides it, so historical orders still count.
-  const { data: activeRels } = (await supabase
-    .from("restaurant_suppliers")
-    .select("supplier_id")
-    .in("restaurant_id", restaurantIds)
-    .eq("status", "active")) as { data: { supplier_id: string }[] | null };
+  // Count active partnerships (restaurant_suppliers with status=active) plus
+  // manually-imported suppliers owned by the restaurant (restaurant_catalogs).
+  // Both count as "active suppliers" because the user manages and orders from
+  // them just the same. Fallback to unique suppliers from order_items when the
+  // partnership table is unavailable or RLS hides it, so historical orders
+  // still count.
+  const [activeRelsRes, importedCatalogsRes] = await Promise.all([
+    supabase
+      .from("restaurant_suppliers")
+      .select("supplier_id")
+      .in("restaurant_id", restaurantIds)
+      .eq("status", "active") as unknown as Promise<{
+      data: { supplier_id: string }[] | null;
+    }>,
+    supabase
+      .from("restaurant_catalogs")
+      .select("id")
+      .in("restaurant_id", restaurantIds) as unknown as Promise<{
+      data: { id: string }[] | null;
+    }>,
+  ]);
 
-  let uniqueSuppliers = new Set((activeRels ?? []).map((r) => r.supplier_id)).size;
+  const platformSuppliers = new Set(
+    (activeRelsRes.data ?? []).map((r) => r.supplier_id),
+  ).size;
+  const importedSuppliers = (importedCatalogsRes.data ?? []).length;
+
+  let uniqueSuppliers = platformSuppliers + importedSuppliers;
 
   if (uniqueSuppliers === 0 && currentOrders.length > 0) {
     const { data: supplierItems } = (await supabase
@@ -408,6 +427,7 @@ export default async function DashboardPage() {
           { table: "orders" },
           { table: "order_splits" },
           { table: "restaurant_suppliers" },
+          { table: "restaurant_catalogs" },
         ]}
       />
       <RestaurantDashboard
