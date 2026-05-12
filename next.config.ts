@@ -78,9 +78,12 @@ const nextConfig: NextConfig = {
         key: "Permissions-Policy",
         value: "camera=(), microphone=(), geolocation=(self), interest-cohort=(), payment=(self), usb=()",
       },
-      { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-      { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
-      { key: "Content-Security-Policy", value: csp },
+      // COOP/CORP can break Supabase auth popups/realtime — relax until verified.
+      { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
+      // Report-only CSP first to surface violations without breaking the app.
+      // Promote to enforced "Content-Security-Policy" after Vercel logs show
+      // no critical violations for 24h.
+      { key: "Content-Security-Policy-Report-Only", value: csp },
     ];
 
     return [
