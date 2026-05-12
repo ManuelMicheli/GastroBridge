@@ -299,7 +299,7 @@ export function SecurityClient({
       {enrolled && currentAal === "aal1" && nextAal === "aal2" && (
         <div className="space-y-3 rounded-lg border border-[color:var(--color-warning-border,#E8D5A8)] bg-[color:var(--color-warning-subtle,#FFF4E5)] p-4">
           <p className="text-[13px] text-[color:var(--color-text-primary)]">
-            <strong>Eleva la sessione a aal2.</strong> Inserisci il codice dell'app authenticator
+            <strong>Eleva la sessione a aal2.</strong> Inserisci il codice dell&apos;app authenticator
             per sbloccare le aree protette.
           </p>
           <div className="max-w-[220px]">
