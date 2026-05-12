@@ -6,6 +6,7 @@ import { LargeTitle } from "@/components/ui/large-title";
 import { GroupedList, GroupedListRow } from "@/components/ui/grouped-list";
 import { SectionFrame } from "@/components/dashboard/restaurant/_awwwards/section-frame";
 import { SettingsNavRow } from "./_components/settings-nav-row";
+import { ShieldCheck, ShieldAlert, ChevronRight } from "lucide-react";
 
 export const metadata: Metadata = { title: "Impostazioni" };
 
@@ -150,6 +151,20 @@ export default async function SettingsPage() {
     .eq("id", user?.id ?? "")
     .single<ProfileRow>();
 
+  // Security status (cheap call; no force-dynamic needed — getUser already taints).
+  let mfaEnrolled = false;
+  let currentAal = "aal1";
+  if (user) {
+    const [{ data: factorsData }, { data: aalData }] = await Promise.all([
+      supabase.auth.mfa.listFactors(),
+      supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+    ]);
+    mfaEnrolled = (factorsData?.totp ?? []).some((f) => f.status === "verified");
+    currentAal = aalData?.currentLevel ?? "aal1";
+  }
+  const emailVerified = Boolean(user?.email_confirmed_at);
+  const securityOk = mfaEnrolled && emailVerified;
+
   const companyName = profile?.company_name?.trim() || "Azienda";
 
   const azienda = SETTINGS_SECTIONS.filter((s) => s.group === "azienda");
@@ -185,6 +200,50 @@ export default async function SettingsPage() {
           >
             ›
           </span>
+        </div>
+
+        {/* Security hero — prominent gateway to /impostazioni/sicurezza */}
+        <div className="px-4 mt-4">
+          <Link
+            href="/impostazioni/sicurezza"
+            className={[
+              "group flex items-center gap-3 rounded-xl p-3",
+              "border transition-colors",
+              securityOk
+                ? "border-[color:var(--color-success-border,#BFDFC7)] bg-[color:var(--color-success-subtle,#E6F4EA)] active:bg-[color:var(--color-success-subtle,#D9EDDF)]"
+                : "border-[color:var(--color-warning-border,#E8D5A8)] bg-[color:var(--color-warning-subtle,#FFF4E5)] active:bg-[color:var(--color-warning-subtle,#FCE9CC)]",
+            ].join(" ")}
+          >
+            <div
+              className={[
+                "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
+                securityOk
+                  ? "bg-[color:var(--color-success,#1E6B3E)] text-white"
+                  : "bg-[color:var(--color-warning,#9A6210)] text-white",
+              ].join(" ")}
+              aria-hidden
+            >
+              {securityOk ? (
+                <ShieldCheck className="h-4 w-4" />
+              ) : (
+                <ShieldAlert className="h-4 w-4" />
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-[13px] font-semibold text-[color:var(--color-text-primary)]">
+                {securityOk ? "Account protetto" : "Proteggi il tuo account"}
+              </div>
+              <div className="mt-0.5 text-[11px] leading-snug text-[color:var(--color-text-secondary)]">
+                {mfaEnrolled
+                  ? `MFA attiva · livello ${currentAal}`
+                  : "Attiva MFA per cassetto fiscale e finanze"}
+              </div>
+            </div>
+            <ChevronRight
+              aria-hidden
+              className="h-4 w-4 shrink-0 text-[color:var(--color-text-tertiary)]"
+            />
+          </Link>
         </div>
 
         <GroupedList className="mt-4" label="Azienda">
@@ -272,6 +331,47 @@ export default async function SettingsPage() {
           </span>
         }
       />
+
+      {/* Security hero (desktop) — fast-track to sicurezza page */}
+      <Link
+        href="/impostazioni/sicurezza"
+        className={[
+          "group flex items-center gap-4 rounded-xl border p-4",
+          "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+          securityOk
+            ? "border-[color:var(--color-success-border,#BFDFC7)] bg-[color:var(--color-success-subtle,#E6F4EA)] hover:bg-[color:var(--color-success-subtle,#D9EDDF)] focus-visible:ring-[color:var(--color-success,#1E6B3E)]"
+            : "border-[color:var(--color-warning-border,#E8D5A8)] bg-[color:var(--color-warning-subtle,#FFF4E5)] hover:bg-[color:var(--color-warning-subtle,#FCE9CC)] focus-visible:ring-[color:var(--color-warning,#9A6210)]",
+        ].join(" ")}
+      >
+        <div
+          className={[
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white",
+            securityOk ? "bg-[color:var(--color-success,#1E6B3E)]" : "bg-[color:var(--color-warning,#9A6210)]",
+          ].join(" ")}
+          aria-hidden
+        >
+          {securityOk ? <ShieldCheck className="h-5 w-5" /> : <ShieldAlert className="h-5 w-5" />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <span className="text-[14px] font-semibold text-text-primary">
+              {securityOk ? "Account protetto" : "Proteggi il tuo account"}
+            </span>
+            <span className="font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
+              MFA {mfaEnrolled ? `attiva · ${currentAal}` : "non attiva"}
+            </span>
+          </div>
+          <p className="mt-0.5 text-[12px] text-text-secondary">
+            {mfaEnrolled
+              ? "Verifica password, sessioni attive e impostazioni di sicurezza."
+              : "Attiva l'autenticazione a due fattori per sbloccare cassetto fiscale e finanze."}
+          </p>
+        </div>
+        <span className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-text-secondary group-hover:text-text-primary">
+          {mfaEnrolled ? "Gestisci" : "Attiva ora"}
+          <ChevronRight className="h-4 w-4" aria-hidden />
+        </span>
+      </Link>
 
       <SectionFrame
         label={`Sezioni \u00B7 ${SETTINGS_SECTIONS.length}`}

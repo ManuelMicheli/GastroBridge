@@ -19,6 +19,9 @@ export default async function SecurityPage() {
 
   return (
     <SecurityClient
+      email={user.email ?? ""}
+      emailVerified={Boolean(user.email_confirmed_at)}
+      lastSignInAt={user.last_sign_in_at ?? null}
       enrolled={verifiedTotp.length > 0}
       currentAal={aalData?.currentLevel ?? "aal1"}
       nextAal={aalData?.nextLevel ?? "aal1"}
