@@ -51,14 +51,17 @@ const nextConfig: NextConfig = {
     // CSP. `unsafe-inline` retained for styles + scripts due to Next.js inline
     // bootstrap and runtime styles; tighten to nonce-based when Next supports
     // strict-dynamic on stable. `unsafe-eval` intentionally omitted.
+    // Vercel Live + Toolbar inject script/iframe/websocket on previews and
+    // (optionally) production. Allowlist or they pollute the console with
+    // CSP violations and inject orphan DOM nodes that break React unmount.
     const csp = [
       "default-src 'self'",
-      `script-src 'self' 'unsafe-inline' https://js.stripe.com ${posthogHost}`,
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "font-src 'self' data: https://fonts.gstatic.com",
-      `img-src 'self' data: blob: ${supabaseOrigin} https://*.stripe.com`.trim(),
-      `connect-src 'self' ${supabaseOrigin} ${supabaseWs} https://api.stripe.com ${posthogHost} https://*.ingest.sentry.io`.replace(/\s+/g, " ").trim(),
-      "frame-src https://js.stripe.com https://hooks.stripe.com",
+      `script-src 'self' 'unsafe-inline' https://js.stripe.com ${posthogHost} https://vercel.live https://*.vercel.live`,
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://vercel.live https://*.vercel.live",
+      "font-src 'self' data: https://fonts.gstatic.com https://vercel.live https://*.vercel.live https://assets.vercel.com",
+      `img-src 'self' data: blob: ${supabaseOrigin} https://*.stripe.com https://vercel.live https://*.vercel.live https://vercel.com`.trim(),
+      `connect-src 'self' ${supabaseOrigin} ${supabaseWs} https://api.stripe.com ${posthogHost} https://*.ingest.sentry.io https://vercel.live https://*.vercel.live wss://*.pusher.com`.replace(/\s+/g, " ").trim(),
+      "frame-src https://js.stripe.com https://hooks.stripe.com https://vercel.live https://*.vercel.live",
       "worker-src 'self' blob:",
       "manifest-src 'self'",
       "media-src 'self' blob:",
@@ -66,7 +69,8 @@ const nextConfig: NextConfig = {
       "base-uri 'self'",
       "form-action 'self'",
       "frame-ancestors 'none'",
-      "upgrade-insecure-requests",
+      // `upgrade-insecure-requests` is ignored when CSP is delivered
+      // report-only — skip until policy is promoted to enforced.
     ].join("; ");
 
     const securityHeaders = [

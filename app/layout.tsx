@@ -94,10 +94,12 @@ export default function RootLayout({
   return (
     <html
       lang="it"
+      translate="no"
       suppressHydrationWarning
       className={`${dmSerifDisplay.variable} ${bodyFont.variable} ${jetbrainsMono.variable}`}
     >
       <head>
+        <meta name="google" content="notranslate" />
         {SUPABASE_ORIGIN && (
           <>
             <link rel="preconnect" href={SUPABASE_ORIGIN} crossOrigin="anonymous" />
