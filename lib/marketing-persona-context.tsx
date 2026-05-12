@@ -12,6 +12,7 @@ import {
 export type Persona = "restaurant" | "supplier";
 
 const STORAGE_KEY = "gbr.marketing.persona";
+const URL_PARAM = "persona";
 
 type PersonaContextValue = {
   persona: Persona;
@@ -22,11 +23,26 @@ type PersonaContextValue = {
 
 const PersonaContext = createContext<PersonaContextValue | null>(null);
 
+function isPersona(v: unknown): v is Persona {
+  return v === "restaurant" || v === "supplier";
+}
+
 function readStoredPersona(): Persona | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw === "restaurant" || raw === "supplier" ? raw : null;
+    return isPersona(raw) ? raw : null;
+  } catch {
+    return null;
+  }
+}
+
+function readUrlPersona(): Persona | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const url = new URL(window.location.href);
+    const raw = url.searchParams.get(URL_PARAM);
+    return isPersona(raw) ? raw : null;
   } catch {
     return null;
   }
@@ -35,6 +51,17 @@ function readStoredPersona(): Persona | null {
 function applyDocumentPersona(value: Persona) {
   if (typeof document === "undefined") return;
   document.documentElement.dataset.persona = value;
+}
+
+function writeUrlPersona(value: Persona) {
+  if (typeof window === "undefined") return;
+  try {
+    const url = new URL(window.location.href);
+    url.searchParams.set(URL_PARAM, value);
+    window.history.replaceState(window.history.state, "", url.toString());
+  } catch {
+    // ignore — non-critical
+  }
 }
 
 export function PersonaProvider({
@@ -48,12 +75,17 @@ export function PersonaProvider({
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    const stored = readStoredPersona();
-    if (stored && stored !== persona) {
-      setPersonaState(stored);
-      applyDocumentPersona(stored);
-    } else {
-      applyDocumentPersona(persona);
+    const fromUrl = readUrlPersona();
+    const fromStorage = readStoredPersona();
+    const resolved = fromUrl ?? fromStorage ?? persona;
+    if (resolved !== persona) setPersonaState(resolved);
+    applyDocumentPersona(resolved);
+    if (fromUrl) {
+      try {
+        window.localStorage.setItem(STORAGE_KEY, fromUrl);
+      } catch {
+        // ignore
+      }
     }
     setHydrated(true);
   }, []);
@@ -66,7 +98,10 @@ export function PersonaProvider({
       } catch {
         // ignore quota errors
       }
-      const apply = () => applyDocumentPersona(next);
+      const apply = () => {
+        applyDocumentPersona(next);
+        writeUrlPersona(next);
+      };
       const vt = (document as Document & {
         startViewTransition?: (cb: () => void) => unknown;
       }).startViewTransition;

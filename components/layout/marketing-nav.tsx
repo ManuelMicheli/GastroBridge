@@ -5,12 +5,14 @@ import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils/formatters";
 import { gsap } from "@/lib/gsap-config";
+import { PersonaSwitcher } from "@/components/marketing/_primitives/persona-switcher";
+import { ThemeToggle } from "@/components/marketing/_primitives/theme-toggle";
 
 const NAV_LINKS = [
-  { href: "#come-funziona", label: "Come Funziona", type: "anchor" as const },
-  { href: "#per-chi", label: "Per Chi", type: "anchor" as const },
-  { href: "/pricing", label: "Prezzi", type: "page" as const },
-  { href: "#faq", label: "FAQ", type: "anchor" as const },
+  { href: "#come-funziona", label: "Meccanismo", type: "anchor" as const },
+  { href: "#crescita", label: "Numeri", type: "anchor" as const },
+  { href: "#prezzo", label: "Prezzo", type: "anchor" as const },
+  { href: "#faq", label: "Dubbi", type: "anchor" as const },
 ];
 
 export function MarketingNav() {
@@ -110,7 +112,9 @@ export function MarketingNav() {
           })}
         </div>
 
-        <div className="hidden md:flex items-center gap-6">
+        <div className="hidden md:flex items-center gap-4">
+          <PersonaSwitcher />
+          <ThemeToggle />
           <Link
             href="/login"
             className="text-[13px] tracking-wide text-[var(--color-marketing-ink-muted)] hover:text-[var(--color-marketing-primary)] link-editorial"
@@ -183,6 +187,10 @@ export function MarketingNav() {
             )
           )}
           <hr className="rule w-full mt-6" />
+          <div className="flex items-center gap-4 mt-6 w-full">
+            <PersonaSwitcher variant="full" />
+            <ThemeToggle />
+          </div>
           <div className="flex flex-col gap-3 mt-4 w-full">
             <Link
               href="/signup"
