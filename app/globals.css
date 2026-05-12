@@ -999,6 +999,32 @@ body {
   --color-marketing-primary-subtle: var(--color-marketing-accent-warm-subtle);
 }
 
+/* Force-dark island within a light marketing area (e.g. cinematic closer). */
+[data-area="marketing"] [data-force-dark="true"] {
+  --color-marketing-bg: #09090F;
+  --color-marketing-bg-soft: #11111A;
+  --color-marketing-ink: #F5F4EE;
+  --color-marketing-ink-muted: #B4B3AE;
+  --color-marketing-ink-subtle: #6E6D69;
+  --color-marketing-rule: rgba(245, 244, 238, 0.10);
+  --color-marketing-rule-strong: rgba(245, 244, 238, 0.20);
+  --color-marketing-primary: #E84560;
+  --color-marketing-primary-hover: #F25A73;
+  --color-marketing-primary-deep: #B91C3C;
+  --color-marketing-primary-subtle: rgba(232, 69, 96, 0.14);
+  --color-marketing-on-primary: #09090F;
+  background: var(--color-marketing-bg);
+  color: var(--color-marketing-ink);
+}
+
+[data-area="marketing"] [data-force-dark="true"][data-side="supplier"],
+:root[data-persona="supplier"] [data-area="marketing"] [data-force-dark="true"] {
+  --color-marketing-primary: #E8A355;
+  --color-marketing-primary-hover: #F0B772;
+  --color-marketing-primary-deep: #B8791F;
+  --color-marketing-primary-subtle: rgba(232, 163, 85, 0.14);
+}
+
 /* Smooth palette swap on persona change (view-transition fallback). */
 @media (prefers-reduced-motion: no-preference) {
   [data-area="marketing"],
