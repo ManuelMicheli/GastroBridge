@@ -28,15 +28,28 @@ function isValidPayload(x: unknown): x is VitalsPayload {
   );
 }
 
+// Strip control characters (incl. CR/LF) that could forge log entries and
+// cap length to keep log lines bounded.
+function sanitizeForLog(s: string, max = 200): string {
+  // eslint-disable-next-line no-control-regex
+  return s.replace(/[\x00-\x1f\x7f]/g, "").slice(0, max);
+}
+
+const ALLOWED_VITAL_NAMES = new Set([
+  "CLS", "FCP", "FID", "INP", "LCP", "TTFB", "Next.js-hydration", "Next.js-route-change-to-render", "Next.js-render",
+]);
+
 export async function POST(req: Request) {
   try {
     const raw = await req.json().catch(() => null);
     if (!isValidPayload(raw)) {
       return new NextResponse(null, { status: 204 });
     }
-    console.log(
-      `[web-vitals] ${raw.name}=${raw.value.toFixed(1)} rating=${raw.rating ?? "-"} path=${raw.path ?? "-"}`,
-    );
+    const name = ALLOWED_VITAL_NAMES.has(raw.name) ? raw.name : "other";
+    const rating = raw.rating === "good" || raw.rating === "needs-improvement" || raw.rating === "poor" ? raw.rating : "-";
+    const path = sanitizeForLog(raw.path ?? "-");
+    const value = Number.isFinite(raw.value) ? raw.value.toFixed(1) : "0";
+    console.log(`[web-vitals] ${name}=${value} rating=${rating} path=${path}`);
   } catch {
     // silent drop — vitals best-effort
   }

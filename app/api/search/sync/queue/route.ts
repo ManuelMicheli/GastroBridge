@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { processOutboxBatch } from "@/lib/meilisearch/sync";
+import { safeEqual } from "@/lib/utils/safe-equal";
 
 // Outbox worker: drains meilisearch_sync_queue and applies to Meilisearch.
 // Invoked by pg_cron (or external scheduler) ~every 30s.
@@ -9,9 +10,9 @@ import { processOutboxBatch } from "@/lib/meilisearch/sync";
 // correctly but duplicate work is wasted. Keep the cron schedule sparse.
 
 export async function POST(request: Request) {
-  const token = request.headers.get("x-cron-token");
+  const token = request.headers.get("x-cron-token") ?? "";
   const expected = process.env.CRON_SECRET;
-  if (!expected || !token || token !== expected) {
+  if (!expected || !safeEqual(token, expected)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

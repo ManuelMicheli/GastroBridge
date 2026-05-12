@@ -14,6 +14,17 @@ const PROTECTED_PREFIXES = [
 
 const AUTH_ROUTES = new Set(["/login", "/signup"]);
 
+// Sections that require an elevated session (aal2 = TOTP verified). Users
+// without MFA enrolled, or with MFA enrolled but only aal1 in the current
+// session, get redirected to /impostazioni/sicurezza to step up.
+const MFA_REQUIRED_PREFIXES = ["/finanze", "/supplier/finanze"];
+
+function isMfaRequired(pathname: string): boolean {
+  return MFA_REQUIRED_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(p + "/"),
+  );
+}
+
 function hasAuthCookie(request: NextRequest): boolean {
   // Supabase SSR stores tokens in `sb-<projectRef>-auth-token` (and `.0`/`.1`
   // chunked variants). Probing all cookies is cheap and avoids paying for a
@@ -82,6 +93,20 @@ export async function updateSession(request: NextRequest) {
 
   if (!user && protectedRoute && !isPublicTokenRoute(pathname)) {
     return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  if (user && isMfaRequired(pathname)) {
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    // currentLevel = aal1/aal2 of the active session; nextLevel = required
+    // by the user's enrolled factors. Block if a verified factor exists but
+    // the user has not stepped up in this session, OR if no factor at all.
+    const current = aal?.currentLevel ?? "aal1";
+    const next = aal?.nextLevel ?? "aal1";
+    if (current !== "aal2" || next !== "aal2") {
+      const url = new URL("/impostazioni/sicurezza", request.url);
+      url.searchParams.set("mfa", current === "aal2" ? "ok" : "required");
+      return NextResponse.redirect(url);
+    }
   }
 
   if (user && authRoute) {

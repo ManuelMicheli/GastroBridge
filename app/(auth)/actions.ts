@@ -4,6 +4,10 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { UserRole } from "@/types/database";
 
+// Generic error to avoid disclosing whether an account exists or whether the
+// failure is due to wrong password vs missing user vs unconfirmed email.
+const GENERIC_AUTH_ERROR = "Credenziali non valide o email non confermata.";
+
 export async function signIn(formData: FormData) {
   const supabase = await createClient();
 
@@ -16,7 +20,7 @@ export async function signIn(formData: FormData) {
   });
 
   if (error) {
-    return { error: error.message };
+    return { error: GENERIC_AUTH_ERROR };
   }
 
   // Get user role for redirect
@@ -60,7 +64,13 @@ export async function signUp(formData: FormData) {
   });
 
   if (error) {
-    return { error: error.message };
+    // Distinguish only password-policy errors (helpful for the user); any
+    // other failure returns a generic message to avoid email enumeration.
+    const msg = error.message.toLowerCase();
+    if (msg.includes("password")) {
+      return { error: error.message };
+    }
+    return { error: "Registrazione non riuscita. Verifica i dati e riprova." };
   }
 
   const redirectTo = role === "supplier" ? "/supplier/dashboard" : "/dashboard";
@@ -91,18 +101,16 @@ export async function signInWithMagicLink(formData: FormData) {
 
   const email = formData.get("email") as string;
 
-  const { error } = await supabase.auth.signInWithOtp({
+  // Always return the same success message — never reveal whether the email
+  // is registered (enumeration vector). Real errors are swallowed.
+  await supabase.auth.signInWithOtp({
     email,
     options: {
       emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/callback`,
     },
   });
 
-  if (error) {
-    return { error: error.message };
-  }
-
-  return { success: true, message: "Controlla la tua email per il link di accesso." };
+  return { success: true, message: "Se l'indirizzo è registrato, riceverai un'email con il link di accesso." };
 }
 
 export async function signOut() {

@@ -3,14 +3,16 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 const CUSTOMER_CONFIRM_TTL_MS = 48 * 60 * 60 * 1000;
 
 function getHmacSecret(): string {
-  const secret =
-    process.env.AUTH_SECRET ??
-    process.env.NEXTAUTH_SECRET ??
-    process.env.SUPABASE_JWT_SECRET;
+  // Single dedicated secret. Sharing a secret across multiple purposes
+  // (auth session, JWT verification, HMAC links) means leaking one leaks all.
+  const secret = process.env.AUTH_SECRET;
   if (!secret) {
     throw new Error(
       "AUTH_SECRET mancante: impossibile firmare token di conferma cliente",
     );
+  }
+  if (secret.length < 32) {
+    throw new Error("AUTH_SECRET troppo corto (minimo 32 byte)");
   }
   return secret;
 }

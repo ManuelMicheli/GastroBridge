@@ -18,6 +18,7 @@ import { createClient } from "@/lib/supabase/server";
 // mode=public:  forces is_available=true filter. Accessible to anon.
 
 const MAX_LIMIT = 200;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -33,6 +34,18 @@ export async function GET(request: Request) {
 
   if (mode !== "admin" && mode !== "public") {
     return NextResponse.json({ error: "Invalid mode" }, { status: 400 });
+  }
+
+  // Validate UUIDs before interpolating into the Meilisearch filter string
+  // to prevent filter injection (`"` + filter clauses).
+  if (supplierId && !UUID_RE.test(supplierId)) {
+    return NextResponse.json({ error: "Invalid supplier_id" }, { status: 400 });
+  }
+  if (categoryId && !UUID_RE.test(categoryId)) {
+    return NextResponse.json({ error: "Invalid category_id" }, { status: 400 });
+  }
+  if (!Number.isFinite(limit) || !Number.isFinite(offset)) {
+    return NextResponse.json({ error: "Invalid pagination" }, { status: 400 });
   }
 
   // Build Meilisearch filter expression.

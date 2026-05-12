@@ -37,6 +37,52 @@ const nextConfig: NextConfig = {
   // Long-cache static assets emitted by Next under /_next/static — these are
   // content-hashed, immutable, and safe to cache for a year.
   async headers() {
+    const supabaseOrigin = (() => {
+      try {
+        const u = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        return u ? new URL(u).origin : "";
+      } catch {
+        return "";
+      }
+    })();
+    const supabaseWs = supabaseOrigin ? supabaseOrigin.replace(/^https/, "wss") : "";
+    const posthogHost = process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://eu.i.posthog.com";
+
+    // CSP. `unsafe-inline` retained for styles + scripts due to Next.js inline
+    // bootstrap and runtime styles; tighten to nonce-based when Next supports
+    // strict-dynamic on stable. `unsafe-eval` intentionally omitted.
+    const csp = [
+      "default-src 'self'",
+      `script-src 'self' 'unsafe-inline' https://js.stripe.com ${posthogHost}`,
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' data: https://fonts.gstatic.com",
+      `img-src 'self' data: blob: ${supabaseOrigin} https://*.stripe.com`.trim(),
+      `connect-src 'self' ${supabaseOrigin} ${supabaseWs} https://api.stripe.com ${posthogHost} https://*.ingest.sentry.io`.replace(/\s+/g, " ").trim(),
+      "frame-src https://js.stripe.com https://hooks.stripe.com",
+      "worker-src 'self' blob:",
+      "manifest-src 'self'",
+      "media-src 'self' blob:",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+      "upgrade-insecure-requests",
+    ].join("; ");
+
+    const securityHeaders = [
+      { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+      { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "X-Frame-Options", value: "DENY" },
+      { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+      {
+        key: "Permissions-Policy",
+        value: "camera=(), microphone=(), geolocation=(self), interest-cohort=(), payment=(self), usb=()",
+      },
+      { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+      { key: "Cross-Origin-Resource-Policy", value: "same-origin" },
+      { key: "Content-Security-Policy", value: csp },
+    ];
+
     return [
       {
         source: "/_next/static/:path*",
@@ -55,6 +101,11 @@ const nextConfig: NextConfig = {
             value: "public, max-age=31536000, immutable",
           },
         ],
+      },
+      {
+        // Apply security headers to every route.
+        source: "/:path*",
+        headers: securityHeaders,
       },
     ];
   },

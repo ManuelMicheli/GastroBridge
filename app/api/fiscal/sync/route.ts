@@ -10,6 +10,7 @@
 
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { safeEqual } from "@/lib/utils/safe-equal";
 import { getAdapter } from "@/lib/fiscal/adapters/registry.ts";
 import { loadCredentials } from "@/lib/fiscal/credentials";
 import { processUnprocessedEvents } from "@/lib/fiscal/normalizer.ts";
@@ -37,8 +38,8 @@ export async function POST(request: Request) {
       { status: 500 },
     );
   }
-  const auth = request.headers.get("authorization");
-  if (auth !== `Bearer ${secret}`) return unauthorized();
+  const auth = request.headers.get("authorization") ?? "";
+  if (!safeEqual(auth, `Bearer ${secret}`)) return unauthorized();
 
   let body: { integration_id?: string } = {};
   try {

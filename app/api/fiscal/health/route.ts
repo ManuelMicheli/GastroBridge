@@ -4,6 +4,7 @@
 
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { safeEqual } from "@/lib/utils/safe-equal";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Loose = any;
@@ -31,7 +32,8 @@ export async function GET(request: Request) {
       { status: 500 },
     );
   }
-  if (request.headers.get("authorization") !== `Bearer ${secret}`) {
+  const auth = request.headers.get("authorization") ?? "";
+  if (!safeEqual(auth, `Bearer ${secret}`)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 

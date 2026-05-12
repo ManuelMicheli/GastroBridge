@@ -16,7 +16,8 @@ type SettingsIconKey =
   | "esigenze"
   | "budget"
   | "team"
-  | "abbonamento";
+  | "abbonamento"
+  | "sicurezza";
 
 const SETTINGS_SECTIONS: ReadonlyArray<{
   href: string;
@@ -75,6 +76,14 @@ const SETTINGS_SECTIONS: ReadonlyArray<{
     group: "app",
   },
   {
+    href: "/impostazioni/sicurezza",
+    label: "Sicurezza",
+    description: "MFA, sessioni e accesso aree sensibili",
+    icon: "sicurezza",
+    color: "#1E3A8A",
+    group: "account",
+  },
+  {
     href: "/impostazioni/abbonamento",
     label: "Abbonamento",
     description: "Piano e fatturazione",
@@ -93,6 +102,7 @@ function SettingsIcon({ icon }: { icon: SettingsIconKey }) {
     budget: "M2 4h12v8H2zM8 6v4M6 8h4",
     team: "M6 8a2.5 2.5 0 100-5 2.5 2.5 0 000 5zM12 9a2 2 0 100-4 2 2 0 000 4zM2 14a4 4 0 018 0M10 14a3 3 0 014-2",
     abbonamento: "M2 6h12M2 9h12M2 4h12v8H2z",
+    sicurezza: "M8 1l5 2v4c0 4-2.5 6.5-5 7.5-2.5-1-5-3.5-5-7.5V3z",
   };
   return (
     <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" aria-hidden>

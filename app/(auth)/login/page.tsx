@@ -33,9 +33,6 @@ export default function LoginPage() {
     setIsLoading(true);
     setError(null);
     const result = await signInWithMagicLink(formData);
-    if (result?.error) {
-      setError(result.error);
-    }
     if (result?.message) {
       toast(result.message);
     }

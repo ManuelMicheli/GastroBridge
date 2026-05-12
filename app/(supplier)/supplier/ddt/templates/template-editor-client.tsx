@@ -6,6 +6,7 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { ArrowLeft, Upload, Trash2, Eye } from "lucide-react";
+import DOMPurify from "isomorphic-dompurify";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,17 +56,19 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
-/**
- * Sanificatore HTML minimale lato client (preview). Il PDF server-side
- * dovrà effettuare il suo stesso passaggio di sanitizzazione prima del render.
- */
+// Whitelist: limited inline formatting only; no scripts, styles, iframes,
+// form elements, event handlers, or URL schemes other than http(s)/mailto/tel.
+const SANITIZE_OPTS = {
+  ALLOWED_TAGS: ["b", "i", "em", "strong", "u", "br", "p", "span", "a", "ul", "ol", "li", "small"],
+  ALLOWED_ATTR: ["href", "title", "rel", "target"],
+  ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto|tel):|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$))/i,
+  FORBID_TAGS: ["style", "script", "iframe", "object", "embed", "form", "input", "svg", "math"],
+  FORBID_ATTR: ["style", "srcset"],
+  KEEP_CONTENT: true,
+};
+
 function sanitizeHtml(input: string): string {
-  return input
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
-    .replace(/on[a-z]+\s*=\s*"[^"]*"/gi, "")
-    .replace(/on[a-z]+\s*=\s*'[^']*'/gi, "")
-    .replace(/javascript:/gi, "");
+  return DOMPurify.sanitize(input, SANITIZE_OPTS) as unknown as string;
 }
 
 export function TemplateEditorClient(props: Props) {
