@@ -9,6 +9,11 @@ const nextConfig: NextConfig = {
         hostname: "*.supabase.co",
         pathname: "/storage/v1/object/public/**",
       },
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+        pathname: "/**",
+      },
     ],
     // Larger devices benefit from AVIF; webp fallback for older browsers
     formats: ["image/avif", "image/webp"],
@@ -59,7 +64,7 @@ const nextConfig: NextConfig = {
       `script-src 'self' 'unsafe-inline' https://js.stripe.com ${posthogHost} https://vercel.live https://*.vercel.live`,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://vercel.live https://*.vercel.live",
       "font-src 'self' data: https://fonts.gstatic.com https://vercel.live https://*.vercel.live https://assets.vercel.com",
-      `img-src 'self' data: blob: ${supabaseOrigin} https://*.stripe.com https://vercel.live https://*.vercel.live https://vercel.com`.trim(),
+      `img-src 'self' data: blob: ${supabaseOrigin} https://*.stripe.com https://images.unsplash.com https://vercel.live https://*.vercel.live https://vercel.com`.trim(),
       `connect-src 'self' ${supabaseOrigin} ${supabaseWs} https://api.stripe.com ${posthogHost} https://*.ingest.sentry.io https://vercel.live https://*.vercel.live wss://*.pusher.com`.replace(/\s+/g, " ").trim(),
       "frame-src https://js.stripe.com https://hooks.stripe.com https://vercel.live https://*.vercel.live",
       "worker-src 'self' blob:",

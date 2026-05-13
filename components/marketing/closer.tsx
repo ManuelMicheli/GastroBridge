@@ -2,11 +2,13 @@
 
 import { useLayoutEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { gsap, SplitText } from "@/lib/gsap-config";
 import { MOTION, prefersReducedMotion } from "@/lib/marketing-motion";
 import { usePersona } from "@/lib/marketing-persona-context";
 import { useMagnetic } from "@/lib/hooks/use-magnetic";
 import { Grain } from "./_primitives/grain";
+import { MARKETING_IMAGERY } from "@/lib/marketing-imagery";
 
 export function Closer() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -109,7 +111,36 @@ export function Closer() {
         paddingBottom: "clamp(96px, 12vw, 180px)",
       }}
     >
-      <Grain opacity={0.18} blendMode="overlay" zIndex={0} />
+      <div aria-hidden className="absolute inset-0 -z-10 overflow-hidden">
+        <Image
+          src={MARKETING_IMAGERY.closerAmbient.src}
+          alt=""
+          fill
+          sizes="100vw"
+          quality={90}
+          style={{
+            objectFit: "cover",
+            objectPosition: MARKETING_IMAGERY.closerAmbient.position,
+          }}
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(9,9,15,0.78) 0%, rgba(9,9,15,0.86) 55%, rgba(9,9,15,0.95) 100%)",
+          }}
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(120% 80% at 70% 30%, rgba(107,31,46,0.32) 0%, transparent 60%)",
+            mixBlendMode: "screen",
+          }}
+        />
+      </div>
+
+      <Grain opacity={0.16} blendMode="overlay" zIndex={0} />
 
       <div className="relative z-[1] mx-auto max-w-[72rem]">
         <div

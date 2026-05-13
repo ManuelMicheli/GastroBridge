@@ -2,11 +2,13 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { gsap, SplitText } from "@/lib/gsap-config";
 import { EditorialEyebrow } from "./_primitives/editorial-eyebrow";
 import { MOTION, prefersReducedMotion } from "@/lib/marketing-motion";
 import { usePersona, type Persona } from "@/lib/marketing-persona-context";
 import { useMagnetic } from "@/lib/hooks/use-magnetic";
+import { MARKETING_IMAGERY } from "@/lib/marketing-imagery";
 
 type SideData = {
   persona: Persona;
@@ -16,6 +18,7 @@ type SideData = {
   ctaLabel: string;
   ctaHref: string;
   side: "left" | "right";
+  image: { src: string; alt: string; position: string };
 };
 
 const SIDES: readonly [SideData, SideData] = [
@@ -27,6 +30,7 @@ const SIDES: readonly [SideData, SideData] = [
     ctaLabel: "Sono Ristoratore",
     ctaHref: "/signup?role=restaurant",
     side: "left",
+    image: MARKETING_IMAGERY.heroRestaurant,
   },
   {
     persona: "supplier",
@@ -36,6 +40,7 @@ const SIDES: readonly [SideData, SideData] = [
     ctaLabel: "Sono Fornitore",
     ctaHref: "/signup?role=supplier",
     side: "right",
+    image: MARKETING_IMAGERY.heroSupplier,
   },
 ] as const;
 
@@ -121,11 +126,13 @@ export function SplitHero() {
     <section
       ref={sectionRef}
       id="hero"
+      data-force-dark="true"
       className="relative grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] overflow-hidden"
       style={{
         minHeight: "calc(100svh - 5rem)",
         paddingTop: "clamp(96px, 12vw, 168px)",
         paddingBottom: "clamp(48px, 6vw, 96px)",
+        background: "#0A0A0E",
       }}
       data-hovered={hovered ?? undefined}
     >
@@ -179,7 +186,7 @@ function Side({ data, active, dimmed, expanded, onHover, onLeave, onChoose }: Si
       data-side={data.persona === "supplier" ? "supplier" : undefined}
       onPointerEnter={onHover}
       onPointerLeave={onLeave}
-      className="relative flex flex-col justify-between order-1"
+      className="relative flex flex-col justify-between order-1 overflow-hidden isolate"
       style={{
         flex: expanded ? "1.4" : dimmed ? "0.6" : "1",
         transition: "flex 380ms cubic-bezier(0.16, 1, 0.3, 1), filter 380ms cubic-bezier(0.16, 1, 0.3, 1)",
@@ -188,8 +195,62 @@ function Side({ data, active, dimmed, expanded, onHover, onLeave, onChoose }: Si
         paddingRight: "var(--gutter-marketing)",
         paddingTop: "clamp(24px, 4vw, 48px)",
         paddingBottom: "clamp(32px, 4vw, 56px)",
+        minHeight: "clamp(520px, 62svh, 760px)",
       }}
     >
+      {/* cinematic backdrop */}
+      <div
+        aria-hidden
+        className="absolute inset-0 -z-10"
+        style={{
+          transform: expanded ? "scale(1.04)" : "scale(1)",
+          transition: "transform 700ms cubic-bezier(0.16, 1, 0.3, 1), opacity 380ms",
+        }}
+      >
+        <Image
+          src={data.image.src}
+          alt=""
+          fill
+          priority
+          sizes="(min-width: 1024px) 60vw, 100vw"
+          quality={92}
+          style={{
+            objectFit: "cover",
+            objectPosition: data.image.position,
+          }}
+        />
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{
+            background:
+              data.persona === "supplier"
+                ? "linear-gradient(140deg, rgba(46,27,18,0.62) 0%, rgba(78,21,32,0.7) 55%, rgba(15,15,16,0.86) 100%)"
+                : "linear-gradient(150deg, rgba(78,21,32,0.65) 0%, rgba(46,21,32,0.78) 60%, rgba(15,15,16,0.92) 100%)",
+            mixBlendMode: "multiply",
+          }}
+        />
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(15,15,16,0.18) 0%, rgba(15,15,16,0.32) 45%, rgba(15,15,16,0.78) 100%)",
+          }}
+        />
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{
+            opacity: 0.16,
+            mixBlendMode: "overlay",
+            backgroundImage:
+              "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.7 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")",
+            backgroundSize: "240px 240px",
+          }}
+        />
+      </div>
+
       {/* corner index + active marker */}
       <div className="flex items-start justify-between gap-6">
         <div data-reveal="eyebrow" className="opacity-0">
