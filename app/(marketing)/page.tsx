@@ -1,4 +1,4 @@
-import { SplitHero } from "@/components/marketing/split-hero";
+import { Hero } from "@/components/marketing/hero";
 import { TickerBar } from "@/components/marketing/_primitives/ticker-bar";
 import { PromiseSection } from "@/components/marketing/promise";
 import { Mechanism } from "@/components/marketing/mechanism";
@@ -14,7 +14,7 @@ import { SectionRule } from "@/components/marketing/_primitives/section-rule";
 export default function HomePage() {
   return (
     <>
-      <SplitHero />
+      <Hero />
       <TickerBar />
       <PromiseSection />
       <SectionRule />

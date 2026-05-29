@@ -17,7 +17,7 @@ const ACCENT = "Zero commissioni. Per sempre.";
 
 const TRUST = ["14 giorni gratis", "senza carta", "0% commissioni"] as const;
 
-export function SplitHero() {
+export function Hero() {
   const sectionRef = useRef<HTMLElement>(null);
   const { setPersona } = usePersona();
   const ctaRef = useMagnetic<HTMLAnchorElement>({ strength: 0.28, radius: 100 });

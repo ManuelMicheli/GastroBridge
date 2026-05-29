@@ -69,48 +69,41 @@ export type PlanDefinition = {
   stripePriceEnv?: string;
 };
 
+// v1 restaurant pricing: two paid plans, Base €50 / Pro €150, 0% commissioni.
+// The "free" tier is no longer offered as a marketing plan (it survives only as
+// the cancelled/default subscription state in PlanType). The displayed cards
+// reuse the existing restaurant tier ids "pro" (Base) and "business" (Pro) so
+// the Stripe wiring (STRIPE_PRICE_RESTAURANT_*) and PLAN_FEATURES keep working.
+// NOTE: the Stripe Price objects behind those envs must be set to €50 / €150,
+// otherwise checkout will charge the old amounts.
 export const RESTAURANT_PLANS: PlanDefinition[] = [
   {
-    id: "free",
-    name: "Free",
-    price: 0,
-    period: "mese",
-    features: [
-      "Ricerca fornitori",
-      "Confronto prezzi base",
-      "Fino a 10 ordini/mese",
-      "1 sede",
-    ],
-  },
-  {
     id: "pro",
-    name: "Pro",
-    price: 49,
+    name: "Base",
+    price: 50,
     period: "mese",
-    highlighted: true,
     stripePriceEnv: "STRIPE_PRICE_RESTAURANT_PRO",
     features: [
-      "Tutto di Free +",
+      "Catalogo vivo, prezzi aggiornati",
       "Ordini illimitati",
-      "Alert risparmio",
-      "Analytics spesa",
-      "Fino a 3 sedi",
-      "Template ordini",
+      "0% commissioni su ogni ordine",
+      "Stripe + cassetto fiscale",
+      "Storico ed export CSV/PDF",
     ],
   },
   {
     id: "business",
-    name: "Business",
-    price: 99,
+    name: "Pro",
+    price: 150,
     period: "mese",
+    highlighted: true,
     stripePriceEnv: "STRIPE_PRICE_RESTAURANT_BUSINESS",
     features: [
-      "Tutto di Pro +",
-      "Sedi illimitate",
-      "Team multi-utente",
-      "API access",
-      "Support prioritario",
-      "Report personalizzati",
+      "Tutto di Base +",
+      "Multi-sede",
+      "Analytics avanzata",
+      "API + webhook",
+      "Supporto prioritario",
     ],
   },
 ];

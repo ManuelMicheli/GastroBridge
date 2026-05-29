@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils/formatters";
 import { gsap } from "@/lib/gsap-config";
-import { PersonaSwitcher } from "@/components/marketing/_primitives/persona-switcher";
 import { ThemeToggle } from "@/components/marketing/_primitives/theme-toggle";
 
 const NAV_LINKS = [
@@ -113,7 +112,6 @@ export function MarketingNav() {
         </div>
 
         <div className="hidden md:flex items-center gap-4">
-          <PersonaSwitcher />
           <ThemeToggle />
           <Link
             href="/login"
@@ -188,7 +186,6 @@ export function MarketingNav() {
           )}
           <hr className="rule w-full mt-6" />
           <div className="flex items-center gap-4 mt-6 w-full">
-            <PersonaSwitcher variant="full" />
             <ThemeToggle />
           </div>
           <div className="flex flex-col gap-3 mt-4 w-full">
