@@ -75,8 +75,13 @@ export function CommandPaletteProvider({ children, navItems, role }: Props) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [toggle, close, isOpen]);
 
+  const value = useMemo(
+    () => ({ isOpen, open, close, toggle, searchItems }),
+    [isOpen, open, close, toggle, searchItems],
+  );
+
   return (
-    <CommandPaletteContext.Provider value={{ isOpen, open, close, toggle, searchItems }}>
+    <CommandPaletteContext.Provider value={value}>
       {children}
     </CommandPaletteContext.Provider>
   );

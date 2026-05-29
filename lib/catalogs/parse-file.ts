@@ -1,8 +1,11 @@
 "use client";
 
-import Papa from "papaparse";
-import ExcelJS from "exceljs";
 import { normalizePrice } from "./normalize";
+
+// papaparse (~45KB) and exceljs (~900KB parsed) are loaded on demand inside the
+// parse functions below — they stay out of every chunk that only needs the pure
+// helpers (suggestMapping/looksLikeHeader/extractUnitFromText), and out of the
+// import-wizard chunk until the user actually parses a file.
 
 export type ParsedRow = Record<string, string>;
 export type ParsedSheet = {
@@ -12,6 +15,7 @@ export type ParsedSheet = {
 };
 
 export async function parseCsv(file: File, hasHeader = true): Promise<ParsedSheet> {
+  const Papa = (await import("papaparse")).default;
   return new Promise((resolve, reject) => {
     Papa.parse<string[]>(file, {
       skipEmptyLines: "greedy",
@@ -50,6 +54,7 @@ function cellToString(value: unknown): string {
 }
 
 export async function parseXlsx(file: File, hasHeader = true): Promise<ParsedSheet> {
+  const ExcelJS = (await import("exceljs")).default;
   const buf = await file.arrayBuffer();
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(buf);

@@ -81,17 +81,21 @@ export async function getPreferences(
 ): Promise<Result<PreferencesBundle>> {
   const supabase = await createClient();
 
-  const { data: globalRow, error: globalErr } = await (supabase as any)
-    .from("restaurant_preferences")
-    .select("*")
-    .eq("restaurant_id", restaurantId)
-    .maybeSingle();
+  // Two independent reads — fire in parallel to halve round-trip latency.
+  const [globalRes, categoryRes] = await Promise.all([
+    (supabase as any)
+      .from("restaurant_preferences")
+      .select("*")
+      .eq("restaurant_id", restaurantId)
+      .maybeSingle(),
+    (supabase as any)
+      .from("restaurant_category_preferences")
+      .select("*")
+      .eq("restaurant_id", restaurantId),
+  ]);
+  const { data: globalRow, error: globalErr } = globalRes;
   if (globalErr) return { ok: false, error: globalErr.message };
-
-  const { data: categoryRows, error: categoryErr } = await (supabase as any)
-    .from("restaurant_category_preferences")
-    .select("*")
-    .eq("restaurant_id", restaurantId);
+  const { data: categoryRows, error: categoryErr } = categoryRes;
   if (categoryErr) return { ok: false, error: categoryErr.message };
 
   const global: PreferencesGlobal = globalRow
