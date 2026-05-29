@@ -93,45 +93,12 @@ export function Mechanism() {
       if (!track) return;
       const cards = Array.from(track.querySelectorAll<HTMLElement>("[data-card]"));
       const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
+      const distance = isDesktop ? track.scrollWidth - window.innerWidth : 0;
 
-      if (isDesktop) {
-        const trackWidth = track.scrollWidth;
-        const viewportWidth = window.innerWidth;
-        const distance = trackWidth - viewportWidth;
-        if (distance > 0) {
-          const horizontal = gsap.to(track, {
-            x: -distance,
-            ease: "none",
-            scrollTrigger: {
-              trigger: sectionRef.current,
-              start: "top top",
-              end: () => `+=${distance + 200}`,
-              pin: true,
-              scrub: 0.6,
-              invalidateOnRefresh: true,
-            },
-          });
-
-          cards.forEach((card) => {
-            gsap.fromTo(
-              card,
-              { opacity: 0.4, scale: 0.92 },
-              {
-                opacity: 1,
-                scale: 1,
-                ease: "none",
-                scrollTrigger: {
-                  trigger: card,
-                  containerAnimation: horizontal,
-                  start: "left 80%",
-                  end: "center 50%",
-                  scrub: true,
-                },
-              }
-            );
-          });
-        }
-      } else {
+      // Per-card vertical reveal — used on mobile AND on wide desktops where the
+      // track fits without overflow (distance <= 0). Without this fallback the
+      // cards keep their opacity-0 class and the whole section is invisible.
+      const revealInPlace = () => {
         cards.forEach((card, i) => {
           gsap.fromTo(
             card,
@@ -141,15 +108,47 @@ export function Mechanism() {
               y: 0,
               duration: MOTION.duration.revealLong,
               ease: MOTION.easeEditorial,
-              scrollTrigger: {
-                trigger: card,
-                start: "top 80%",
-                once: true,
-              },
+              scrollTrigger: { trigger: card, start: "top 85%", once: true },
               delay: i * 0.05,
             }
           );
         });
+      };
+
+      if (isDesktop && distance > 0) {
+        const horizontal = gsap.to(track, {
+          x: -distance,
+          ease: "none",
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: "top top",
+            end: () => `+=${distance + 200}`,
+            pin: true,
+            scrub: 0.6,
+            invalidateOnRefresh: true,
+          },
+        });
+
+        cards.forEach((card) => {
+          gsap.fromTo(
+            card,
+            { opacity: 0.4, scale: 0.92 },
+            {
+              opacity: 1,
+              scale: 1,
+              ease: "none",
+              scrollTrigger: {
+                trigger: card,
+                containerAnimation: horizontal,
+                start: "left 80%",
+                end: "center 50%",
+                scrub: true,
+              },
+            }
+          );
+        });
+      } else {
+        revealInPlace();
       }
     }, sectionRef);
 
