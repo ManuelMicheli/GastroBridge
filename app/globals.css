@@ -1469,3 +1469,12 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .rt-badge-inner-ripple { animation: none; opacity: 0; }
 }
+
+/* Auth — soft entrance for the form column. */
+@keyframes authIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-anim { animation: none !important; }
+}
