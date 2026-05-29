@@ -18,30 +18,30 @@ export default async function SearchPage() {
   } = await supabase.auth.getUser();
   const userId = user?.id ?? "";
 
-  let preferences: Preferences | null = null;
-  let restaurantIds: string[] = [];
-  if (user) {
-    const { data: restaurants } = await supabase
-      .from("restaurants")
-      .select("id")
-      .eq("profile_id", user.id)
-      .order("is_primary", { ascending: false })
-      .order("created_at", { ascending: true })
-      .returns<{ id: string }[]>();
-    restaurantIds = (restaurants ?? []).map((r) => r.id);
-    const primary = restaurants?.[0];
-    if (primary) {
-      const prefResult = await getPreferences(primary.id);
-      preferences = bundleToScoringPrefs(prefResult.ok ? prefResult.data : null);
-    }
-  }
+  // --- Phase 1: independent reads in parallel (restaurants, manual catalogs,
+  //     connected supplier catalogs). None depend on each other.
+  const [restaurantsRes, catalogsRes, connected] = await Promise.all([
+    user
+      ? supabase
+          .from("restaurants")
+          .select("id")
+          .eq("profile_id", user.id)
+          .order("is_primary", { ascending: false })
+          .order("created_at", { ascending: true })
+          .returns<{ id: string }[]>()
+      : Promise.resolve({ data: [] as { id: string }[] }),
+    supabase
+      .from("restaurant_catalogs")
+      .select("id, supplier_name, delivery_days, min_order_amount")
+      .order("supplier_name", { ascending: true }),
+    loadConnectedSupplierCatalogs(userId),
+  ]);
 
-  // --- Cataloghi manuali del ristoratore
-  const { data: catalogs } = await supabase
-    .from("restaurant_catalogs")
-    .select("id, supplier_name, delivery_days, min_order_amount")
-    .order("supplier_name", { ascending: true });
+  const restaurants = restaurantsRes.data;
+  const restaurantIds: string[] = (restaurants ?? []).map((r) => r.id);
+  const primary = restaurants?.[0];
 
+  const catalogs = catalogsRes.data;
   const manualSuppliers: SupplierLite[] = (catalogs ?? []).map((c: any) => ({
     id:               c.id,
     supplier_name:    c.supplier_name,
@@ -51,28 +51,36 @@ export default async function SearchPage() {
         ? Number(c.min_order_amount)
         : null,
   }));
+  const manualSupplierIds = manualSuppliers.map((s) => s.id);
 
-  let manualItems: CatalogItemLite[] = [];
-  if (manualSuppliers.length > 0) {
-    const ids = manualSuppliers.map((s) => s.id);
-    const { data } = await supabase
-      .from("restaurant_catalog_items")
-      .select("id, catalog_id, product_name, product_name_normalized, unit, price, notes")
-      .in("catalog_id", ids as any);
-    manualItems = (data ?? []).map((r: any) => ({
-      id:                       r.id,
-      catalog_id:               r.catalog_id,
-      product_name:             r.product_name,
-      product_name_normalized:  r.product_name_normalized,
-      unit:                     r.unit,
-      price:                    Number(r.price),
-      notes:                    r.notes,
-    }));
-  }
+  // --- Phase 2: reads that depend on Phase-1 results, also parallel.
+  const [prefResult, manualItemsRes, usualOrder] = await Promise.all([
+    primary ? getPreferences(primary.id) : Promise.resolve(null),
+    manualSupplierIds.length > 0
+      ? supabase
+          .from("restaurant_catalog_items")
+          .select("id, catalog_id, product_name, product_name_normalized, unit, price, notes")
+          .in("catalog_id", manualSupplierIds as any)
+      : Promise.resolve({ data: [] as any[] }),
+    loadUsualOrder(supabase as any, restaurantIds),
+  ]);
+
+  const preferences: Preferences | null = prefResult
+    ? bundleToScoringPrefs(prefResult.ok ? prefResult.data : null)
+    : null;
+
+  const manualItems: CatalogItemLite[] = (manualItemsRes.data ?? []).map((r: any) => ({
+    id:                       r.id,
+    catalog_id:               r.catalog_id,
+    product_name:             r.product_name,
+    product_name_normalized:  r.product_name_normalized,
+    unit:                     r.unit,
+    price:                    Number(r.price),
+    notes:                    r.notes,
+  }));
 
   // --- Fornitori reali collegati (status=active)
-  const { suppliers: connectedSuppliers, items: connectedItemsRaw } =
-    await loadConnectedSupplierCatalogs(userId);
+  const { suppliers: connectedSuppliers, items: connectedItemsRaw } = connected;
 
   const connectedItems: CatalogItemLite[] = connectedItemsRaw.map((r) => ({
     id:                      r.id,
@@ -88,8 +96,6 @@ export default async function SearchPage() {
   const items: CatalogItemLite[] = [...connectedItems, ...manualItems];
 
   const connectedSupplierIds = connectedSuppliers.map((s) => s.id);
-
-  const usualOrder = await loadUsualOrder(supabase as any, restaurantIds);
 
   return (
     <SearchPageClient

@@ -6,6 +6,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   type ReactNode,
 } from "react";
 
@@ -49,8 +50,15 @@ export function SidebarProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [toggle]);
 
+  // Stable value identity — consumers only re-render when isCollapsed flips,
+  // not on every parent render.
+  const value = useMemo(
+    () => ({ isCollapsed, toggle, setCollapsed }),
+    [isCollapsed, toggle, setCollapsed],
+  );
+
   return (
-    <SidebarContext.Provider value={{ isCollapsed, toggle, setCollapsed }}>
+    <SidebarContext.Provider value={value}>
       {children}
     </SidebarContext.Provider>
   );

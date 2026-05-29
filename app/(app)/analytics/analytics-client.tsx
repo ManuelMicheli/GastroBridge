@@ -7,6 +7,7 @@
 
 "use client";
 
+import dynamic from "next/dynamic";
 import { TerminalKPICard } from "@/components/dashboard/cards/terminal-kpi-card";
 import { SectionFrame } from "@/components/dashboard/restaurant/_awwwards/section-frame";
 import { LargeTitle } from "@/components/ui/large-title";
@@ -15,12 +16,21 @@ import type { RestaurantAnalytics } from "@/lib/analytics/restaurant";
 import { PeriodSelector } from "./_components/period-selector";
 import { BudgetTracker } from "./_components/budget-tracker";
 import { VarianceCard } from "./_components/variance-card";
-import { CategoryDonut } from "./_components/category-donut";
 import { ProductInsightsTable } from "./_components/product-insights-table";
-import { YoyTrendChart } from "./_components/yoy-trend-chart";
 import { WeekdayHeatmap } from "./_components/weekday-heatmap";
 import { ExportCsvButton } from "./_components/export-csv-button";
 import { AnalyticsRecentOrdersLog } from "./_components/recent-orders-log";
+
+// recharts (~300KB+) only ships when these below-the-fold charts mount — kept
+// out of the analytics route's initial JS. Height-matched skeletons avoid CLS.
+const CategoryDonut = dynamic(
+  () => import("./_components/category-donut").then((m) => m.CategoryDonut),
+  { ssr: false, loading: () => <div className="h-52 animate-pulse rounded-lg bg-surface-elevated" /> },
+);
+const YoyTrendChart = dynamic(
+  () => import("./_components/yoy-trend-chart").then((m) => m.YoyTrendChart),
+  { ssr: false, loading: () => <div className="h-[17rem] animate-pulse rounded-lg bg-surface-elevated" /> },
+);
 
 type Props = {
   data: RestaurantAnalytics;

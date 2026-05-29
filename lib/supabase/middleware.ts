@@ -14,9 +14,10 @@ const PROTECTED_PREFIXES = [
 
 const AUTH_ROUTES = new Set(["/login", "/signup"]);
 
-// Sections that require an elevated session (aal2 = TOTP verified). Users
-// without MFA enrolled, or with MFA enrolled but only aal1 in the current
-// session, get redirected to /impostazioni/sicurezza to step up.
+// Sections that step up to an elevated session (aal2 = TOTP verified) when —
+// and only when — the user already has MFA enrolled. MFA is optional: users
+// without any verified factor keep full access. Users who DID enrol MFA must
+// step up (otherwise an aal1 session would weaken their own 2FA).
 const MFA_REQUIRED_PREFIXES = ["/finanze", "/supplier/finanze"];
 
 function isMfaRequired(pathname: string): boolean {
@@ -97,14 +98,15 @@ export async function updateSession(request: NextRequest) {
 
   if (user && isMfaRequired(pathname)) {
     const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-    // currentLevel = aal1/aal2 of the active session; nextLevel = required
-    // by the user's enrolled factors. Block if a verified factor exists but
-    // the user has not stepped up in this session, OR if no factor at all.
+    // currentLevel = aal1/aal2 of the active session; nextLevel = the level the
+    // user's enrolled factors allow. nextLevel === "aal2" means a verified MFA
+    // factor exists. MFA is optional: only step up when the user enrolled MFA
+    // (next aal2) but the current session is still aal1. No factor → allow.
     const current = aal?.currentLevel ?? "aal1";
     const next = aal?.nextLevel ?? "aal1";
-    if (current !== "aal2" || next !== "aal2") {
+    if (next === "aal2" && current !== "aal2") {
       const url = new URL("/impostazioni/sicurezza", request.url);
-      url.searchParams.set("mfa", current === "aal2" ? "ok" : "required");
+      url.searchParams.set("mfa", "required");
       return NextResponse.redirect(url);
     }
   }
