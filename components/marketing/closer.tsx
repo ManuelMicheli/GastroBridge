@@ -6,6 +6,7 @@ import Image from "next/image";
 import { gsap, SplitText } from "@/lib/gsap-config";
 import { MOTION, prefersReducedMotion } from "@/lib/marketing-motion";
 import { usePersona } from "@/lib/marketing-persona-context";
+import { SUPPLIER_PLATFORM_ENABLED } from "@/lib/utils/constants";
 import { useMagnetic } from "@/lib/hooks/use-magnetic";
 import { Grain } from "./_primitives/grain";
 import { MARKETING_IMAGERY } from "@/lib/marketing-imagery";
@@ -228,23 +229,38 @@ export function Closer() {
             style={{ height: 28, width: 1, background: "var(--color-marketing-rule-strong)" }}
           />
 
-          <Link
-            href="/signup?role=supplier"
-            onClick={() => setPersona("supplier")}
-            data-side="supplier"
-            className="inline-flex items-center gap-3 rounded-full px-8 py-4 text-[14px] tracking-wide"
-            style={{
-              background: supplierActive ? "var(--color-marketing-primary)" : "transparent",
-              color: supplierActive ? "var(--color-marketing-on-primary)" : "var(--color-marketing-ink)",
-              border: supplierActive ? "1px solid transparent" : "1px solid var(--color-marketing-rule-strong)",
-              transition: "background-color 240ms cubic-bezier(0.16, 1, 0.3, 1), color 240ms cubic-bezier(0.16, 1, 0.3, 1)",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-marketing-primary-hover)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = supplierActive ? "var(--color-marketing-primary)" : "transparent")}
-          >
-            Crea account fornitore
-            <span aria-hidden>→</span>
-          </Link>
+          {SUPPLIER_PLATFORM_ENABLED ? (
+            <Link
+              href="/signup?role=supplier"
+              onClick={() => setPersona("supplier")}
+              data-side="supplier"
+              className="inline-flex items-center gap-3 rounded-full px-8 py-4 text-[14px] tracking-wide"
+              style={{
+                background: supplierActive ? "var(--color-marketing-primary)" : "transparent",
+                color: supplierActive ? "var(--color-marketing-on-primary)" : "var(--color-marketing-ink)",
+                border: supplierActive ? "1px solid transparent" : "1px solid var(--color-marketing-rule-strong)",
+                transition: "background-color 240ms cubic-bezier(0.16, 1, 0.3, 1), color 240ms cubic-bezier(0.16, 1, 0.3, 1)",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-marketing-primary-hover)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = supplierActive ? "var(--color-marketing-primary)" : "transparent")}
+            >
+              Crea account fornitore
+              <span aria-hidden>→</span>
+            </Link>
+          ) : (
+            <span
+              data-side="supplier"
+              title="Disponibile nella versione 2"
+              className="inline-flex items-center gap-3 rounded-full px-8 py-4 text-[14px] tracking-wide cursor-not-allowed"
+              style={{
+                background: "transparent",
+                color: "var(--color-marketing-ink-muted)",
+                border: "1px solid var(--color-marketing-rule-strong)",
+              }}
+            >
+              Account fornitore · presto
+            </span>
+          )}
         </div>
 
         <div

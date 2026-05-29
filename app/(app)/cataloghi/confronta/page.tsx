@@ -55,11 +55,12 @@ export default async function CatalogComparePage() {
       <div className="p-6 space-y-3">
         <h1 className="text-2xl font-semibold text-text-primary">Confronto prezzi</h1>
         <p className="text-text-secondary">
-          Servono almeno 2 cataloghi per confrontare. Collega fornitori dalla pagina{" "}
-          <Link href="/fornitori/cerca" className="text-accent-green hover:underline">
-            Cerca fornitori
-          </Link>{" "}
-          o aggiungi cataloghi manuali.
+          Servono almeno 2 cataloghi per confrontare. Aggiungi i cataloghi dei
+          tuoi fornitori dalla pagina{" "}
+          <Link href="/fornitori" className="text-accent-green hover:underline">
+            Fornitori
+          </Link>
+          .
         </p>
         <Link href="/cataloghi" className="text-accent-green hover:underline">
           ← Torna ai cataloghi

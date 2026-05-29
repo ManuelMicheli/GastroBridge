@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePersona, type Persona } from "@/lib/marketing-persona-context";
+import { SUPPLIER_PLATFORM_ENABLED } from "@/lib/utils/constants";
 
 const OPTIONS: readonly { value: Persona; label: string; short: string }[] = [
   { value: "restaurant", label: "Ristoratore", short: "Rist." },
@@ -57,23 +58,37 @@ export function PersonaSwitcher({ variant = "compact" }: Props) {
 
       {OPTIONS.map((opt) => {
         const isActive = persona === opt.value;
+        // v1: supplier perspective is parked — render its tab as a disabled
+        // "Presto" (coming soon) chip instead of a switchable option.
+        const comingSoon = opt.value === "supplier" && !SUPPLIER_PLATFORM_ENABLED;
         return (
           <button
             key={opt.value}
             role="tab"
             aria-selected={isActive}
+            aria-disabled={comingSoon}
             data-active={isActive}
-            onClick={() => setPersona(opt.value)}
-            className="relative z-[1] inline-flex items-center gap-2 px-4 py-1.5 font-mono uppercase tracking-[0.14em] transition-colors"
+            disabled={comingSoon}
+            onClick={() => {
+              if (!comingSoon) setPersona(opt.value);
+            }}
+            title={comingSoon ? "Disponibile nella versione 2" : undefined}
+            className="relative z-[1] inline-flex items-center gap-2 px-4 py-1.5 font-mono uppercase tracking-[0.14em] transition-colors disabled:cursor-not-allowed"
             style={{
               fontSize: "11px",
-              color: isActive ? "var(--color-marketing-on-primary)" : "var(--color-marketing-ink-muted)",
+              color: isActive
+                ? "var(--color-marketing-on-primary)"
+                : comingSoon
+                  ? "var(--color-marketing-ink-subtle)"
+                  : "var(--color-marketing-ink-muted)",
+              opacity: comingSoon ? 0.55 : 1,
             }}
             onMouseEnter={(e) => {
-              if (!isActive) e.currentTarget.style.color = "var(--color-marketing-ink)";
+              if (!isActive && !comingSoon) e.currentTarget.style.color = "var(--color-marketing-ink)";
             }}
             onMouseLeave={(e) => {
-              if (!isActive) e.currentTarget.style.color = "var(--color-marketing-ink-muted)";
+              if (!isActive && !comingSoon)
+                e.currentTarget.style.color = "var(--color-marketing-ink-muted)";
             }}
           >
             <span
@@ -88,6 +103,17 @@ export function PersonaSwitcher({ variant = "compact" }: Props) {
             />
             <span className="hidden sm:inline">{variant === "compact" ? opt.short : opt.label}</span>
             <span className="sm:hidden">{opt.short}</span>
+            {comingSoon && (
+              <span
+                className="ml-1 rounded-full px-1.5 py-px text-[8px] tracking-[0.12em]"
+                style={{
+                  background: "var(--color-marketing-rule-strong)",
+                  color: "var(--color-marketing-ink-muted)",
+                }}
+              >
+                PRESTO
+              </span>
+            )}
           </button>
         );
       })}

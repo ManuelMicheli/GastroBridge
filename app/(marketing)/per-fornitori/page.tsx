@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { SUPPLIER_PLANS } from "@/lib/utils/constants";
+import { SUPPLIER_PLANS, SUPPLIER_PLATFORM_ENABLED } from "@/lib/utils/constants";
 import { EditorialEyebrow } from "@/components/marketing/_primitives/editorial-eyebrow";
 import { SectionRule } from "@/components/marketing/_primitives/section-rule";
 import { QuotePull } from "@/components/marketing/_primitives/quote-pull";
@@ -47,6 +47,27 @@ const BENEFITS = [
 export default function ForSuppliersPage() {
   return (
     <div data-side="supplier">
+      {/* v1: supplier platform is parked → banner + disabled CTAs. */}
+      {!SUPPLIER_PLATFORM_ENABLED && (
+        <div
+          style={{
+            position: "sticky",
+            top: 0,
+            zIndex: 40,
+            textAlign: "center",
+            padding: "10px 16px",
+            background: "var(--color-marketing-primary)",
+            color: "var(--color-marketing-on-primary)",
+            fontFamily: "var(--font-mono, monospace)",
+            fontSize: "11px",
+            letterSpacing: "0.18em",
+            textTransform: "uppercase",
+          }}
+        >
+          Lato fornitori — Coming soon · in arrivo nella versione 2
+        </div>
+      )}
+
       {/* Hero */}
       <section
         style={{
@@ -88,16 +109,29 @@ export default function ForSuppliersPage() {
             consegne da un&apos;unica piattaforma professionale.
           </p>
           <div className="col-span-12 lg:col-start-5 mt-4">
-            <Link
-              href="/signup?role=supplier"
-              className="inline-flex items-center rounded-full px-6 py-3 text-[14px] tracking-wide transition-colors"
-              style={{
-                background: "var(--color-marketing-primary)",
-                color: "var(--color-marketing-on-primary)",
-              }}
-            >
-              Diventa fornitore →
-            </Link>
+            {SUPPLIER_PLATFORM_ENABLED ? (
+              <Link
+                href="/signup?role=supplier"
+                className="inline-flex items-center rounded-full px-6 py-3 text-[14px] tracking-wide transition-colors"
+                style={{
+                  background: "var(--color-marketing-primary)",
+                  color: "var(--color-marketing-on-primary)",
+                }}
+              >
+                Diventa fornitore →
+              </Link>
+            ) : (
+              <span
+                title="Disponibile nella versione 2"
+                className="inline-flex items-center rounded-full px-6 py-3 text-[14px] tracking-wide cursor-not-allowed"
+                style={{
+                  border: "1px solid var(--color-marketing-rule-strong)",
+                  color: "var(--color-marketing-ink-muted)",
+                }}
+              >
+                Diventa fornitore · presto
+              </span>
+            )}
           </div>
         </div>
       </section>
@@ -327,23 +361,36 @@ export default function ForSuppliersPage() {
                     </li>
                   ))}
                 </ul>
-                <Link
-                  href={`/signup?role=supplier&plan=${plan.id}`}
-                  className="inline-flex items-center justify-center w-full py-3 text-[14px] tracking-wide transition-colors rounded-full"
-                  style={
-                    highlighted
-                      ? {
-                          background: "var(--color-marketing-primary)",
-                          color: "var(--color-marketing-on-primary)",
-                        }
-                      : {
-                          border: "1px solid var(--color-marketing-rule-strong)",
-                          color: "var(--color-marketing-ink)",
-                        }
-                  }
-                >
-                  Scegli {plan.name} →
-                </Link>
+                {SUPPLIER_PLATFORM_ENABLED ? (
+                  <Link
+                    href={`/signup?role=supplier&plan=${plan.id}`}
+                    className="inline-flex items-center justify-center w-full py-3 text-[14px] tracking-wide transition-colors rounded-full"
+                    style={
+                      highlighted
+                        ? {
+                            background: "var(--color-marketing-primary)",
+                            color: "var(--color-marketing-on-primary)",
+                          }
+                        : {
+                            border: "1px solid var(--color-marketing-rule-strong)",
+                            color: "var(--color-marketing-ink)",
+                          }
+                    }
+                  >
+                    Scegli {plan.name} →
+                  </Link>
+                ) : (
+                  <span
+                    title="Disponibile nella versione 2"
+                    className="inline-flex items-center justify-center w-full py-3 text-[14px] tracking-wide rounded-full cursor-not-allowed"
+                    style={{
+                      border: "1px solid var(--color-marketing-rule-strong)",
+                      color: "var(--color-marketing-ink-muted)",
+                    }}
+                  >
+                    {plan.name} · presto
+                  </span>
+                )}
               </div>
             );
           })}

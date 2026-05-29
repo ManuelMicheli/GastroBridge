@@ -3,7 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils/formatters";
-import { RESTAURANT_PLANS, SUPPLIER_PLANS, type PlanDefinition } from "@/lib/utils/constants";
+import {
+  RESTAURANT_PLANS,
+  SUPPLIER_PLANS,
+  SUPPLIER_PLATFORM_ENABLED,
+  type PlanDefinition,
+} from "@/lib/utils/constants";
 
 function PlanCard({ plan, role }: { plan: PlanDefinition; role: string }) {
   const highlighted = !!plan.highlighted;
@@ -159,20 +164,28 @@ export function PricingTable() {
           { key: "supplier" as const, label: "Per fornitori" },
         ]).map((entry) => {
           const active = tab === entry.key;
+          // v1: supplier plans are parked → disabled "presto" tab.
+          const comingSoon = entry.key === "supplier" && !SUPPLIER_PLATFORM_ENABLED;
           return (
             <button
               key={entry.key}
               role="tab"
               aria-selected={active}
-              onClick={() => setTab(entry.key)}
-              className="relative pb-2 font-mono uppercase tracking-[0.18em] text-[12px] transition-colors"
+              aria-disabled={comingSoon}
+              disabled={comingSoon}
+              onClick={() => {
+                if (!comingSoon) setTab(entry.key);
+              }}
+              title={comingSoon ? "Disponibile nella versione 2" : undefined}
+              className="relative pb-2 font-mono uppercase tracking-[0.18em] text-[12px] transition-colors disabled:cursor-not-allowed"
               style={{
                 color: active
                   ? "var(--color-marketing-ink)"
                   : "var(--color-marketing-ink-subtle)",
+                opacity: comingSoon ? 0.5 : 1,
               }}
             >
-              {entry.label}
+              {comingSoon ? `${entry.label} · presto` : entry.label}
               {active && (
                 <span
                   aria-hidden

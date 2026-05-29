@@ -9,6 +9,7 @@ import { MOTION, prefersReducedMotion } from "@/lib/marketing-motion";
 import { usePersona, type Persona } from "@/lib/marketing-persona-context";
 import { useMagnetic } from "@/lib/hooks/use-magnetic";
 import { MARKETING_IMAGERY } from "@/lib/marketing-imagery";
+import { SUPPLIER_PLATFORM_ENABLED } from "@/lib/utils/constants";
 
 type SideData = {
   persona: Persona;
@@ -163,6 +164,7 @@ export function SplitHero() {
         onHover={() => setHovered(SIDES[1].persona)}
         onLeave={() => setHovered(null)}
         onChoose={() => setPersona(SIDES[1].persona)}
+        comingSoon={!SUPPLIER_PLATFORM_ENABLED}
       />
     </section>
   );
@@ -176,9 +178,10 @@ type SideProps = {
   onHover: () => void;
   onLeave: () => void;
   onChoose: () => void;
+  comingSoon?: boolean;
 };
 
-function Side({ data, active, dimmed, expanded, onHover, onLeave, onChoose }: SideProps) {
+function Side({ data, active, dimmed, expanded, onHover, onLeave, onChoose, comingSoon = false }: SideProps) {
   const ctaRef = useMagnetic<HTMLAnchorElement>({ strength: 0.28, radius: 100 });
 
   return (
@@ -258,7 +261,7 @@ function Side({ data, active, dimmed, expanded, onHover, onLeave, onChoose }: Si
             {data.eyebrow}
           </EditorialEyebrow>
         </div>
-        {active && (
+        {active && !comingSoon && (
           <span
             data-reveal="eyebrow"
             className="opacity-0 font-mono uppercase text-[10px] tracking-[0.22em] flex items-center gap-2"
@@ -273,6 +276,19 @@ function Side({ data, active, dimmed, expanded, onHover, onLeave, onChoose }: Si
               }}
             />
             ATTIVO
+          </span>
+        )}
+        {comingSoon && (
+          <span
+            data-reveal="eyebrow"
+            className="opacity-0 font-mono uppercase text-[10px] tracking-[0.22em] rounded-full px-3 py-1"
+            style={{
+              color: "var(--color-marketing-ink)",
+              border: "1px solid var(--color-marketing-rule-strong)",
+              background: "rgba(255,255,255,0.06)",
+            }}
+          >
+            Coming soon
           </span>
         )}
       </div>
@@ -320,24 +336,38 @@ function Side({ data, active, dimmed, expanded, onHover, onLeave, onChoose }: Si
         </div>
 
         <div data-reveal="cta" className="opacity-0">
-          <Link
-            ref={ctaRef}
-            href={data.ctaHref}
-            onClick={onChoose}
-            className="group inline-flex items-center gap-3 rounded-full px-7 py-3.5 text-[14px] tracking-wide will-change-transform"
-            style={{
-              background: "var(--color-marketing-primary)",
-              color: "var(--color-marketing-on-primary)",
-              transition: "background-color 240ms cubic-bezier(0.16, 1, 0.3, 1)",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-marketing-primary-hover)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "var(--color-marketing-primary)")}
-          >
-            {data.ctaLabel}
-            <span aria-hidden className="inline-block transition-transform duration-300 group-hover:translate-x-1">
-              →
+          {comingSoon ? (
+            <span
+              className="inline-flex items-center gap-3 rounded-full px-7 py-3.5 text-[14px] tracking-wide cursor-not-allowed"
+              style={{
+                border: "1px solid var(--color-marketing-rule-strong)",
+                color: "var(--color-marketing-ink-muted)",
+                background: "rgba(255,255,255,0.04)",
+              }}
+              title="Disponibile nella versione 2"
+            >
+              {data.ctaLabel} · presto
             </span>
-          </Link>
+          ) : (
+            <Link
+              ref={ctaRef}
+              href={data.ctaHref}
+              onClick={onChoose}
+              className="group inline-flex items-center gap-3 rounded-full px-7 py-3.5 text-[14px] tracking-wide will-change-transform"
+              style={{
+                background: "var(--color-marketing-primary)",
+                color: "var(--color-marketing-on-primary)",
+                transition: "background-color 240ms cubic-bezier(0.16, 1, 0.3, 1)",
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-marketing-primary-hover)")}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "var(--color-marketing-primary)")}
+            >
+              {data.ctaLabel}
+              <span aria-hidden className="inline-block transition-transform duration-300 group-hover:translate-x-1">
+                →
+              </span>
+            </Link>
+          )}
         </div>
       </div>
     </div>

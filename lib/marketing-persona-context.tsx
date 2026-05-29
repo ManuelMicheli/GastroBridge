@@ -8,6 +8,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
+import { SUPPLIER_PLATFORM_ENABLED } from "@/lib/utils/constants";
 
 export type Persona = "restaurant" | "supplier";
 
@@ -24,7 +25,12 @@ type PersonaContextValue = {
 const PersonaContext = createContext<PersonaContextValue | null>(null);
 
 function isPersona(v: unknown): v is Persona {
-  return v === "restaurant" || v === "supplier";
+  if (v === "restaurant") return true;
+  // v1: supplier persona is parked. Treat it as invalid so a stale
+  // ?persona=supplier URL or localStorage value can never lock the marketing
+  // site into the (coming-soon) supplier view.
+  if (v === "supplier") return SUPPLIER_PLATFORM_ENABLED;
+  return false;
 }
 
 function readStoredPersona(): Persona | null {
@@ -91,6 +97,8 @@ export function PersonaProvider({
   }, []);
 
   const setPersona = useCallback((next: Persona) => {
+    // v1 guard: never switch into the parked supplier persona.
+    if (next === "supplier" && !SUPPLIER_PLATFORM_ENABLED) return;
     setPersonaState((prev) => {
       if (prev === next) return prev;
       try {

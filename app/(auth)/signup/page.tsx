@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/components/ui/toast";
 import { Store, Truck } from "lucide-react";
 import { cn } from "@/lib/utils/formatters";
+import { SUPPLIER_PLATFORM_ENABLED } from "@/lib/utils/constants";
 import type { UserRole } from "@/types/database";
 
 export default function SignupPage() {
@@ -75,14 +76,30 @@ export default function SignupPage() {
 
           <button
             type="button"
-            onClick={() => setSelectedRole("supplier")}
+            disabled={!SUPPLIER_PLATFORM_ENABLED}
+            aria-disabled={!SUPPLIER_PLATFORM_ENABLED}
+            onClick={() => {
+              if (SUPPLIER_PLATFORM_ENABLED) setSelectedRole("supplier");
+            }}
+            title={
+              SUPPLIER_PLATFORM_ENABLED
+                ? undefined
+                : "La registrazione fornitori arriverà nella versione 2"
+            }
             className={cn(
-              "flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200",
-              selectedRole === "supplier"
-                ? "border-forest bg-forest-light"
-                : "border-sage-muted hover:border-sage"
+              "relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200",
+              !SUPPLIER_PLATFORM_ENABLED
+                ? "border-sage-muted opacity-60 cursor-not-allowed"
+                : selectedRole === "supplier"
+                  ? "border-forest bg-forest-light"
+                  : "border-sage-muted hover:border-sage"
             )}
           >
+            {!SUPPLIER_PLATFORM_ENABLED && (
+              <span className="absolute top-1.5 right-1.5 rounded-full bg-sage-muted px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-charcoal">
+                Presto
+              </span>
+            )}
             <Truck
               className={cn(
                 "h-8 w-8",

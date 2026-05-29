@@ -22,6 +22,7 @@ import {
   useSearchKeyboard,
 } from "@/components/shared/awwwards";
 import { CatalogsClient } from "@/app/(app)/cataloghi/catalogs-client";
+import { SUPPLIER_PLATFORM_ENABLED } from "@/lib/utils/constants";
 
 import {
   hasActiveFacets,
@@ -67,8 +68,15 @@ export function SuppliersClient({
     [],
   );
 
-  const initialTab: TabId =
-    sp.get("tab") === "importati" ? "importati" : "connessi";
+  // v1: the platform "Marketplace" (restaurant↔supplier connection) tab is
+  // parked. Restaurateurs work entirely from manually-imported catalogs, so we
+  // default to — and lock onto — the "Importati" tab. The connessi code path
+  // below is kept intact for v2 (flip SUPPLIER_PLATFORM_ENABLED to restore it).
+  const initialTab: TabId = !SUPPLIER_PLATFORM_ENABLED
+    ? "importati"
+    : sp.get("tab") === "importati"
+      ? "importati"
+      : "connessi";
   const [tab, setTab] = useState<TabId>(initialTab);
 
   const [query, setQuery] = useState(initial.query);
@@ -433,14 +441,21 @@ function TabStrip({
     icon: typeof Store;
     count: number;
   }> = [
-    { id: "connessi", label: "Marketplace", icon: Store, count: connessiCount },
+    // v1: "Marketplace" (platform connection) tab hidden until v2.
+    ...(SUPPLIER_PLATFORM_ENABLED
+      ? [{ id: "connessi" as const, label: "Marketplace", icon: Store, count: connessiCount }]
+      : []),
     {
       id: "importati",
-      label: "Importati",
+      label: SUPPLIER_PLATFORM_ENABLED ? "Importati" : "I miei fornitori",
       icon: FileSpreadsheet,
       count: importatiCount,
     },
   ];
+
+  // Nothing to switch between → no tab strip.
+  if (tabs.length <= 1) return null;
+
   return (
     <div className="flex items-end gap-1 border-b border-border-subtle px-4 pt-2">
       {tabs.map((t) => {

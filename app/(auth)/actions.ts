@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { SUPPLIER_PLATFORM_ENABLED } from "@/lib/utils/constants";
 import type { UserRole } from "@/types/database";
 
 // Generic error to avoid disclosing whether an account exists or whether the
@@ -51,6 +52,15 @@ export async function signUp(formData: FormData) {
   const password = formData.get("password") as string;
   const companyName = formData.get("companyName") as string;
   const role = formData.get("role") as UserRole;
+
+  // v1 is restaurant-only. Reject supplier signups server-side even if the
+  // disabled client control is bypassed. Supplier onboarding returns in v2.
+  if (role === "supplier" && !SUPPLIER_PLATFORM_ENABLED) {
+    return {
+      error:
+        "La registrazione come fornitore non è ancora disponibile. Arriverà nella versione 2.",
+    };
+  }
 
   const { error } = await supabase.auth.signUp({
     email,

@@ -1,6 +1,16 @@
 import type { PlanType } from "@/types/database";
 
 // ==========================================
+// Feature flags
+// ==========================================
+
+// v1 is restaurant-only. The supplier side of the platform (supplier signup,
+// supplier marketing surfaces, restaurant↔supplier platform connection) is
+// fully built but parked until v2. Flip to `true` to re-enable it everywhere.
+// DO NOT delete the supplier code paths gated behind this flag.
+export const SUPPLIER_PLATFORM_ENABLED = false;
+
+// ==========================================
 // Routes
 // ==========================================
 
