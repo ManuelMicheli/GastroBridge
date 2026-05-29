@@ -2,9 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { gsap } from "@/lib/gsap-config";
 import { EditorialEyebrow } from "./_primitives/editorial-eyebrow";
-import { MOTION, prefersReducedMotion } from "@/lib/marketing-motion";
+import { MOTION, canAnimate } from "@/lib/marketing-motion";
 import { useMagnetic } from "@/lib/hooks/use-magnetic";
 
 // v1 — single funnel. Restaurant-only copy; no persona branching.
@@ -13,33 +12,33 @@ type Step = {
   title: string;
   description: string;
   meta: string;
-  mock: "catalog" | "order" | "ledger";
+  mock: "catalog" | "order" | "history";
 };
 
 const STEPS: readonly Step[] = [
   {
     step: "01",
-    title: "Cataloghi vivi.",
+    title: "Carica i tuoi fornitori.",
     description:
-      "Prezzi aggiornati, disponibilità reale, nessun PDF da scaricare. Confronti tre fornitori in un'unica vista.",
-    meta: "REAL-TIME · ZERO PDF",
+      "Aggiungi i fornitori con cui già lavori e importa i loro listini — a mano o da CSV/Excel. Una volta sola, poi sono sempre lì.",
+    meta: "IMPORT · CSV",
     mock: "catalog",
   },
   {
     step: "02",
     title: "Ordini in 90 secondi.",
     description:
-      "Aggiungi, conferma, ricevi. Storico, resi e ricorrenti gestiti dalla stessa dashboard, senza una telefonata.",
+      "Apri il catalogo, aggiungi, conferma, invii. Storico, resi e ricorrenti nella stessa dashboard, senza una telefonata.",
     meta: "≈ 90 SECONDI",
     mock: "order",
   },
   {
     step: "03",
-    title: "Pagamenti tracciati.",
+    title: "Tutto organizzato.",
     description:
-      "Stripe paga il fornitore, la fattura arriva nel tuo cassetto fiscale, la riconciliazione è automatica.",
-    meta: "STRIPE · CASSETTO FISCALE",
-    mock: "ledger",
+      "Storico ordini, listini sempre aggiornati, food cost sotto controllo. Esporti in CSV o PDF quando vuoi.",
+    meta: "STORICO · EXPORT",
+    mock: "history",
   },
 ] as const;
 
@@ -51,14 +50,23 @@ export function Mechanism() {
   const ctaLinkRef = useMagnetic<HTMLAnchorElement>({ strength: 0.28, radius: 100 });
 
   useEffect(() => {
-    if (prefersReducedMotion()) {
+    const revealAll = () => {
       headerRef.current?.querySelectorAll<HTMLElement>("[data-reveal]").forEach((el) => (el.style.opacity = "1"));
       trackRef.current?.querySelectorAll<HTMLElement>("[data-card]").forEach((el) => (el.style.opacity = "1"));
       if (ctaRef.current) ctaRef.current.style.opacity = "1";
+    };
+    // Mobile / reduced-motion: show content immediately, never load GSAP.
+    // (The desktop horizontal-pin scroll below is irrelevant on touch anyway.)
+    if (!canAnimate()) {
+      revealAll();
       return;
     }
 
-    const ctx = gsap.context(() => {
+    let cleanup: (() => void) | undefined;
+    let cancelled = false;
+    import("@/lib/gsap-config").then(({ gsap }) => {
+      if (cancelled) return;
+      const ctx = gsap.context(() => {
       const headerEls = headerRef.current?.querySelectorAll<HTMLElement>("[data-reveal]");
       if (headerEls) {
         gsap.fromTo(
@@ -150,9 +158,14 @@ export function Mechanism() {
       } else {
         revealInPlace();
       }
-    }, sectionRef);
+      }, sectionRef);
+      cleanup = () => ctx.revert();
+    });
 
-    return () => ctx.revert();
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
   }, []);
 
   return (
@@ -328,8 +341,8 @@ function MockPanel({ kind }: { kind: Step["mock"] }) {
             aria-hidden
             className="inline-block w-1.5 h-1.5 rounded-full"
             style={{
-              background: "#1B6B4A",
-              boxShadow: "0 0 0 3px rgba(27,107,74,0.12)",
+              background: "var(--color-marketing-primary)",
+              boxShadow: "0 0 0 3px color-mix(in srgb, var(--color-marketing-primary) 14%, transparent)",
             }}
           />
           <span className="uppercase" style={{ color: "var(--color-marketing-ink-muted)", letterSpacing: "0.05em" }}>
@@ -339,7 +352,7 @@ function MockPanel({ kind }: { kind: Step["mock"] }) {
           <span style={{ color: "var(--color-marketing-ink)", fontWeight: 500 }}>
             {kind === "catalog" && "GBR.CTL"}
             {kind === "order" && "GBR.ORD"}
-            {kind === "ledger" && "GBR.LDG"}
+            {kind === "history" && "GBR.LOG"}
           </span>
         </div>
         <span style={{ color: "var(--color-marketing-ink-subtle)" }}>14:23</span>
@@ -348,7 +361,7 @@ function MockPanel({ kind }: { kind: Step["mock"] }) {
       <div className="px-4 py-4 space-y-2">
         {kind === "catalog" && <CatalogMock />}
         {kind === "order" && <OrderMock />}
-        {kind === "ledger" && <LedgerMock />}
+        {kind === "history" && <HistoryMock />}
       </div>
     </div>
   );
@@ -433,24 +446,27 @@ function OrderMock() {
   );
 }
 
-function LedgerMock() {
+function HistoryMock() {
   const rows: readonly (readonly [string, string, string])[] = [
-    ["Caseificio Romanò", "OUT 12 mag", "−€206.40"],
-    ["Stripe fee", "—", "−€0.00"],
-    ["Forno Marini", "12 mag", "−€84.20"],
-    ["Saldo 12 mag", "—", "−€290.60"],
+    ["Caseificio Romanò", "12 mag", "consegnato"],
+    ["Forno Marini", "11 mag", "consegnato"],
+    ["Ortofrutta Po", "10 mag", "in transito"],
+    ["Caseificio Romanò", "08 mag", "consegnato"],
   ] as const;
   return (
     <>
-      {rows.map((r, i) => (
-        <div
-          key={r[0]}
-          className={i === rows.length - 1 ? "pt-2 mt-1" : ""}
-          style={i === rows.length - 1 ? { borderTop: "0.5px solid var(--color-marketing-rule)" } : undefined}
-        >
-          <Row cols={r} emphasis={2} />
-        </div>
+      {rows.map((r) => (
+        <Row key={`${r[0]}-${r[1]}`} cols={r} emphasis={0} />
       ))}
+      <div
+        className="flex items-center justify-between pt-2 mt-1"
+        style={{ borderTop: "0.5px solid var(--color-marketing-rule)" }}
+      >
+        <span className="uppercase" style={{ color: "var(--color-marketing-ink-subtle)", letterSpacing: "0.15em" }}>
+          Esporta
+        </span>
+        <span style={{ color: "var(--color-marketing-ink)", fontWeight: 500 }}>CSV · PDF</span>
+      </div>
     </>
   );
 }

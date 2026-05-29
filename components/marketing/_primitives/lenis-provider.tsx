@@ -1,44 +1,51 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
-import Lenis from "lenis";
-import { gsap, ScrollTrigger } from "@/lib/gsap-config";
+import { useEffect, type ReactNode } from "react";
 
 export function LenisProvider({ children }: { children: ReactNode }) {
-  const lenisRef = useRef<Lenis | null>(null);
-
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const coarse = window.matchMedia("(pointer: coarse)").matches;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    // Smooth scroll is a desktop-only nicety. On touch devices it adds nothing
+    // (native momentum scroll is better) and would drag in the Lenis + GSAP
+    // chunks. Bail before importing so mobile never pays for them.
     if (coarse || reduced) return;
 
-    const lenis = new Lenis({
-      duration: 1.1,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      wheelMultiplier: 1,
-      touchMultiplier: 1.5,
-      smoothWheel: true,
-    });
-    lenisRef.current = lenis;
+    let cleanup: (() => void) | undefined;
+    let cancelled = false;
 
-    function onScroll() {
-      ScrollTrigger.update();
-    }
-    lenis.on("scroll", onScroll);
+    Promise.all([import("lenis"), import("@/lib/gsap-config")]).then(
+      ([{ default: Lenis }, { gsap, ScrollTrigger }]) => {
+        if (cancelled) return;
 
-    function tickerCb(time: number) {
-      lenis.raf(time * 1000);
-    }
-    gsap.ticker.add(tickerCb);
-    gsap.ticker.lagSmoothing(0);
+        const lenis = new Lenis({
+          duration: 1.1,
+          easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+          wheelMultiplier: 1,
+          touchMultiplier: 1.5,
+          smoothWheel: true,
+        });
+
+        const onScroll = () => ScrollTrigger.update();
+        lenis.on("scroll", onScroll);
+
+        const tickerCb = (time: number) => lenis.raf(time * 1000);
+        gsap.ticker.add(tickerCb);
+        gsap.ticker.lagSmoothing(0);
+
+        cleanup = () => {
+          gsap.ticker.remove(tickerCb);
+          lenis.off("scroll", onScroll);
+          lenis.destroy();
+        };
+      }
+    );
 
     return () => {
-      gsap.ticker.remove(tickerCb);
-      lenis.off("scroll", onScroll);
-      lenis.destroy();
-      lenisRef.current = null;
+      cancelled = true;
+      cleanup?.();
     };
   }, []);
 

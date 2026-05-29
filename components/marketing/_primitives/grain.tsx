@@ -14,7 +14,11 @@ export function Grain({
   return (
     <div
       aria-hidden
-      className="pointer-events-none fixed inset-0"
+      // Desktop-only. A fixed, full-viewport layer with mix-blend-mode forces
+      // the compositor to re-blend the whole screen on every scroll frame —
+      // cheap on desktop GPUs, a major scroll-jank / INP cost on mobile. Hidden
+      // below lg; the texture is a subtle finish nobody misses on a phone.
+      className="pointer-events-none fixed inset-0 hidden lg:block"
       style={{
         zIndex,
         opacity,

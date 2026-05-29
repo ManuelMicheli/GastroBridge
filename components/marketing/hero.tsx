@@ -3,19 +3,18 @@
 import { useLayoutEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { gsap, SplitText } from "@/lib/gsap-config";
 import { EditorialEyebrow } from "./_primitives/editorial-eyebrow";
-import { MOTION, prefersReducedMotion } from "@/lib/marketing-motion";
+import { MOTION, canAnimate } from "@/lib/marketing-motion";
 import { usePersona } from "@/lib/marketing-persona-context";
 import { useMagnetic } from "@/lib/hooks/use-magnetic";
 import { MARKETING_IMAGERY } from "@/lib/marketing-imagery";
 
 // v1 — single funnel. The home speaks only to restaurateurs; the supplier
 // side is parked (see SUPPLIER_PLATFORM_ENABLED) and lives at /per-fornitori.
-const HEADLINE = ["Ordina dai tuoi", "fornitori in 90 secondi."] as const;
-const ACCENT = "Zero commissioni. Per sempre.";
+const HEADLINE = ["I tuoi fornitori,", "i tuoi cataloghi."] as const;
+const ACCENT = "Un ordine, in 90 secondi.";
 
-const TRUST = ["14 giorni gratis", "senza carta", "0% commissioni"] as const;
+const TRUST = ["14 giorni gratis", "senza carta", "i tuoi dati, esportabili"] as const;
 
 export function Hero() {
   const sectionRef = useRef<HTMLElement>(null);
@@ -23,91 +22,108 @@ export function Hero() {
   const ctaRef = useMagnetic<HTMLAnchorElement>({ strength: 0.28, radius: 100 });
 
   useLayoutEffect(() => {
-    if (prefersReducedMotion()) {
+    const revealAll = () =>
       sectionRef.current
         ?.querySelectorAll<HTMLElement>("[data-reveal]")
         .forEach((el) => (el.style.opacity = "1"));
+
+    // Mobile / reduced-motion: reveal synchronously (before paint, since this
+    // is a layout effect) so the LCP headline is visible on first paint and
+    // never waits on the GSAP chunk to download/parse. GSAP is never imported.
+    if (!canAnimate()) {
+      revealAll();
       return;
     }
 
-    // Track every SplitText so we revert BEFORE React unmounts the host nodes.
-    const splits: SplitText[] = [];
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline({ defaults: { ease: MOTION.easeEditorial } });
+    let cleanup: (() => void) | undefined;
+    let cancelled = false;
+    import("@/lib/gsap-config").then(({ gsap, SplitText }) => {
+      if (cancelled || !sectionRef.current) return;
 
-      const eyebrow = sectionRef.current?.querySelector<HTMLElement>("[data-reveal='eyebrow']");
-      const heads = sectionRef.current?.querySelectorAll<HTMLElement>("[data-split-target]");
-      const accent = sectionRef.current?.querySelector<HTMLElement>("[data-reveal='accent']");
-      const sub = sectionRef.current?.querySelector<HTMLElement>("[data-reveal='sub']");
-      const ctas = sectionRef.current?.querySelectorAll<HTMLElement>("[data-reveal='cta']");
-      const trust = sectionRef.current?.querySelector<HTMLElement>("[data-reveal='trust']");
+      // Track every SplitText so we revert BEFORE React unmounts the host nodes.
+      const splits: { revert: () => void }[] = [];
+      const ctx = gsap.context(() => {
+        const tl = gsap.timeline({ defaults: { ease: MOTION.easeEditorial } });
 
-      if (eyebrow) {
-        tl.fromTo(
-          eyebrow,
-          { opacity: 0, y: 10 },
-          { opacity: 1, y: 0, duration: MOTION.duration.revealShort },
-          0.1
-        );
-      }
-      heads?.forEach((h, i) => {
-        const split = new SplitText(h, { type: "words" });
-        splits.push(split);
-        tl.fromTo(
-          split.words,
-          { opacity: 0, y: 56 },
-          {
-            opacity: 1,
-            y: 0,
-            stagger: MOTION.stagger.word,
-            duration: MOTION.duration.revealLong,
-          },
-          0.22 + i * 0.06
-        );
-      });
-      if (accent) {
-        tl.fromTo(
-          accent,
-          { opacity: 0, y: 24 },
-          { opacity: 1, y: 0, duration: MOTION.duration.revealBase },
-          "-=0.5"
-        );
-      }
-      if (sub) {
-        tl.fromTo(
-          sub,
-          { opacity: 0, y: 18 },
-          { opacity: 1, y: 0, duration: MOTION.duration.revealBase },
-          "-=0.4"
-        );
-      }
-      if (ctas) {
-        tl.fromTo(
-          ctas,
-          { opacity: 0, y: 14 },
-          { opacity: 1, y: 0, duration: MOTION.duration.revealBase, stagger: 0.08 },
-          "-=0.35"
-        );
-      }
-      if (trust) {
-        tl.fromTo(
-          trust,
-          { opacity: 0, y: 12 },
-          { opacity: 1, y: 0, duration: MOTION.duration.revealShort },
-          "-=0.3"
-        );
-      }
-    }, sectionRef);
+        const eyebrow = sectionRef.current?.querySelector<HTMLElement>("[data-reveal='eyebrow']");
+        const heads = sectionRef.current?.querySelectorAll<HTMLElement>("[data-split-target]");
+        const accent = sectionRef.current?.querySelector<HTMLElement>("[data-reveal='accent']");
+        const sub = sectionRef.current?.querySelector<HTMLElement>("[data-reveal='sub']");
+        const ctas = sectionRef.current?.querySelectorAll<HTMLElement>("[data-reveal='cta']");
+        const trust = sectionRef.current?.querySelector<HTMLElement>("[data-reveal='trust']");
+
+        if (eyebrow) {
+          tl.fromTo(
+            eyebrow,
+            { opacity: 0, y: 10 },
+            { opacity: 1, y: 0, duration: MOTION.duration.revealShort },
+            0.1
+          );
+        }
+        heads?.forEach((h, i) => {
+          const split = new SplitText(h, { type: "words" });
+          splits.push(split);
+          tl.fromTo(
+            split.words,
+            { opacity: 0, y: 56 },
+            {
+              opacity: 1,
+              y: 0,
+              stagger: MOTION.stagger.word,
+              duration: MOTION.duration.revealLong,
+            },
+            0.22 + i * 0.06
+          );
+        });
+        if (accent) {
+          tl.fromTo(
+            accent,
+            { opacity: 0, y: 24 },
+            { opacity: 1, y: 0, duration: MOTION.duration.revealBase },
+            "-=0.5"
+          );
+        }
+        if (sub) {
+          tl.fromTo(
+            sub,
+            { opacity: 0, y: 18 },
+            { opacity: 1, y: 0, duration: MOTION.duration.revealBase },
+            "-=0.4"
+          );
+        }
+        if (ctas) {
+          tl.fromTo(
+            ctas,
+            { opacity: 0, y: 14 },
+            { opacity: 1, y: 0, duration: MOTION.duration.revealBase, stagger: 0.08 },
+            "-=0.35"
+          );
+        }
+        if (trust) {
+          tl.fromTo(
+            trust,
+            { opacity: 0, y: 12 },
+            { opacity: 1, y: 0, duration: MOTION.duration.revealShort },
+            "-=0.3"
+          );
+        }
+      }, sectionRef);
+
+      cleanup = () => {
+        splits.forEach((s) => {
+          try {
+            s.revert();
+          } catch {
+            // ignore — already reverted
+          }
+        });
+        ctx.revert();
+      };
+    });
 
     return () => {
-      splits.forEach((s) => {
-        try {
-          s.revert();
-        } catch {
-          // ignore — already reverted
-        }
-      });
-      ctx.revert();
+      cancelled = true;
+      cleanup?.();
     };
   }, []);
 
@@ -134,7 +150,7 @@ export function Hero() {
           fill
           priority
           sizes="100vw"
-          quality={92}
+          quality={70}
           style={{
             objectFit: "cover",
             objectPosition: MARKETING_IMAGERY.heroRestaurant.position,
@@ -156,9 +172,10 @@ export function Hero() {
               "linear-gradient(180deg, rgba(15,15,16,0.3) 0%, rgba(15,15,16,0.12) 38%, rgba(15,15,16,0.72) 100%)",
           }}
         />
-        {/* film grain */}
+        {/* film grain — desktop only; mix-blend over the LCP image is a paint
+            cost on mobile for a finish that's invisible at phone DPRs */}
         <div
-          className="absolute inset-0"
+          className="absolute inset-0 hidden lg:block"
           style={{
             opacity: 0.16,
             mixBlendMode: "overlay",
@@ -217,8 +234,8 @@ export function Hero() {
             fontFamily: "var(--font-display)",
           }}
         >
-          Prezzi vivi, ordini tracciati, food cost sotto controllo. Smetti di
-          rincorrere il telefono.
+          Carica i fornitori con cui già lavori, importa i loro listini, ordina
+          dal digitale. Basta PDF e telefonate.
         </p>
 
         {/* CTAs */}

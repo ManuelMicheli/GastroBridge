@@ -1,79 +1,19 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { gsap, ScrollTrigger } from "@/lib/gsap-config";
-import { MOTION, prefersReducedMotion } from "@/lib/marketing-motion";
-
-type TickerItem = {
-  label: string;
-  value: number;
-  format?: "int" | "currency" | "percent";
-  prefix?: string;
-  suffix?: string;
-};
-
-const ITEMS: readonly TickerItem[] = [
-  { label: "VOL 24H", value: 127420, format: "currency" },
-  { label: "TXN", value: 1247, format: "int" },
-  { label: "SLA", value: 99.8, format: "percent" },
-  { label: "MOM", value: 24.6, format: "percent", prefix: "▲ +" },
+// v1 — factual strip. No fabricated metrics (the old animated VOL/TXN/SLA/MoM
+// counters were invented) and no payment claims. Just what the tool does.
+const FACTS: readonly string[] = [
+  "I TUOI FORNITORI",
+  "I TUOI CATALOGHI",
+  "IMPORT CSV / EXCEL",
+  "ORDINI IN 90 SECONDI",
+  "STORICO + EXPORT",
+  "NESSUN LOCK-IN",
 ] as const;
 
-function formatValue(item: TickerItem, current: number): string {
-  if (item.format === "currency") {
-    return "€" + Math.round(current).toLocaleString("it-IT");
-  }
-  if (item.format === "percent") {
-    return current.toFixed(1) + "%";
-  }
-  return Math.round(current).toLocaleString("it-IT");
-}
-
 export function TickerBar() {
-  const rootRef = useRef<HTMLDivElement>(null);
-  const valueRefs = useRef<Array<HTMLSpanElement | null>>([]);
-
-  useEffect(() => {
-    if (prefersReducedMotion()) {
-      ITEMS.forEach((item, i) => {
-        const el = valueRefs.current[i];
-        if (el) el.textContent = (item.prefix ?? "") + formatValue(item, item.value) + (item.suffix ?? "");
-      });
-      return;
-    }
-
-    const ctx = gsap.context(() => {
-      const trigger = ScrollTrigger.create({
-        trigger: rootRef.current,
-        start: "top 85%",
-        once: true,
-        onEnter: () => {
-          ITEMS.forEach((item, i) => {
-            const el = valueRefs.current[i];
-            if (!el) return;
-            const state = { val: 0 };
-            gsap.to(state, {
-              val: item.value,
-              duration: MOTION.duration.counter,
-              ease: MOTION.easeEditorial,
-              onUpdate: () => {
-                el.textContent =
-                  (item.prefix ?? "") + formatValue(item, state.val) + (item.suffix ?? "");
-              },
-            });
-          });
-        },
-      });
-
-      return () => trigger.kill();
-    }, rootRef);
-
-    return () => ctx.revert();
-  }, []);
-
   return (
     <div
-      ref={rootRef}
       className="relative border-y font-mono"
       style={{
         borderColor: "var(--color-marketing-rule)",
@@ -95,49 +35,34 @@ export function TickerBar() {
       >
         <span className="flex items-center gap-2 uppercase">
           <span aria-hidden className="ticker-pulse inline-block w-1.5 h-1.5 rounded-full" />
-          <span style={{ color: "var(--color-marketing-ink)" }}>LIVE</span>
+          <span style={{ color: "var(--color-marketing-ink)" }}>GBR</span>
         </span>
 
         <span className="opacity-30" aria-hidden>|</span>
 
-        <span className="uppercase" style={{ color: "var(--color-marketing-ink)" }}>
-          GBR.NET
-        </span>
-
-        <span className="opacity-30" aria-hidden>|</span>
-
-        {ITEMS.map((item, i) => (
-          <span key={item.label} className="flex items-center gap-2 uppercase">
-            <span className="opacity-70">{item.label}</span>
-            <span
-              ref={(el) => { valueRefs.current[i] = el; }}
-              style={{ color: "var(--color-marketing-ink)" }}
-            >
-              {(item.prefix ?? "") + "0" + (item.suffix ?? "")}
-            </span>
+        {FACTS.map((fact, i) => (
+          <span key={fact} className="flex items-center gap-8 uppercase">
+            {i > 0 && <span className="opacity-30" aria-hidden>·</span>}
+            <span style={{ color: "var(--color-marketing-ink)" }}>{fact}</span>
           </span>
         ))}
-
-        <span className="ml-auto uppercase opacity-50 hidden md:inline">
-          LAST UPDATE 14:23:07 CET
-        </span>
       </div>
 
       <style jsx>{`
         .ticker-pulse {
-          background: #1B6B4A;
-          box-shadow: 0 0 0 0 rgba(27, 107, 74, 0.5);
+          background: var(--color-marketing-primary);
+          box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-marketing-primary) 50%, transparent);
           animation: tickerPulse 1.8s cubic-bezier(0.16, 1, 0.3, 1) infinite;
         }
         @keyframes tickerPulse {
           0% {
-            box-shadow: 0 0 0 0 rgba(27, 107, 74, 0.55);
+            box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-marketing-primary) 55%, transparent);
           }
           70% {
-            box-shadow: 0 0 0 8px rgba(27, 107, 74, 0);
+            box-shadow: 0 0 0 8px color-mix(in srgb, var(--color-marketing-primary) 0%, transparent);
           }
           100% {
-            box-shadow: 0 0 0 0 rgba(27, 107, 74, 0);
+            box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-marketing-primary) 0%, transparent);
           }
         }
         .ticker-row::-webkit-scrollbar {

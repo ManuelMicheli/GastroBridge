@@ -1,9 +1,8 @@
 "use client";
 
 import { useLayoutEffect, useRef } from "react";
-import { gsap, SplitText, ScrollTrigger } from "@/lib/gsap-config";
 import { EditorialEyebrow } from "./_primitives/editorial-eyebrow";
-import { MOTION, prefersReducedMotion } from "@/lib/marketing-motion";
+import { MOTION, canAnimate } from "@/lib/marketing-motion";
 
 // v1 — single funnel "Il Problema". Loss-framing before the value pitch.
 // No fabricated metrics: the contrast is the old fragmented workflow vs. GBR.
@@ -24,7 +23,7 @@ export function PromiseSection() {
   const painsRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
-    if (prefersReducedMotion()) {
+    const revealAll = () => {
       [headRef, bodyRef].forEach((r) => r.current && (r.current.style.opacity = "1"));
       panelRef.current
         ?.querySelectorAll<HTMLElement>("[data-line]")
@@ -32,12 +31,20 @@ export function PromiseSection() {
       painsRef.current
         ?.querySelectorAll<HTMLElement>("[data-pain]")
         .forEach((el) => (el.style.opacity = "1"));
+    };
+    // Mobile / reduced-motion: show content immediately, never load GSAP.
+    if (!canAnimate()) {
+      revealAll();
       return;
     }
 
-    const splits: SplitText[] = [];
-    const ctx = gsap.context(() => {
-      const trigger = { trigger: sectionRef.current, start: "top 70%", once: true };
+    let cleanup: (() => void) | undefined;
+    let cancelled = false;
+    import("@/lib/gsap-config").then(({ gsap, SplitText, ScrollTrigger }) => {
+      if (cancelled) return;
+      const splits: { revert: () => void }[] = [];
+      const ctx = gsap.context(() => {
+        const trigger = { trigger: sectionRef.current, start: "top 70%", once: true };
 
       if (headRef.current) {
         const split = new SplitText(headRef.current, { type: "lines", linesClass: "pr-line" });
@@ -104,18 +111,24 @@ export function PromiseSection() {
         );
       }
 
-      ScrollTrigger.refresh();
-    }, sectionRef);
+        ScrollTrigger.refresh();
+      }, sectionRef);
+
+      cleanup = () => {
+        splits.forEach((s) => {
+          try {
+            s.revert();
+          } catch {
+            // ignore
+          }
+        });
+        ctx.revert();
+      };
+    });
 
     return () => {
-      splits.forEach((s) => {
-        try {
-          s.revert();
-        } catch {
-          // ignore
-        }
-      });
-      ctx.revert();
+      cancelled = true;
+      cleanup?.();
     };
   }, []);
 

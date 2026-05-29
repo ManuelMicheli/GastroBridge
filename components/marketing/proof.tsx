@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { gsap } from "@/lib/gsap-config";
 import { EditorialEyebrow } from "./_primitives/editorial-eyebrow";
-import { MOTION, prefersReducedMotion } from "@/lib/marketing-motion";
+import { MOTION, canAnimate } from "@/lib/marketing-motion";
 
 // v1 — "Perché GBR". Trust built on verifiable product facts, not vanity
 // metrics or fabricated testimonials. Every claim here is a real condition.
@@ -15,34 +14,34 @@ type Guarantee = {
 
 const GUARANTEES: readonly Guarantee[] = [
   {
-    mark: "0%",
-    title: "Commissioni",
-    caption: "Zero percentuali su ogni ordine. Paghi il canone, non le transazioni.",
+    mark: "TUOI",
+    title: "I tuoi fornitori",
+    caption: "Porti i fornitori con cui già lavori. Nessun marketplace, nessuna ricerca obbligata.",
+  },
+  {
+    mark: "CSV",
+    title: "Import in un attimo",
+    caption: "Carichi listini e cataloghi anche da Excel/CSV. Aggiorni un prezzo, vale per ogni ordine.",
+  },
+  {
+    mark: "90s",
+    title: "Ordini veloci",
+    caption: "Dall'apertura del catalogo all'ordine inviato in un minuto e mezzo. Senza telefonate.",
   },
   {
     mark: "NO",
     title: "Lock-in",
-    caption: "Esporti storico ordini e fatture in CSV/PDF quando vuoi. Niente gabbia.",
-  },
-  {
-    mark: "7gg",
-    title: "Rimborso garantito",
-    caption: "Mediazione GBR sulle dispute. Fornitore inadempiente sospeso dalla rete.",
+    caption: "Esporti storico ordini e listini in CSV/PDF quando vuoi. I dati restano tuoi.",
   },
   {
     mark: "GDPR",
-    title: "I dati sono tuoi",
-    caption: "Mai rivenduti, mai profilati cross-platform. Esporti o cancelli in ogni momento.",
+    title: "Privacy",
+    caption: "Dati mai rivenduti, mai profilati cross-platform. Esporti o cancelli in ogni momento.",
   },
   {
-    mark: "STRIPE",
-    title: "Pagamenti + fisco",
-    caption: "Stripe incassa, la fattura va al cassetto fiscale, la riconciliazione è automatica.",
-  },
-  {
-    mark: "NO",
-    title: "Esclusiva",
-    caption: "Tieni i tuoi fornitori storici. Usaci per le categorie che vuoi, libero di uscire.",
+    mark: "1",
+    title: "Un posto solo",
+    caption: "Cataloghi, ordini, storico e food cost in un'unica dashboard. Basta PDF sparsi.",
   },
 ] as const;
 
@@ -52,40 +51,53 @@ export function Proof() {
   const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (prefersReducedMotion()) {
+    const revealAll = () => {
       headRef.current?.querySelectorAll<HTMLElement>("[data-reveal]").forEach((el) => (el.style.opacity = "1"));
       gridRef.current?.querySelectorAll<HTMLElement>("[data-cell]").forEach((el) => (el.style.opacity = "1"));
+    };
+    // Mobile / reduced-motion: show content immediately, never load GSAP.
+    if (!canAnimate()) {
+      revealAll();
       return;
     }
 
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        headRef.current?.querySelectorAll("[data-reveal]") ?? [],
-        { opacity: 0, y: 18 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: MOTION.duration.revealBase,
-          stagger: MOTION.stagger.block,
-          ease: MOTION.easeEditorial,
-          scrollTrigger: { trigger: sectionRef.current, start: "top 78%", once: true },
-        }
-      );
-      gsap.fromTo(
-        gridRef.current?.querySelectorAll("[data-cell]") ?? [],
-        { opacity: 0, y: 24 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: MOTION.duration.revealBase,
-          stagger: 0.08,
-          ease: MOTION.easeEditorial,
-          scrollTrigger: { trigger: gridRef.current, start: "top 82%", once: true },
-        }
-      );
-    }, sectionRef);
+    let cleanup: (() => void) | undefined;
+    let cancelled = false;
+    import("@/lib/gsap-config").then(({ gsap }) => {
+      if (cancelled) return;
+      const ctx = gsap.context(() => {
+        gsap.fromTo(
+          headRef.current?.querySelectorAll("[data-reveal]") ?? [],
+          { opacity: 0, y: 18 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: MOTION.duration.revealBase,
+            stagger: MOTION.stagger.block,
+            ease: MOTION.easeEditorial,
+            scrollTrigger: { trigger: sectionRef.current, start: "top 78%", once: true },
+          }
+        );
+        gsap.fromTo(
+          gridRef.current?.querySelectorAll("[data-cell]") ?? [],
+          { opacity: 0, y: 24 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: MOTION.duration.revealBase,
+            stagger: 0.08,
+            ease: MOTION.easeEditorial,
+            scrollTrigger: { trigger: gridRef.current, start: "top 82%", once: true },
+          }
+        );
+      }, sectionRef);
+      cleanup = () => ctx.revert();
+    });
 
-    return () => ctx.revert();
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
   }, []);
 
   return (

@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils/formatters";
 import { EditorialEyebrow } from "./_primitives/editorial-eyebrow";
-import { gsap } from "@/lib/gsap-config";
-import { MOTION, prefersReducedMotion } from "@/lib/marketing-motion";
+import { MOTION, canAnimate } from "@/lib/marketing-motion";
 
 // v1 — restaurant-only FAQ. Blockers that stop a signup come first; billing /
 // privacy / export / coverage follow. Prices reflect the real model (€50/€150).
@@ -12,32 +11,28 @@ type Item = { q: string; a: string };
 
 const ITEMS: readonly Item[] = [
   {
-    q: "Cosa succede se il fornitore non consegna?",
-    a: "Rimborso garantito entro sette giorni. Mediazione GastroBridge sulle dispute, audit del fornitore in caso di mancate consegne ripetute. Se i problemi continuano, viene sospeso dalla rete.",
+    q: "Devo trovare nuovi fornitori sulla piattaforma?",
+    a: "No. GastroBridge parte dai fornitori con cui già lavori: li aggiungi tu e importi i loro listini. Non è un marketplace — è lo strumento per digitalizzare e ordinare dai tuoi fornitori di sempre.",
   },
   {
-    q: "Posso continuare con i miei fornitori storici?",
-    a: "Sì. Nessuna esclusiva. Usaci per alcune categorie, lavora offline per altre. Quando vuoi tornare al telefono sei libero — semplicemente non ti sblocchiamo il listino vivo.",
+    q: "Come importo i miei cataloghi?",
+    a: "Aggiungi un fornitore e carichi il suo listino: a mano oppure importando un file CSV/Excel. Da quel momento ordini sempre da lì, con i prezzi che aggiorni una volta sola.",
   },
   {
     q: "Quanto tempo prima del primo ordine?",
-    a: "Cinque minuti per registrarti, dieci per impostare gli alert sui prezzi delle categorie che usi. Il primo ordine può partire lo stesso giorno se trovi un fornitore già verificato sulla tua zona.",
+    a: "Cinque minuti per registrarti e il tempo di caricare un listino — anche da CSV. Il primo ordine può partire lo stesso giorno.",
+  },
+  {
+    q: "I pagamenti passano dalla piattaforma?",
+    a: "Per ora no. GastroBridge è lo strumento per gestire fornitori, cataloghi e ordini: i pagamenti ai fornitori continui a farli come sempre, fuori dalla piattaforma.",
   },
   {
     q: "Quanto costa?",
-    a: "Base €50/mese, Pro €150/mese. Zero commissioni sulle transazioni: paghi il canone, non gli ordini. Prova gratis 14 giorni, senza carta, disdici quando vuoi. Stripe per i pagamenti, fattura elettronica al cassetto fiscale.",
+    a: "Base €50/mese, Pro €150/mese — è il canone per usare lo strumento, niente percentuali sugli ordini. Prova gratis 14 giorni, senza carta, disdici quando vuoi.",
   },
   {
-    q: "Privacy dei dati ordini?",
-    a: "Niente rivendita dati a terzi, niente profilazione cross-platform. Il volume aggregato della rete viene usato solo per benchmark anonimi. Conservazione conforme a GDPR, esporti o cancelli l'account in ogni momento.",
-  },
-  {
-    q: "Posso esportare i miei dati?",
-    a: "Sì. Storico ordini in CSV/XLSX, fatture in PDF, transazioni Stripe direttamente dal pannello. Niente lock-in: se decidi di andare via, esci con tutto ciò che hai prodotto sulla piattaforma.",
-  },
-  {
-    q: "In quali zone siete attivi?",
-    a: "Nord Italia: Lombardia, Piemonte, Veneto, Emilia-Romagna. Apertura Liguria, Trentino e Toscana nel 2026. Se la tua zona non è coperta, ti avvisiamo all'attivazione — nessun account fantasma in lista d'attesa.",
+    q: "Privacy e proprietà dei dati?",
+    a: "I tuoi dati restano tuoi: niente rivendita a terzi, niente profilazione cross-platform. Conservazione conforme a GDPR. Esporti storico ordini e listini in CSV/PDF, o cancelli l'account, in ogni momento.",
   },
 ] as const;
 
@@ -48,38 +43,53 @@ export function Objections() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    if (prefersReducedMotion()) {
+    const revealAll = () => {
       headRef.current?.querySelectorAll<HTMLElement>("[data-reveal]").forEach((el) => (el.style.opacity = "1"));
       listRef.current?.querySelectorAll<HTMLElement>("[data-row]").forEach((el) => (el.style.opacity = "1"));
+    };
+    // Mobile / reduced-motion: show content immediately, never load GSAP.
+    if (!canAnimate()) {
+      revealAll();
       return;
     }
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        headRef.current?.querySelectorAll("[data-reveal]") ?? [],
-        { opacity: 0, y: 18 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: MOTION.duration.revealBase,
-          stagger: MOTION.stagger.block,
-          ease: MOTION.easeEditorial,
-          scrollTrigger: { trigger: sectionRef.current, start: "top 78%", once: true },
-        }
-      );
-      gsap.fromTo(
-        listRef.current?.querySelectorAll("[data-row]") ?? [],
-        { opacity: 0, y: 14 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: MOTION.duration.revealBase,
-          stagger: 0.05,
-          ease: MOTION.easeEditorial,
-          scrollTrigger: { trigger: listRef.current, start: "top 78%", once: true },
-        }
-      );
-    }, sectionRef);
-    return () => ctx.revert();
+
+    let cleanup: (() => void) | undefined;
+    let cancelled = false;
+    import("@/lib/gsap-config").then(({ gsap }) => {
+      if (cancelled) return;
+      const ctx = gsap.context(() => {
+        gsap.fromTo(
+          headRef.current?.querySelectorAll("[data-reveal]") ?? [],
+          { opacity: 0, y: 18 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: MOTION.duration.revealBase,
+            stagger: MOTION.stagger.block,
+            ease: MOTION.easeEditorial,
+            scrollTrigger: { trigger: sectionRef.current, start: "top 78%", once: true },
+          }
+        );
+        gsap.fromTo(
+          listRef.current?.querySelectorAll("[data-row]") ?? [],
+          { opacity: 0, y: 14 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: MOTION.duration.revealBase,
+            stagger: 0.05,
+            ease: MOTION.easeEditorial,
+            scrollTrigger: { trigger: listRef.current, start: "top 78%", once: true },
+          }
+        );
+      }, sectionRef);
+      cleanup = () => ctx.revert();
+    });
+
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
   }, []);
 
   return (

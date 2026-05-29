@@ -23,3 +23,17 @@ export function prefersReducedMotion(): boolean {
   if (typeof window === "undefined") return false;
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
+
+// Gate for the GSAP/SplitText reveal animations. Returns true only on
+// pointer-fine, motion-allowed devices (i.e. desktop). On touch devices
+// (phones/tablets, `pointer: coarse`) and when the user prefers reduced
+// motion we skip the animations entirely AND never dynamic-import the GSAP
+// chunk — that keeps the marketing bundle off the mobile main thread, which
+// is where the heavy parse/execute cost (and thus TBT) was coming from.
+// Mirrors the existing coarse-pointer gating in LenisProvider and useMagnetic.
+export function canAnimate(): boolean {
+  if (typeof window === "undefined") return false;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
+  if (window.matchMedia("(pointer: coarse)").matches) return false;
+  return true;
+}

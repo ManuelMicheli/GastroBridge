@@ -3,8 +3,7 @@
 import { useLayoutEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { gsap, SplitText } from "@/lib/gsap-config";
-import { MOTION, prefersReducedMotion } from "@/lib/marketing-motion";
+import { MOTION, canAnimate } from "@/lib/marketing-motion";
 import { usePersona } from "@/lib/marketing-persona-context";
 import { useMagnetic } from "@/lib/hooks/use-magnetic";
 import { Grain } from "./_primitives/grain";
@@ -21,16 +20,25 @@ export function Closer() {
   const { setPersona } = usePersona();
 
   useLayoutEffect(() => {
-    if (prefersReducedMotion()) {
+    const revealAll = () => {
       [yearRef, subRef, ctaRef, footRef].forEach((r) => {
         if (r.current) r.current.style.opacity = "1";
       });
       if (headlineRef.current) headlineRef.current.style.opacity = "1";
+    };
+    // Mobile / reduced-motion: show content immediately, never load GSAP.
+    if (!canAnimate()) {
+      revealAll();
       return;
     }
-    const splits: SplitText[] = [];
-    const ctx = gsap.context(() => {
-      const tl = gsap.timeline({
+
+    let cleanup: (() => void) | undefined;
+    let cancelled = false;
+    import("@/lib/gsap-config").then(({ gsap, SplitText }) => {
+      if (cancelled) return;
+      const splits: { revert: () => void }[] = [];
+      const ctx = gsap.context(() => {
+        const tl = gsap.timeline({
         defaults: { ease: MOTION.easeEditorial },
         scrollTrigger: { trigger: sectionRef.current, start: "top 78%", once: true },
       });
@@ -81,17 +89,23 @@ export function Closer() {
         { opacity: 1, duration: MOTION.duration.revealShort },
         "-=0.25"
       );
-    }, sectionRef);
+      }, sectionRef);
+
+      cleanup = () => {
+        splits.forEach((s) => {
+          try {
+            s.revert();
+          } catch {
+            // ignore
+          }
+        });
+        ctx.revert();
+      };
+    });
 
     return () => {
-      splits.forEach((s) => {
-        try {
-          s.revert();
-        } catch {
-          // ignore
-        }
-      });
-      ctx.revert();
+      cancelled = true;
+      cleanup?.();
     };
   }, []);
 
@@ -116,7 +130,7 @@ export function Closer() {
           alt=""
           fill
           sizes="100vw"
-          quality={90}
+          quality={70}
           style={{
             objectFit: "cover",
             objectPosition: MARKETING_IMAGERY.closerAmbient.position,

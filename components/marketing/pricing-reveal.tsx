@@ -2,9 +2,8 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { gsap } from "@/lib/gsap-config";
 import { EditorialEyebrow } from "./_primitives/editorial-eyebrow";
-import { MOTION, prefersReducedMotion } from "@/lib/marketing-motion";
+import { MOTION, canAnimate } from "@/lib/marketing-motion";
 
 // v1 — two fixed plans. No volume slider, no modeled "savings vs intermediari"
 // (that figure came from an assumed rate, not real data). Only true prices.
@@ -24,13 +23,13 @@ const PLANS: readonly Plan[] = [
     name: "Base",
     price: "€50",
     period: "/mese",
-    lead: "Tutto per ordinare e tenere i conti in ordine.",
+    lead: "Tutto per digitalizzare i tuoi fornitori e ordinare.",
     features: [
-      "Catalogo vivo, prezzi aggiornati",
+      "Fornitori e cataloghi illimitati",
+      "Import CSV / Excel",
       "Ordini illimitati",
-      "0% commissioni su ogni ordine",
-      "Stripe + cassetto fiscale",
-      "Storico ed export CSV/PDF",
+      "Food cost e storico",
+      "Export CSV / PDF",
     ],
   },
   {
@@ -56,38 +55,53 @@ export function PricingReveal() {
   const cardsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (prefersReducedMotion()) {
+    const revealAll = () => {
       headerRef.current?.querySelectorAll<HTMLElement>("[data-reveal]").forEach((el) => (el.style.opacity = "1"));
       cardsRef.current?.querySelectorAll<HTMLElement>("[data-card]").forEach((el) => (el.style.opacity = "1"));
+    };
+    // Mobile / reduced-motion: show content immediately, never load GSAP.
+    if (!canAnimate()) {
+      revealAll();
       return;
     }
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        headerRef.current?.querySelectorAll("[data-reveal]") ?? [],
-        { opacity: 0, y: 18 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: MOTION.duration.revealBase,
-          stagger: MOTION.stagger.block,
-          ease: MOTION.easeEditorial,
-          scrollTrigger: { trigger: sectionRef.current, start: "top 78%", once: true },
-        }
-      );
-      gsap.fromTo(
-        cardsRef.current?.querySelectorAll("[data-card]") ?? [],
-        { opacity: 0, y: 28 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: MOTION.duration.revealLong,
-          stagger: 0.1,
-          ease: MOTION.easeEditorial,
-          scrollTrigger: { trigger: cardsRef.current, start: "top 82%", once: true },
-        }
-      );
-    }, sectionRef);
-    return () => ctx.revert();
+
+    let cleanup: (() => void) | undefined;
+    let cancelled = false;
+    import("@/lib/gsap-config").then(({ gsap }) => {
+      if (cancelled) return;
+      const ctx = gsap.context(() => {
+        gsap.fromTo(
+          headerRef.current?.querySelectorAll("[data-reveal]") ?? [],
+          { opacity: 0, y: 18 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: MOTION.duration.revealBase,
+            stagger: MOTION.stagger.block,
+            ease: MOTION.easeEditorial,
+            scrollTrigger: { trigger: sectionRef.current, start: "top 78%", once: true },
+          }
+        );
+        gsap.fromTo(
+          cardsRef.current?.querySelectorAll("[data-card]") ?? [],
+          { opacity: 0, y: 28 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: MOTION.duration.revealLong,
+            stagger: 0.1,
+            ease: MOTION.easeEditorial,
+            scrollTrigger: { trigger: cardsRef.current, start: "top 82%", once: true },
+          }
+        );
+      }, sectionRef);
+      cleanup = () => ctx.revert();
+    });
+
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
   }, []);
 
   return (
@@ -120,7 +134,7 @@ export function PricingReveal() {
         >
           Un canone fisso.
           <br />
-          <span style={{ color: "var(--color-marketing-primary)" }}>0% su ogni ordine.</span>
+          <span style={{ color: "var(--color-marketing-primary)" }}>Niente sorprese.</span>
         </h2>
       </div>
 

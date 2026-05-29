@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { cn } from "@/lib/utils/formatters";
-import { gsap } from "@/lib/gsap-config";
 import { ThemeToggle } from "@/components/marketing/_primitives/theme-toggle";
 
 const NAV_LINKS = [
@@ -51,13 +50,14 @@ export function MarketingNav() {
   function handleAnchorClick(e: React.MouseEvent<HTMLAnchorElement>, href: string) {
     e.preventDefault();
     setMobileOpen(false);
-    const target = document.querySelector(href);
+    const target = document.querySelector<HTMLElement>(href);
     if (target) {
-      gsap.to(window, {
-        scrollTo: { y: target, offsetY: 80 },
-        duration: 0.9,
-        ease: "power3.inOut",
-      });
+      // Native smooth scroll — drops the GSAP ScrollToPlugin dependency from
+      // the nav (which sits in every marketing page) so it never ships to the
+      // client. 80px offset clears the fixed nav.
+      const top = target.getBoundingClientRect().top + window.scrollY - 80;
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      window.scrollTo({ top, behavior: reduced ? "auto" : "smooth" });
     }
   }
 
