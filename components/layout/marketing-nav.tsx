@@ -10,7 +10,7 @@ import { ThemeToggle } from "@/components/marketing/_primitives/theme-toggle";
 
 const NAV_LINKS = [
   { href: "#come-funziona", label: "Meccanismo", type: "anchor" as const },
-  { href: "#crescita", label: "Numeri", type: "anchor" as const },
+  { href: "#perche", label: "Perché", type: "anchor" as const },
   { href: "#prezzo", label: "Prezzo", type: "anchor" as const },
   { href: "#faq", label: "Dubbi", type: "anchor" as const },
 ];

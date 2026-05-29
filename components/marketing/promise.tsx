@@ -4,38 +4,40 @@ import { useLayoutEffect, useRef } from "react";
 import { gsap, SplitText, ScrollTrigger } from "@/lib/gsap-config";
 import { EditorialEyebrow } from "./_primitives/editorial-eyebrow";
 import { MOTION, prefersReducedMotion } from "@/lib/marketing-motion";
-import { usePersona } from "@/lib/marketing-persona-context";
 
-const META = [
-  { label: "ZERO INTERMEDIARI", caption: "Tu e il fornitore. Punto." },
-  { label: "PREZZI VIVI", caption: "Aggiornati ogni ora, non in PDF." },
-  { label: "ORDINI IN 90 SECONDI", caption: "Aggiungi, conferma, ricevi." },
-  { label: "PAGAMENTI CERTI", caption: "Stripe + cassetto fiscale." },
+// v1 — single funnel "Il Problema". Loss-framing before the value pitch.
+// No fabricated metrics: the contrast is the old fragmented workflow vs. GBR.
+const OLD_CHANNELS = ["PDF allegati", "WhatsApp", "Telefono", "Fax", "Excel", "Post-it"] as const;
+
+const PAINS = [
+  { k: "PREZZI OPACHI", v: "li scopri in fattura" },
+  { k: "NESSUNO STORICO", v: "ordini persi nel rumore" },
+  { k: "ERRORI D'ORDINE", v: "righe sbagliate, resi" },
+  { k: "TEMPO PERSO", v: "ore al telefono ogni settimana" },
 ] as const;
 
 export function PromiseSection() {
   const sectionRef = useRef<HTMLElement>(null);
   const headRef = useRef<HTMLHeadingElement>(null);
-  const numberRef = useRef<HTMLDivElement>(null);
-  const labelRef = useRef<HTMLDivElement>(null);
-  const metaRef = useRef<HTMLDivElement>(null);
-  const { persona } = usePersona();
+  const bodyRef = useRef<HTMLParagraphElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const painsRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
     if (prefersReducedMotion()) {
-      [headRef, numberRef, labelRef, metaRef].forEach((r) => {
-        if (r.current) r.current.style.opacity = "1";
-      });
+      [headRef, bodyRef].forEach((r) => r.current && (r.current.style.opacity = "1"));
+      panelRef.current
+        ?.querySelectorAll<HTMLElement>("[data-line]")
+        .forEach((el) => (el.style.opacity = "1"));
+      painsRef.current
+        ?.querySelectorAll<HTMLElement>("[data-pain]")
+        .forEach((el) => (el.style.opacity = "1"));
       return;
     }
 
     const splits: SplitText[] = [];
     const ctx = gsap.context(() => {
-      const tlScroll = {
-        trigger: sectionRef.current,
-        start: "top 70%",
-        once: true,
-      };
+      const trigger = { trigger: sectionRef.current, start: "top 70%", once: true };
 
       if (headRef.current) {
         const split = new SplitText(headRef.current, { type: "lines", linesClass: "pr-line" });
@@ -50,39 +52,46 @@ export function PromiseSection() {
             duration: MOTION.duration.revealLong,
             stagger: MOTION.stagger.line,
             ease: MOTION.easeEditorial,
-            scrollTrigger: tlScroll,
+            scrollTrigger: trigger,
           }
         );
       }
 
-      if (numberRef.current) {
-        gsap.set(numberRef.current, { opacity: 1, clipPath: "inset(100% 0 0 0)" });
-        gsap.to(numberRef.current, {
-          clipPath: "inset(0% 0 0 0)",
-          duration: 1.1,
-          ease: "expo.out",
-          scrollTrigger: { ...tlScroll, start: "top 75%" },
-        });
-      }
-      if (labelRef.current) {
+      if (bodyRef.current) {
         gsap.fromTo(
-          labelRef.current,
-          { opacity: 0, y: 10 },
+          bodyRef.current,
+          { opacity: 0, y: 16 },
           {
             opacity: 1,
             y: 0,
             duration: MOTION.duration.revealBase,
             ease: MOTION.easeEditorial,
-            scrollTrigger: { ...tlScroll, start: "top 72%" },
-            delay: 0.5,
+            scrollTrigger: { ...trigger, start: "top 72%" },
+            delay: 0.25,
           }
         );
       }
 
-      if (metaRef.current) {
-        const items = metaRef.current.querySelectorAll<HTMLElement>("[data-meta-item]");
+      const lines = panelRef.current?.querySelectorAll<HTMLElement>("[data-line]");
+      if (lines) {
         gsap.fromTo(
-          items,
+          lines,
+          { opacity: 0, x: 12 },
+          {
+            opacity: 1,
+            x: 0,
+            duration: MOTION.duration.revealBase,
+            stagger: 0.07,
+            ease: MOTION.easeEditorial,
+            scrollTrigger: { trigger: panelRef.current, start: "top 80%", once: true },
+          }
+        );
+      }
+
+      const pains = painsRef.current?.querySelectorAll<HTMLElement>("[data-pain]");
+      if (pains) {
+        gsap.fromTo(
+          pains,
           { opacity: 0, y: 14 },
           {
             opacity: 1,
@@ -90,7 +99,7 @@ export function PromiseSection() {
             duration: MOTION.duration.revealBase,
             stagger: MOTION.stagger.block,
             ease: MOTION.easeEditorial,
-            scrollTrigger: { ...tlScroll, start: "top 80%" },
+            scrollTrigger: { trigger: painsRef.current, start: "top 82%", once: true },
           }
         );
       }
@@ -108,17 +117,12 @@ export function PromiseSection() {
       });
       ctx.revert();
     };
-  }, [persona]);
-
-  const accentLine =
-    persona === "supplier" ? "e per chi la rifornisce." : "per chi vive in cucina";
-  const muteLine =
-    persona === "supplier" ? "per chi vive in cucina" : "e per chi la rifornisce.";
+  }, []);
 
   return (
     <section
       ref={sectionRef}
-      id="promise"
+      id="problema"
       style={{
         paddingLeft: "var(--gutter-marketing)",
         paddingRight: "var(--gutter-marketing)",
@@ -127,11 +131,11 @@ export function PromiseSection() {
       }}
     >
       <div className="grid grid-cols-12 gap-y-12 gap-x-6 lg:gap-x-10 items-start">
-        <div className="col-span-12 lg:col-span-7">
-          <EditorialEyebrow number="— 01">LA PROMESSA</EditorialEyebrow>
+        {/* left — the pain, in words */}
+        <div className="col-span-12 lg:col-span-6">
+          <EditorialEyebrow number="— 01">OGGI</EditorialEyebrow>
 
           <h2
-            key={persona}
             ref={headRef}
             className="font-display opacity-0 mt-[clamp(24px,3vw,40px)]"
             style={{
@@ -140,18 +144,16 @@ export function PromiseSection() {
               letterSpacing: "var(--type-marketing-h2-ls)",
               color: "var(--color-marketing-ink)",
             }}
-            suppressHydrationWarning
           >
-            Una piattaforma{" "}
-            <span style={{ color: "var(--color-marketing-primary)" }}>{accentLine}</span>{" "}
-            {persona === "supplier" ? "" : <>e <span style={{ color: "var(--color-marketing-ink-muted)" }}>{muteLine}</span></>}
-            {persona === "supplier" && (
-              <span style={{ color: "var(--color-marketing-ink-muted)" }}> {muteLine}</span>
-            )}
+            Ordinare non dovrebbe essere{" "}
+            <span style={{ color: "var(--color-marketing-primary)" }}>
+              una caccia al telefono.
+            </span>
           </h2>
 
           <p
-            className="mt-[clamp(28px,3vw,44px)] max-w-[52ch]"
+            ref={bodyRef}
+            className="opacity-0 mt-[clamp(28px,3vw,44px)] max-w-[48ch]"
             style={{
               fontSize: "var(--type-marketing-pull)",
               lineHeight: "var(--type-marketing-pull-lh)",
@@ -159,60 +161,101 @@ export function PromiseSection() {
               fontFamily: "var(--font-display)",
             }}
           >
-            Una rete dove ogni ordine, ogni prezzo e ogni relazione vivono nello
-            stesso posto — senza filtri e senza fee.
+            Listini in PDF che invecchiano. Prezzi che scopri solo in fattura.
+            Un food cost che non torna mai.
           </p>
         </div>
 
-        <div className="col-span-12 lg:col-span-5 flex flex-col items-start lg:items-end justify-start">
+        {/* right — old method stack, struck, resolved into GBR */}
+        <div className="col-span-12 lg:col-span-5 lg:col-start-8">
           <div
-            ref={numberRef}
-            className="font-display leading-none opacity-0"
+            ref={panelRef}
+            className="font-mono"
             style={{
-              fontSize: "var(--type-marketing-mega)",
-              letterSpacing: "var(--type-marketing-mega-ls)",
-              color: "var(--color-marketing-primary)",
-              willChange: "clip-path",
-            }}
-            aria-hidden
-          >
-            €0
-          </div>
-          <div
-            ref={labelRef}
-            className="opacity-0 mt-4 lg:text-right font-mono uppercase"
-            style={{
-              fontSize: "11px",
-              letterSpacing: "0.22em",
-              color: "var(--color-marketing-ink-subtle)",
-              maxWidth: "22ch",
+              border: "0.5px solid var(--color-marketing-rule-strong)",
+              borderRadius: 8,
+              overflow: "hidden",
+              background: "var(--color-marketing-bg-soft)",
             }}
           >
-            commissioni{" "}
-            <span style={{ color: "var(--color-marketing-ink)" }}>fisse</span>
-            <br />
-            per ristoratori
-            <br />
-            <span aria-hidden className="opacity-50">— da sempre</span>
+            <div
+              className="flex items-center justify-between px-5 py-3"
+              style={{
+                borderBottom: "0.5px solid var(--color-marketing-rule)",
+                background: "var(--color-marketing-bg)",
+              }}
+            >
+              <span
+                className="uppercase"
+                style={{
+                  fontSize: "10px",
+                  letterSpacing: "0.22em",
+                  color: "var(--color-marketing-ink-subtle)",
+                }}
+              >
+                COME ORDINI OGGI
+              </span>
+              <span style={{ fontSize: "10px", color: "var(--color-marketing-ink-subtle)" }}>
+                6 canali
+              </span>
+            </div>
+
+            <div className="px-5 py-5 space-y-3">
+              {OLD_CHANNELS.map((c) => (
+                <div
+                  key={c}
+                  data-line
+                  className="opacity-0 flex items-center gap-3"
+                  style={{ fontSize: "14px", color: "var(--color-marketing-ink-muted)" }}
+                >
+                  <span aria-hidden style={{ color: "var(--color-marketing-ink-subtle)" }}>
+                    ✕
+                  </span>
+                  <span style={{ textDecoration: "line-through", textDecorationThickness: "1px" }}>
+                    {c}
+                  </span>
+                </div>
+              ))}
+
+              <div
+                data-line
+                className="opacity-0 flex items-center gap-3 pt-4 mt-1"
+                style={{
+                  borderTop: "0.5px solid var(--color-marketing-rule)",
+                  fontSize: "15px",
+                }}
+              >
+                <span aria-hidden style={{ color: "var(--color-marketing-primary)" }}>
+                  →
+                </span>
+                <span style={{ color: "var(--color-marketing-ink)", fontWeight: 500 }}>
+                  GBR. Un posto solo.
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
+      {/* pains row */}
       <div
-        ref={metaRef}
+        ref={painsRef}
         className="mt-[clamp(64px,8vw,128px)] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-10 gap-x-8 pt-10"
         style={{ borderTop: "1px solid var(--color-marketing-rule)" }}
       >
-        {META.map((m, i) => (
-          <div key={m.label} data-meta-item className="opacity-0">
+        {PAINS.map((p, i) => (
+          <div key={p.k} data-pain className="opacity-0">
             <p
-              className="font-mono uppercase mb-3"
+              className="font-mono uppercase mb-3 flex items-center gap-2"
               style={{
                 fontSize: "10px",
                 letterSpacing: "0.22em",
                 color: "var(--color-marketing-ink-subtle)",
               }}
             >
+              <span aria-hidden style={{ color: "var(--color-marketing-primary)" }}>
+                ✕
+              </span>
               0{i + 1}
             </p>
             <p
@@ -223,16 +266,10 @@ export function PromiseSection() {
                 color: "var(--color-marketing-ink)",
               }}
             >
-              {m.label}
+              {p.k}
             </p>
-            <p
-              style={{
-                fontSize: "14px",
-                lineHeight: 1.5,
-                color: "var(--color-marketing-ink-muted)",
-              }}
-            >
-              {m.caption}
+            <p style={{ fontSize: "14px", lineHeight: 1.5, color: "var(--color-marketing-ink-muted)" }}>
+              {p.v}
             </p>
           </div>
         ))}

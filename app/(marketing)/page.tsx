@@ -1,28 +1,26 @@
 import { SplitHero } from "@/components/marketing/split-hero";
 import { TickerBar } from "@/components/marketing/_primitives/ticker-bar";
 import { PromiseSection } from "@/components/marketing/promise";
-import { Interlude } from "@/components/marketing/interlude";
 import { Mechanism } from "@/components/marketing/mechanism";
 import { Proof } from "@/components/marketing/proof";
-import { Atelier } from "@/components/marketing/atelier";
 import { PricingReveal } from "@/components/marketing/pricing-reveal";
 import { Objections } from "@/components/marketing/objections";
 import { Closer } from "@/components/marketing/closer";
 import { SectionRule } from "@/components/marketing/_primitives/section-rule";
 
+// v1 — restaurant-only conversion funnel:
+// hero → problema → come funziona → perché GBR → prezzo → faq → cta.
+// Atelier + Interlude (editorial) cut to shorten the path to the CTA.
 export default function HomePage() {
   return (
     <>
       <SplitHero />
       <TickerBar />
       <PromiseSection />
-      <Interlude />
       <SectionRule />
       <Mechanism />
       <SectionRule />
       <Proof />
-      <SectionRule />
-      <Atelier />
       <SectionRule />
       <PricingReveal />
       <SectionRule />

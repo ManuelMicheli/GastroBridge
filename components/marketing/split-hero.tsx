@@ -1,54 +1,26 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { gsap, SplitText } from "@/lib/gsap-config";
 import { EditorialEyebrow } from "./_primitives/editorial-eyebrow";
 import { MOTION, prefersReducedMotion } from "@/lib/marketing-motion";
-import { usePersona, type Persona } from "@/lib/marketing-persona-context";
+import { usePersona } from "@/lib/marketing-persona-context";
 import { useMagnetic } from "@/lib/hooks/use-magnetic";
 import { MARKETING_IMAGERY } from "@/lib/marketing-imagery";
-import { SUPPLIER_PLATFORM_ENABLED } from "@/lib/utils/constants";
 
-type SideData = {
-  persona: Persona;
-  eyebrow: string;
-  headline: readonly [string, string, string];
-  metric: { value: string; label: string };
-  ctaLabel: string;
-  ctaHref: string;
-  side: "left" | "right";
-  image: { src: string; alt: string; position: string };
-};
+// v1 — single funnel. The home speaks only to restaurateurs; the supplier
+// side is parked (see SUPPLIER_PLATFORM_ENABLED) and lives at /per-fornitori.
+const HEADLINE = ["Ordina dai tuoi", "fornitori in 90 secondi."] as const;
+const ACCENT = "Zero commissioni. Per sempre.";
 
-const SIDES: readonly [SideData, SideData] = [
-  {
-    persona: "restaurant",
-    eyebrow: "PER CHI CUCINA · 01",
-    headline: ["Trova.", "Ordina.", "Risparmia."],
-    metric: { value: "1,247", label: "ristoranti attivi" },
-    ctaLabel: "Sono Ristoratore",
-    ctaHref: "/signup?role=restaurant",
-    side: "left",
-    image: MARKETING_IMAGERY.heroRestaurant,
-  },
-  {
-    persona: "supplier",
-    eyebrow: "PER CHI FORNISCE · 02",
-    headline: ["Vendi.", "Cresci.", "Senza fee."],
-    metric: { value: "312", label: "fornitori live" },
-    ctaLabel: "Sono Fornitore",
-    ctaHref: "/signup?role=supplier",
-    side: "right",
-    image: MARKETING_IMAGERY.heroSupplier,
-  },
-] as const;
+const TRUST = ["14 giorni gratis", "senza carta", "0% commissioni"] as const;
 
 export function SplitHero() {
   const sectionRef = useRef<HTMLElement>(null);
-  const [hovered, setHovered] = useState<Persona | null>(null);
-  const { persona, setPersona } = usePersona();
+  const { setPersona } = usePersona();
+  const ctaRef = useMagnetic<HTMLAnchorElement>({ strength: 0.28, radius: 100 });
 
   useLayoutEffect(() => {
     if (prefersReducedMotion()) {
@@ -58,23 +30,23 @@ export function SplitHero() {
       return;
     }
 
-    // Track every SplitText so we can revert BEFORE React unmounts the host
-    // h1. Without explicit revert, SplitText leaves its <div>-wrapped words
-    // in place and React's removeChild fails on the original JSX children
-    // it expects but no longer exist in the DOM.
+    // Track every SplitText so we revert BEFORE React unmounts the host nodes.
     const splits: SplitText[] = [];
     const ctx = gsap.context(() => {
       const tl = gsap.timeline({ defaults: { ease: MOTION.easeEditorial } });
-      const eyebrows = sectionRef.current?.querySelectorAll<HTMLElement>("[data-reveal='eyebrow']");
-      const heads = sectionRef.current?.querySelectorAll<HTMLElement>("[data-split-target]");
-      const metrics = sectionRef.current?.querySelectorAll<HTMLElement>("[data-reveal='metric']");
-      const ctas = sectionRef.current?.querySelectorAll<HTMLElement>("[data-reveal='cta']");
 
-      if (eyebrows) {
+      const eyebrow = sectionRef.current?.querySelector<HTMLElement>("[data-reveal='eyebrow']");
+      const heads = sectionRef.current?.querySelectorAll<HTMLElement>("[data-split-target]");
+      const accent = sectionRef.current?.querySelector<HTMLElement>("[data-reveal='accent']");
+      const sub = sectionRef.current?.querySelector<HTMLElement>("[data-reveal='sub']");
+      const ctas = sectionRef.current?.querySelectorAll<HTMLElement>("[data-reveal='cta']");
+      const trust = sectionRef.current?.querySelector<HTMLElement>("[data-reveal='trust']");
+
+      if (eyebrow) {
         tl.fromTo(
-          eyebrows,
+          eyebrow,
           { opacity: 0, y: 10 },
-          { opacity: 1, y: 0, duration: MOTION.duration.revealShort, stagger: 0.06 },
+          { opacity: 1, y: 0, duration: MOTION.duration.revealShort },
           0.1
         );
       }
@@ -83,22 +55,30 @@ export function SplitHero() {
         splits.push(split);
         tl.fromTo(
           split.words,
-          { opacity: 0, y: 50 },
+          { opacity: 0, y: 56 },
           {
             opacity: 1,
             y: 0,
             stagger: MOTION.stagger.word,
             duration: MOTION.duration.revealLong,
           },
-          0.25 + i * 0.08
+          0.22 + i * 0.06
         );
       });
-      if (metrics) {
+      if (accent) {
         tl.fromTo(
-          metrics,
-          { opacity: 0, y: 14 },
-          { opacity: 1, y: 0, duration: MOTION.duration.revealBase, stagger: 0.08 },
-          "-=0.45"
+          accent,
+          { opacity: 0, y: 24 },
+          { opacity: 1, y: 0, duration: MOTION.duration.revealBase },
+          "-=0.5"
+        );
+      }
+      if (sub) {
+        tl.fromTo(
+          sub,
+          { opacity: 0, y: 18 },
+          { opacity: 1, y: 0, duration: MOTION.duration.revealBase },
+          "-=0.4"
         );
       }
       if (ctas) {
@@ -106,7 +86,15 @@ export function SplitHero() {
           ctas,
           { opacity: 0, y: 14 },
           { opacity: 1, y: 0, duration: MOTION.duration.revealBase, stagger: 0.08 },
-          "-=0.45"
+          "-=0.35"
+        );
+      }
+      if (trust) {
+        tl.fromTo(
+          trust,
+          { opacity: 0, y: 12 },
+          { opacity: 1, y: 0, duration: MOTION.duration.revealShort },
+          "-=0.3"
         );
       }
     }, sectionRef);
@@ -128,121 +116,48 @@ export function SplitHero() {
       ref={sectionRef}
       id="hero"
       data-force-dark="true"
-      className="relative grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] overflow-hidden"
+      className="relative flex flex-col justify-center overflow-hidden isolate"
       style={{
         minHeight: "calc(100svh - 5rem)",
-        paddingTop: "clamp(96px, 12vw, 168px)",
-        paddingBottom: "clamp(48px, 6vw, 96px)",
-        background: "#0A0A0E",
-      }}
-      data-hovered={hovered ?? undefined}
-    >
-      <Side
-        key={SIDES[0].persona}
-        data={SIDES[0]}
-        active={persona === SIDES[0].persona}
-        dimmed={hovered !== null && hovered !== SIDES[0].persona}
-        expanded={hovered === SIDES[0].persona}
-        onHover={() => setHovered(SIDES[0].persona)}
-        onLeave={() => setHovered(null)}
-        onChoose={() => setPersona(SIDES[0].persona)}
-      />
-
-      {/* divider: horizontal rule on mobile, vertical line on desktop */}
-      <div
-        aria-hidden
-        className="h-px w-full md:h-auto md:w-px md:self-stretch"
-        style={{ background: "var(--color-marketing-rule-strong)" }}
-      />
-
-      <Side
-        key={SIDES[1].persona}
-        data={SIDES[1]}
-        active={persona === SIDES[1].persona}
-        dimmed={hovered !== null && hovered !== SIDES[1].persona}
-        expanded={hovered === SIDES[1].persona}
-        onHover={() => setHovered(SIDES[1].persona)}
-        onLeave={() => setHovered(null)}
-        onChoose={() => setPersona(SIDES[1].persona)}
-        comingSoon={!SUPPLIER_PLATFORM_ENABLED}
-      />
-    </section>
-  );
-}
-
-type SideProps = {
-  data: SideData;
-  active: boolean;
-  dimmed: boolean;
-  expanded: boolean;
-  onHover: () => void;
-  onLeave: () => void;
-  onChoose: () => void;
-  comingSoon?: boolean;
-};
-
-function Side({ data, active, dimmed, expanded, onHover, onLeave, onChoose, comingSoon = false }: SideProps) {
-  const ctaRef = useMagnetic<HTMLAnchorElement>({ strength: 0.28, radius: 100 });
-
-  return (
-    <div
-      data-side={data.persona === "supplier" ? "supplier" : undefined}
-      onPointerEnter={onHover}
-      onPointerLeave={onLeave}
-      className="relative flex flex-col justify-between order-1 overflow-hidden isolate"
-      style={{
-        flex: expanded ? "1.4" : dimmed ? "0.6" : "1",
-        transition: "flex 380ms cubic-bezier(0.16, 1, 0.3, 1), filter 380ms cubic-bezier(0.16, 1, 0.3, 1)",
-        filter: dimmed ? "brightness(0.78) saturate(0.7)" : "none",
+        paddingTop: "clamp(112px, 13vw, 184px)",
+        paddingBottom: "clamp(56px, 7vw, 104px)",
         paddingLeft: "var(--gutter-marketing)",
         paddingRight: "var(--gutter-marketing)",
-        paddingTop: "clamp(24px, 4vw, 48px)",
-        paddingBottom: "clamp(32px, 4vw, 56px)",
-        minHeight: "clamp(520px, 62svh, 760px)",
+        background: "#0A0A0E",
       }}
     >
       {/* cinematic backdrop */}
-      <div
-        aria-hidden
-        className="absolute inset-0 -z-10"
-        style={{
-          transform: expanded ? "scale(1.04)" : "scale(1)",
-          transition: "transform 700ms cubic-bezier(0.16, 1, 0.3, 1), opacity 380ms",
-        }}
-      >
+      <div aria-hidden className="absolute inset-0 -z-10">
         <Image
-          src={data.image.src}
+          src={MARKETING_IMAGERY.heroRestaurant.src}
           alt=""
           fill
           priority
-          sizes="(min-width: 1024px) 60vw, 100vw"
+          sizes="100vw"
           quality={92}
           style={{
             objectFit: "cover",
-            objectPosition: data.image.position,
+            objectPosition: MARKETING_IMAGERY.heroRestaurant.position,
           }}
         />
+        {/* warm editorial wash, anchored to the text side */}
         <div
-          aria-hidden
           className="absolute inset-0"
           style={{
             background:
-              data.persona === "supplier"
-                ? "linear-gradient(140deg, rgba(46,27,18,0.62) 0%, rgba(78,21,32,0.7) 55%, rgba(15,15,16,0.86) 100%)"
-                : "linear-gradient(150deg, rgba(78,21,32,0.65) 0%, rgba(46,21,32,0.78) 60%, rgba(15,15,16,0.92) 100%)",
+              "linear-gradient(100deg, rgba(15,15,16,0.94) 0%, rgba(46,21,32,0.82) 42%, rgba(78,21,32,0.5) 72%, rgba(15,15,16,0.4) 100%)",
             mixBlendMode: "multiply",
           }}
         />
         <div
-          aria-hidden
           className="absolute inset-0"
           style={{
             background:
-              "linear-gradient(180deg, rgba(15,15,16,0.18) 0%, rgba(15,15,16,0.32) 45%, rgba(15,15,16,0.78) 100%)",
+              "linear-gradient(180deg, rgba(15,15,16,0.3) 0%, rgba(15,15,16,0.12) 38%, rgba(15,15,16,0.72) 100%)",
           }}
         />
+        {/* film grain */}
         <div
-          aria-hidden
           className="absolute inset-0"
           style={{
             opacity: 0.16,
@@ -254,106 +169,66 @@ function Side({ data, active, dimmed, expanded, onHover, onLeave, onChoose, comi
         />
       </div>
 
-      {/* corner index + active marker */}
-      <div className="flex items-start justify-between gap-6">
-        <div data-reveal="eyebrow" className="opacity-0">
-          <EditorialEyebrow tone={active ? "primary" : "subtle"}>
-            {data.eyebrow}
+      <div className="relative w-full max-w-[1100px]">
+        {/* eyebrow */}
+        <div data-reveal="eyebrow" className="opacity-0 mb-[clamp(28px,4vw,48px)]">
+          <EditorialEyebrow tone="subtle">
+            <span style={{ color: "var(--color-marketing-primary)" }}>●</span>{" "}
+            PER CHI CUCINA · NORD ITALIA
           </EditorialEyebrow>
         </div>
-        {active && !comingSoon && (
-          <span
-            data-reveal="eyebrow"
-            className="opacity-0 font-mono uppercase text-[10px] tracking-[0.22em] flex items-center gap-2"
-            style={{ color: "var(--color-marketing-primary)" }}
-          >
-            <span
-              aria-hidden
-              className="inline-block w-1.5 h-1.5 rounded-full"
-              style={{
-                background: "var(--color-marketing-primary)",
-                boxShadow: "0 0 0 4px color-mix(in srgb, var(--color-marketing-primary) 18%, transparent)",
-              }}
-            />
-            ATTIVO
-          </span>
-        )}
-        {comingSoon && (
-          <span
-            data-reveal="eyebrow"
-            className="opacity-0 font-mono uppercase text-[10px] tracking-[0.22em] rounded-full px-3 py-1"
-            style={{
-              color: "var(--color-marketing-ink)",
-              border: "1px solid var(--color-marketing-rule-strong)",
-              background: "rgba(255,255,255,0.06)",
-            }}
-          >
-            Coming soon
-          </span>
-        )}
-      </div>
 
-      {/* headline — inner span owns split target so React never reconciles
-          children that SplitText has mutated. */}
-      <h1
-        className="font-display mt-[clamp(28px,5vw,72px)] mb-[clamp(28px,4vw,56px)]"
-        style={{
-          fontSize: "var(--type-marketing-display)",
-          lineHeight: "var(--type-marketing-display-lh)",
-          letterSpacing: "var(--type-marketing-display-ls)",
-          color: "var(--color-marketing-ink)",
-        }}
-      >
-        <span
-          data-reveal="head"
-          data-split-target
-          className="block opacity-0"
-          style={{ whiteSpace: "pre-line" }}
-          suppressHydrationWarning
-        >
-          {data.headline.join("\n")}
-        </span>
-      </h1>
-
-      {/* metric + cta footer */}
-      <div className="flex flex-col gap-[clamp(20px,3vw,32px)]">
-        <div
-          data-reveal="metric"
-          className="opacity-0 flex items-center gap-4 font-mono uppercase"
+        {/* headline */}
+        <h1
+          className="font-display"
           style={{
-            fontSize: "11px",
-            letterSpacing: "0.18em",
-            color: "var(--color-marketing-ink-subtle)",
+            fontSize: "var(--type-marketing-display)",
+            lineHeight: "var(--type-marketing-display-lh)",
+            letterSpacing: "var(--type-marketing-display-ls)",
+            color: "var(--color-marketing-ink)",
           }}
         >
           <span
-            aria-hidden
-            className="inline-block h-px"
-            style={{ width: 36, background: "var(--color-marketing-ink-subtle)" }}
-          />
-          <span style={{ color: "var(--color-marketing-ink)" }}>{data.metric.value}</span>
-          <span>{data.metric.label}</span>
-        </div>
+            data-reveal="head"
+            data-split-target
+            className="block opacity-0"
+            style={{ whiteSpace: "pre-line" }}
+            suppressHydrationWarning
+          >
+            {HEADLINE.join("\n")}
+          </span>
+          <span
+            data-reveal="accent"
+            className="block opacity-0 mt-[0.12em]"
+            style={{ color: "var(--color-marketing-primary)" }}
+          >
+            {ACCENT}
+          </span>
+        </h1>
 
-        <div data-reveal="cta" className="opacity-0">
-          {comingSoon ? (
-            <span
-              className="inline-flex items-center gap-3 rounded-full px-7 py-3.5 text-[14px] tracking-wide cursor-not-allowed"
-              style={{
-                border: "1px solid var(--color-marketing-rule-strong)",
-                color: "var(--color-marketing-ink-muted)",
-                background: "rgba(255,255,255,0.04)",
-              }}
-              title="Disponibile nella versione 2"
-            >
-              {data.ctaLabel} · presto
-            </span>
-          ) : (
+        {/* sub */}
+        <p
+          data-reveal="sub"
+          className="opacity-0 mt-[clamp(28px,3.5vw,48px)] max-w-[46ch]"
+          style={{
+            fontSize: "var(--type-marketing-pull)",
+            lineHeight: "var(--type-marketing-pull-lh)",
+            color: "var(--color-marketing-ink-muted)",
+            fontFamily: "var(--font-display)",
+          }}
+        >
+          Prezzi vivi, ordini tracciati, food cost sotto controllo. Smetti di
+          rincorrere il telefono.
+        </p>
+
+        {/* CTAs */}
+        <div className="mt-[clamp(36px,4.5vw,64px)] flex flex-wrap items-center gap-x-8 gap-y-5">
+          <div data-reveal="cta" className="opacity-0">
             <Link
               ref={ctaRef}
-              href={data.ctaHref}
-              onClick={onChoose}
-              className="group inline-flex items-center gap-3 rounded-full px-7 py-3.5 text-[14px] tracking-wide will-change-transform"
+              href="/signup?role=restaurant"
+              onClick={() => setPersona("restaurant")}
+              className="group inline-flex items-center gap-3 rounded-full px-8 py-4 text-[14px] tracking-wide will-change-transform"
               style={{
                 background: "var(--color-marketing-primary)",
                 color: "var(--color-marketing-on-primary)",
@@ -362,14 +237,56 @@ function Side({ data, active, dimmed, expanded, onHover, onLeave, onChoose, comi
               onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-marketing-primary-hover)")}
               onMouseLeave={(e) => (e.currentTarget.style.background = "var(--color-marketing-primary)")}
             >
-              {data.ctaLabel}
+              Prova gratis
               <span aria-hidden className="inline-block transition-transform duration-300 group-hover:translate-x-1">
                 →
               </span>
             </Link>
-          )}
+          </div>
+
+          <div data-reveal="cta" className="opacity-0">
+            <Link
+              href="#come-funziona"
+              className="group inline-flex items-center gap-3 text-[14px] tracking-wide"
+              style={{ color: "var(--color-marketing-ink)" }}
+            >
+              <span
+                aria-hidden
+                className="inline-flex items-center justify-center w-9 h-9 rounded-full transition-colors"
+                style={{ border: "1px solid var(--color-marketing-rule-strong)" }}
+              >
+                ▷
+              </span>
+              <span className="link-editorial">guarda 90 sec</span>
+            </Link>
+          </div>
+        </div>
+
+        {/* trust strip */}
+        <div
+          data-reveal="trust"
+          className="opacity-0 mt-[clamp(40px,5vw,72px)] flex flex-wrap items-center gap-x-4 gap-y-2 font-mono uppercase"
+          style={{
+            fontSize: "11px",
+            letterSpacing: "0.2em",
+            color: "var(--color-marketing-ink-subtle)",
+          }}
+        >
+          <span
+            aria-hidden
+            className="inline-block h-px"
+            style={{ width: 36, background: "var(--color-marketing-ink-subtle)" }}
+          />
+          {TRUST.map((t, i) => (
+            <span key={t} className="flex items-center gap-4">
+              {i > 0 && <span aria-hidden className="opacity-40">·</span>}
+              <span style={{ color: i === TRUST.length - 1 ? "var(--color-marketing-ink)" : undefined }}>
+                {t}
+              </span>
+            </span>
+          ))}
         </div>
       </div>
-    </div>
+    </section>
   );
 }

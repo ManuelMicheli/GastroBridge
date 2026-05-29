@@ -1,15 +1,17 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Link from "next/link";
 import { gsap } from "@/lib/gsap-config";
 import { EditorialEyebrow } from "./_primitives/editorial-eyebrow";
 import { MOTION, prefersReducedMotion } from "@/lib/marketing-motion";
-import { usePersona, type Persona } from "@/lib/marketing-persona-context";
+import { useMagnetic } from "@/lib/hooks/use-magnetic";
 
+// v1 — single funnel. Restaurant-only copy; no persona branching.
 type Step = {
   step: string;
-  title: { restaurant: string; supplier: string };
-  description: { restaurant: string; supplier: string };
+  title: string;
+  description: string;
   meta: string;
   mock: "catalog" | "order" | "ledger";
 };
@@ -17,46 +19,25 @@ type Step = {
 const STEPS: readonly Step[] = [
   {
     step: "01",
-    title: {
-      restaurant: "Cataloghi vivi.",
-      supplier: "Listini sempre online.",
-    },
-    description: {
-      restaurant:
-        "Prezzi aggiornati, disponibilità reale, nessun PDF chiuso da scaricare. Confronti tre fornitori in un'unica vista.",
-      supplier:
-        "Aggiorni un prezzo una volta: appare istantaneamente a tutti i ristoranti che ti seguono. Niente listini di carta da rinviare.",
-    },
+    title: "Cataloghi vivi.",
+    description:
+      "Prezzi aggiornati, disponibilità reale, nessun PDF da scaricare. Confronti tre fornitori in un'unica vista.",
     meta: "REAL-TIME · ZERO PDF",
     mock: "catalog",
   },
   {
     step: "02",
-    title: {
-      restaurant: "Ordini in 90 secondi.",
-      supplier: "Ordini in arrivo, già pronti.",
-    },
-    description: {
-      restaurant:
-        "Aggiungi, conferma, ricevi. Storico, resi e ricorrenti gestiti dalla stessa dashboard, senza una telefonata.",
-      supplier:
-        "Ricevi ordini strutturati pronti per il magazzino. Conferma con un click, programmi la consegna, chiudi la pratica.",
-    },
+    title: "Ordini in 90 secondi.",
+    description:
+      "Aggiungi, conferma, ricevi. Storico, resi e ricorrenti gestiti dalla stessa dashboard, senza una telefonata.",
     meta: "≈ 90 SECONDI",
     mock: "order",
   },
   {
     step: "03",
-    title: {
-      restaurant: "Pagamenti tracciati.",
-      supplier: "Incassi senza solleciti.",
-    },
-    description: {
-      restaurant:
-        "Stripe paga il fornitore, la fattura arriva nel tuo cassetto fiscale, la riconciliazione è automatica.",
-      supplier:
-        "Stripe incassa al posto tuo. Vedi DSO, scaduti e flusso giornaliero senza chiamare il commercialista.",
-    },
+    title: "Pagamenti tracciati.",
+    description:
+      "Stripe paga il fornitore, la fattura arriva nel tuo cassetto fiscale, la riconciliazione è automatica.",
     meta: "STRIPE · CASSETTO FISCALE",
     mock: "ledger",
   },
@@ -66,12 +47,14 @@ export function Mechanism() {
   const sectionRef = useRef<HTMLElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
-  const { persona } = usePersona();
+  const ctaRef = useRef<HTMLDivElement>(null);
+  const ctaLinkRef = useMagnetic<HTMLAnchorElement>({ strength: 0.28, radius: 100 });
 
   useEffect(() => {
     if (prefersReducedMotion()) {
       headerRef.current?.querySelectorAll<HTMLElement>("[data-reveal]").forEach((el) => (el.style.opacity = "1"));
       trackRef.current?.querySelectorAll<HTMLElement>("[data-card]").forEach((el) => (el.style.opacity = "1"));
+      if (ctaRef.current) ctaRef.current.style.opacity = "1";
       return;
     }
 
@@ -88,6 +71,20 @@ export function Mechanism() {
             stagger: MOTION.stagger.block,
             ease: MOTION.easeEditorial,
             scrollTrigger: { trigger: headerRef.current, start: "top 78%", once: true },
+          }
+        );
+      }
+
+      if (ctaRef.current) {
+        gsap.fromTo(
+          ctaRef.current,
+          { opacity: 0, y: 18 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: MOTION.duration.revealBase,
+            ease: MOTION.easeEditorial,
+            scrollTrigger: { trigger: ctaRef.current, start: "top 88%", once: true },
           }
         );
       }
@@ -178,7 +175,7 @@ export function Mechanism() {
         }}
       >
         <div data-reveal className="col-span-12 lg:col-span-4 opacity-0">
-          <EditorialEyebrow number="— 02">IL MECCANISMO</EditorialEyebrow>
+          <EditorialEyebrow number="— 02">COME FUNZIONA</EditorialEyebrow>
         </div>
         <h2
           data-reveal
@@ -192,7 +189,7 @@ export function Mechanism() {
         >
           Tre passi.
           <br />
-          <span style={{ color: "var(--color-marketing-ink-muted)" }}>Un flusso senza frizione.</span>
+          <span style={{ color: "var(--color-marketing-ink-muted)" }}>Zero attrito.</span>
         </h2>
       </div>
 
@@ -249,7 +246,7 @@ export function Mechanism() {
                 color: "var(--color-marketing-ink)",
               }}
             >
-              {s.title[persona]}
+              {s.title}
             </h3>
             <p
               className="mb-8 max-w-[40ch]"
@@ -259,18 +256,56 @@ export function Mechanism() {
                 color: "var(--color-marketing-ink-muted)",
               }}
             >
-              {s.description[persona]}
+              {s.description}
             </p>
 
-            <MockPanel kind={s.mock} persona={persona} />
+            <MockPanel kind={s.mock} />
           </article>
         ))}
+      </div>
+
+      {/* CTA — close the loop before the next section */}
+      <div
+        ref={ctaRef}
+        className="opacity-0 mt-[clamp(56px,7vw,112px)] flex flex-wrap items-center gap-x-8 gap-y-4"
+        style={{
+          paddingLeft: "var(--gutter-marketing)",
+          paddingRight: "var(--gutter-marketing)",
+        }}
+      >
+        <Link
+          ref={ctaLinkRef}
+          href="/signup?role=restaurant"
+          className="group inline-flex items-center gap-3 rounded-full px-8 py-4 text-[14px] tracking-wide will-change-transform"
+          style={{
+            background: "var(--color-marketing-primary)",
+            color: "var(--color-marketing-on-primary)",
+            transition: "background-color 240ms cubic-bezier(0.16, 1, 0.3, 1)",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-marketing-primary-hover)")}
+          onMouseLeave={(e) => (e.currentTarget.style.background = "var(--color-marketing-primary)")}
+        >
+          Prova gratis
+          <span aria-hidden className="inline-block transition-transform duration-300 group-hover:translate-x-1">
+            →
+          </span>
+        </Link>
+        <span
+          className="font-mono uppercase"
+          style={{
+            fontSize: "11px",
+            letterSpacing: "0.2em",
+            color: "var(--color-marketing-ink-subtle)",
+          }}
+        >
+          14 giorni · senza carta
+        </span>
       </div>
     </section>
   );
 }
 
-function MockPanel({ kind, persona }: { kind: Step["mock"]; persona: Persona }) {
+function MockPanel({ kind }: { kind: Step["mock"] }) {
   return (
     <div
       className="mt-auto font-mono"
@@ -312,9 +347,9 @@ function MockPanel({ kind, persona }: { kind: Step["mock"]; persona: Persona }) 
       </div>
 
       <div className="px-4 py-4 space-y-2">
-        {kind === "catalog" && <CatalogMock persona={persona} />}
-        {kind === "order" && <OrderMock persona={persona} />}
-        {kind === "ledger" && <LedgerMock persona={persona} />}
+        {kind === "catalog" && <CatalogMock />}
+        {kind === "order" && <OrderMock />}
+        {kind === "ledger" && <LedgerMock />}
       </div>
     </div>
   );
@@ -348,9 +383,9 @@ function Row({
   );
 }
 
-function CatalogMock({ persona }: { persona: Persona }) {
+function CatalogMock() {
   const rows: readonly (readonly [string, string, string])[] = [
-    ["Mozzarella fior di latte", "€7.20/kg", persona === "supplier" ? "stock 240" : "↓ −0.30"],
+    ["Mozzarella fior di latte", "€7.20/kg", "↓ −0.30"],
     ["Pomodoro pelato 3kg", "€4.80/cz", "↓ −0.10"],
     ["Olio EVO 5L", "€32.10/cz", "→ stab."],
     ["Farina 00 25kg", "€18.40/cz", "↑ +0.40"],
@@ -364,13 +399,11 @@ function CatalogMock({ persona }: { persona: Persona }) {
   );
 }
 
-function OrderMock({ persona }: { persona: Persona }) {
+function OrderMock() {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <span style={{ color: "var(--color-marketing-ink-muted)" }}>
-          {persona === "supplier" ? "Da Pizzeria Centrale" : "A Caseificio Romanò"}
-        </span>
+        <span style={{ color: "var(--color-marketing-ink-muted)" }}>A Caseificio Romanò</span>
         <span style={{ color: "var(--color-marketing-ink)", fontWeight: 500 }}>#A-1247</span>
       </div>
       <div style={{ borderTop: "0.5px solid var(--color-marketing-rule)", paddingTop: 10 }} className="space-y-2">
@@ -394,25 +427,19 @@ function OrderMock({ persona }: { persona: Persona }) {
           style={{ background: "var(--color-marketing-primary)" }}
         />
         <span className="uppercase" style={{ color: "var(--color-marketing-primary)", letterSpacing: "0.15em", fontSize: "10px" }}>
-          {persona === "supplier" ? "Confermato · cons. 09:00" : "Confermato · ETA 12 mag"}
+          Confermato · ETA 12 mag
         </span>
       </div>
     </div>
   );
 }
 
-function LedgerMock({ persona }: { persona: Persona }) {
+function LedgerMock() {
   const rows: readonly (readonly [string, string, string])[] = [
-    persona === "supplier"
-      ? (["Pizzeria Centrale", "INC 12 mag", "+€206.40"] as const)
-      : (["Caseificio Romanò", "OUT 12 mag", "−€206.40"] as const),
+    ["Caseificio Romanò", "OUT 12 mag", "−€206.40"],
     ["Stripe fee", "—", "−€0.00"],
-    [
-      persona === "supplier" ? "Trattoria Cinque" : "Forno Marini",
-      "12 mag",
-      persona === "supplier" ? "+€84.20" : "−€84.20",
-    ],
-    ["Saldo 12 mag", "—", persona === "supplier" ? "+€290.60" : "−€290.60"],
+    ["Forno Marini", "12 mag", "−€84.20"],
+    ["Saldo 12 mag", "—", "−€290.60"],
   ] as const;
   return (
     <>

@@ -6,7 +6,6 @@ import Image from "next/image";
 import { gsap, SplitText } from "@/lib/gsap-config";
 import { MOTION, prefersReducedMotion } from "@/lib/marketing-motion";
 import { usePersona } from "@/lib/marketing-persona-context";
-import { SUPPLIER_PLATFORM_ENABLED } from "@/lib/utils/constants";
 import { useMagnetic } from "@/lib/hooks/use-magnetic";
 import { Grain } from "./_primitives/grain";
 import { MARKETING_IMAGERY } from "@/lib/marketing-imagery";
@@ -19,7 +18,7 @@ export function Closer() {
   const ctaRef = useRef<HTMLDivElement>(null);
   const footRef = useRef<HTMLDivElement>(null);
   const ctaPrimaryRef = useMagnetic<HTMLAnchorElement>({ strength: 0.3, radius: 110 });
-  const { persona, setPersona } = usePersona();
+  const { setPersona } = usePersona();
 
   useLayoutEffect(() => {
     if (prefersReducedMotion()) {
@@ -96,9 +95,8 @@ export function Closer() {
     };
   }, []);
 
-  const restaurantActive = persona === "restaurant";
-  const supplierActive = persona === "supplier";
-
+  // v1 — single restaurant CTA. persona is always "restaurant" in v1; the
+  // supplier signup lives at /per-fornitori, surfaced only from the footer.
   return (
     <section
       ref={sectionRef}
@@ -197,8 +195,8 @@ export function Closer() {
             fontFamily: "var(--font-display)",
           }}
         >
-          Cinque minuti per registrarti. Due settimane per capire se ti stiamo
-          restituendo tempo. Nessuna carta, nessun contratto.
+          Cinque minuti per iniziare. Quattordici giorni di prova per capire se
+          ti stiamo restituendo tempo. Nessuna carta, nessun contratto.
         </p>
 
         <div
@@ -210,57 +208,19 @@ export function Closer() {
             href="/signup?role=restaurant"
             onClick={() => setPersona("restaurant")}
             onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-marketing-primary-hover)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = restaurantActive ? "var(--color-marketing-primary)" : "transparent")}
-            className="inline-flex items-center gap-3 rounded-full px-8 py-4 text-[14px] tracking-wide will-change-transform"
+            onMouseLeave={(e) => (e.currentTarget.style.background = "var(--color-marketing-primary)")}
+            className="group inline-flex items-center gap-3 rounded-full px-8 py-4 text-[14px] tracking-wide will-change-transform"
             style={{
-              background: restaurantActive ? "var(--color-marketing-primary)" : "transparent",
-              color: restaurantActive ? "var(--color-marketing-on-primary)" : "var(--color-marketing-ink)",
-              border: restaurantActive ? "1px solid transparent" : "1px solid var(--color-marketing-rule-strong)",
-              transition: "background-color 240ms cubic-bezier(0.16, 1, 0.3, 1), color 240ms cubic-bezier(0.16, 1, 0.3, 1)",
+              background: "var(--color-marketing-primary)",
+              color: "var(--color-marketing-on-primary)",
+              transition: "background-color 240ms cubic-bezier(0.16, 1, 0.3, 1)",
             }}
           >
-            Crea account ristoratore
-            <span aria-hidden>→</span>
-          </Link>
-
-          <span
-            aria-hidden
-            className="hidden sm:block"
-            style={{ height: 28, width: 1, background: "var(--color-marketing-rule-strong)" }}
-          />
-
-          {SUPPLIER_PLATFORM_ENABLED ? (
-            <Link
-              href="/signup?role=supplier"
-              onClick={() => setPersona("supplier")}
-              data-side="supplier"
-              className="inline-flex items-center gap-3 rounded-full px-8 py-4 text-[14px] tracking-wide"
-              style={{
-                background: supplierActive ? "var(--color-marketing-primary)" : "transparent",
-                color: supplierActive ? "var(--color-marketing-on-primary)" : "var(--color-marketing-ink)",
-                border: supplierActive ? "1px solid transparent" : "1px solid var(--color-marketing-rule-strong)",
-                transition: "background-color 240ms cubic-bezier(0.16, 1, 0.3, 1), color 240ms cubic-bezier(0.16, 1, 0.3, 1)",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "var(--color-marketing-primary-hover)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = supplierActive ? "var(--color-marketing-primary)" : "transparent")}
-            >
-              Crea account fornitore
-              <span aria-hidden>→</span>
-            </Link>
-          ) : (
-            <span
-              data-side="supplier"
-              title="Disponibile nella versione 2"
-              className="inline-flex items-center gap-3 rounded-full px-8 py-4 text-[14px] tracking-wide cursor-not-allowed"
-              style={{
-                background: "transparent",
-                color: "var(--color-marketing-ink-muted)",
-                border: "1px solid var(--color-marketing-rule-strong)",
-              }}
-            >
-              Account fornitore · presto
+            Crea il tuo account gratis
+            <span aria-hidden className="inline-block transition-transform duration-300 group-hover:translate-x-1">
+              →
             </span>
-          )}
+          </Link>
         </div>
 
         <div
@@ -272,27 +232,11 @@ export function Closer() {
             color: "var(--color-marketing-ink-subtle)",
           }}
         >
-          <span>90 secondi</span>
+          <span>14 giorni gratis</span>
           <span aria-hidden className="opacity-50">·</span>
           <span>senza carta</span>
           <span aria-hidden className="opacity-50">·</span>
-          <span>zero impegno</span>
-        </div>
-
-        <hr
-          className="mt-[clamp(72px,9vw,144px)] border-0 border-t"
-          style={{ borderColor: "var(--color-marketing-rule)" }}
-        />
-        <div
-          className="mt-6 flex flex-wrap items-center justify-between gap-4 font-mono uppercase"
-          style={{
-            fontSize: "11px",
-            letterSpacing: "0.22em",
-            color: "var(--color-marketing-ink-subtle)",
-          }}
-        >
-          <span>GBR · Bologna · 2026</span>
-          <span aria-hidden>—</span>
+          <span>disdici quando vuoi</span>
         </div>
       </div>
     </section>

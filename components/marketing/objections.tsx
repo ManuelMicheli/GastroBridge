@@ -5,85 +5,47 @@ import { cn } from "@/lib/utils/formatters";
 import { EditorialEyebrow } from "./_primitives/editorial-eyebrow";
 import { gsap } from "@/lib/gsap-config";
 import { MOTION, prefersReducedMotion } from "@/lib/marketing-motion";
-import { usePersona, type Persona } from "@/lib/marketing-persona-context";
 
-type Audience = Persona | "both";
-
-type Item = {
-  q: string;
-  a: string;
-  audience: Audience;
-};
+// v1 — restaurant-only FAQ. Blockers that stop a signup come first; billing /
+// privacy / export / coverage follow. Prices reflect the real model (€50/€150).
+type Item = { q: string; a: string };
 
 const ITEMS: readonly Item[] = [
   {
     q: "Cosa succede se il fornitore non consegna?",
     a: "Rimborso garantito entro sette giorni. Mediazione GastroBridge sulle dispute, audit del fornitore in caso di mancate consegne ripetute. Se i problemi continuano, viene sospeso dalla rete.",
-    audience: "restaurant",
   },
   {
     q: "Posso continuare con i miei fornitori storici?",
-    a: "Sì. Nessuna esclusiva. Usaci per alcune categorie, lavora offline per altre. Quando vuoi tornare al telefono, sei libero — semplicemente non ti sblocchiamo il listino vivo.",
-    audience: "restaurant",
+    a: "Sì. Nessuna esclusiva. Usaci per alcune categorie, lavora offline per altre. Quando vuoi tornare al telefono sei libero — semplicemente non ti sblocchiamo il listino vivo.",
   },
   {
     q: "Quanto tempo prima del primo ordine?",
-    a: "Cinque minuti per registrarti, dieci minuti per impostare gli alert sui prezzi delle categorie che usi. Il primo ordine può partire lo stesso giorno se trovi un fornitore già verificato sulla tua zona.",
-    audience: "restaurant",
+    a: "Cinque minuti per registrarti, dieci per impostare gli alert sui prezzi delle categorie che usi. Il primo ordine può partire lo stesso giorno se trovi un fornitore già verificato sulla tua zona.",
   },
   {
-    q: "Come faccio a entrare come fornitore?",
-    a: "Apri il profilo da /per-fornitori con P.IVA, sede, categorie e zone di consegna. Carichi il catalogo (anche CSV) e il team verifica entro 24 ore lavorative. Niente costi di onboarding.",
-    audience: "supplier",
-  },
-  {
-    q: "Chi vede i miei prezzi?",
-    a: "Solo i ristoratori autenticati nella tua zona di consegna. Puoi tenere riservati i listini a clienti specifici, gestire prezzi differenziati per fascia ordine, oppure renderli pubblici per acquisire visibilità. Decidi tu.",
-    audience: "supplier",
-  },
-  {
-    q: "Come gestisco gli ordini in arrivo?",
-    a: "Dashboard unica: stato ordine, conferma, programmazione consegna, DDT, fattura. Push notification su PWA. Esportazione CSV per il gestionale di magazzino. Webhook disponibili sui piani Pro.",
-    audience: "supplier",
-  },
-  {
-    q: "Come fatturate?",
-    a: "Ristoratori: piano Starter gratuito sotto €15.000 di volume mensile. Pro €49/mese oltre soglia, niente percentuali sulle transazioni. Fornitori: Starter gratuito, Pro €79/mese con analytics e API. Stripe per i pagamenti, fattura elettronica al cassetto fiscale.",
-    audience: "both",
+    q: "Quanto costa?",
+    a: "Base €50/mese, Pro €150/mese. Zero commissioni sulle transazioni: paghi il canone, non gli ordini. Prova gratis 14 giorni, senza carta, disdici quando vuoi. Stripe per i pagamenti, fattura elettronica al cassetto fiscale.",
   },
   {
     q: "Privacy dei dati ordini?",
     a: "Niente rivendita dati a terzi, niente profilazione cross-platform. Il volume aggregato della rete viene usato solo per benchmark anonimi. Conservazione conforme a GDPR, esporti o cancelli l'account in ogni momento.",
-    audience: "both",
   },
   {
     q: "Posso esportare i miei dati?",
     a: "Sì. Storico ordini in CSV/XLSX, fatture in PDF, transazioni Stripe direttamente dal pannello. Niente lock-in: se decidi di andare via, esci con tutto ciò che hai prodotto sulla piattaforma.",
-    audience: "both",
   },
   {
     q: "In quali zone siete attivi?",
     a: "Nord Italia: Lombardia, Piemonte, Veneto, Emilia-Romagna. Apertura Liguria, Trentino e Toscana nel 2026. Se la tua zona non è coperta, ti avvisiamo all'attivazione — nessun account fantasma in lista d'attesa.",
-    audience: "both",
   },
-];
-
-function visibleItems(persona: Persona): readonly Item[] {
-  return ITEMS.filter((i) => i.audience === persona || i.audience === "both");
-}
+] as const;
 
 export function Objections() {
   const sectionRef = useRef<HTMLElement>(null);
   const headRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [openIndex, setOpenIndex] = useState<number | null>(null);
-  const { persona } = usePersona();
-
-  const items = visibleItems(persona);
-
-  useEffect(() => {
-    setOpenIndex(null);
-  }, [persona]);
 
   useEffect(() => {
     if (prefersReducedMotion()) {
@@ -162,10 +124,14 @@ export function Objections() {
               color: "var(--color-marketing-ink-subtle)",
             }}
           >
-            Filtrate per{" "}
-            <span style={{ color: "var(--color-marketing-primary)" }}>
-              {persona === "supplier" ? "fornitori" : "ristoratori"}
-            </span>
+            Non trovi la risposta?{" "}
+            <a
+              href="mailto:ciao@gastrobridge.it"
+              className="link-editorial"
+              style={{ color: "var(--color-marketing-primary)" }}
+            >
+              Scrivici
+            </a>
           </p>
         </div>
 
@@ -174,12 +140,12 @@ export function Objections() {
           className="col-span-12 lg:col-span-8"
           style={{ borderTop: "1px solid var(--color-marketing-rule)" }}
         >
-          {items.map((item, i) => {
+          {ITEMS.map((item, i) => {
             const isOpen = openIndex === i;
             const id = `obj-answer-${i}`;
             return (
               <div
-                key={`${persona}-${i}-${item.q}`}
+                key={item.q}
                 data-row
                 className="opacity-0"
                 style={{ borderBottom: "1px solid var(--color-marketing-rule)" }}
