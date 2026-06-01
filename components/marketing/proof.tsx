@@ -16,32 +16,32 @@ const GUARANTEES: readonly Guarantee[] = [
   {
     mark: "TUOI",
     title: "I tuoi fornitori",
-    caption: "Porti i fornitori con cui già lavori. Nessun marketplace, nessuna ricerca obbligata.",
+    caption: "Continui a lavorare con i fornitori e le condizioni che hai già negoziato. GastroBridge è lo strumento, non l'intermediario.",
   },
   {
     mark: "CSV",
-    title: "Import in un attimo",
-    caption: "Carichi listini e cataloghi anche da Excel/CSV. Aggiorni un prezzo, vale per ogni ordine.",
+    title: "Importazione assistita",
+    caption: "Listini e cataloghi caricati da Excel o CSV, senza reinserimenti manuali. Una variazione di prezzo si applica a tutti gli ordini successivi.",
   },
   {
     mark: "90s",
-    title: "Ordini veloci",
-    caption: "Dall'apertura del catalogo all'ordine inviato in un minuto e mezzo. Senza telefonate.",
+    title: "Processo d'ordine rapido",
+    caption: "Dalla consultazione del catalogo all'invio in circa novanta secondi. Ordini, storico e ricorrenti in un'unica interfaccia.",
   },
   {
-    mark: "NO",
-    title: "Lock-in",
-    caption: "Esporti storico ordini e listini in CSV/PDF quando vuoi. I dati restano tuoi.",
+    mark: "0%",
+    title: "Canone fisso",
+    caption: "Abbonamento a costo prevedibile, senza commissioni sul transato. La spesa non aumenta al crescere del volume d'ordine.",
   },
   {
     mark: "GDPR",
-    title: "Privacy",
-    caption: "Dati mai rivenduti, mai profilati cross-platform. Esporti o cancelli in ogni momento.",
+    title: "Conformità e riservatezza",
+    caption: "Trattamento dei dati conforme al GDPR. Nessuna cessione a terzi, nessuna profilazione. Esportazione e cancellazione su richiesta.",
   },
   {
-    mark: "1",
-    title: "Un posto solo",
-    caption: "Cataloghi, ordini, storico e food cost in un'unica dashboard. Basta PDF sparsi.",
+    mark: "NO",
+    title: "Portabilità garantita",
+    caption: "Storico ordini e listini esportabili in CSV o PDF in qualsiasi momento. Nessun vincolo contrattuale di permanenza.",
   },
 ] as const;
 

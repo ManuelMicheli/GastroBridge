@@ -20,7 +20,7 @@ const STEPS: readonly Step[] = [
     step: "01",
     title: "Carica i tuoi fornitori.",
     description:
-      "Aggiungi i fornitori con cui già lavori e importa i loro listini — a mano o da CSV/Excel. Una volta sola, poi sono sempre lì.",
+      "Aggiungi i fornitori con cui già lavori e importa i loro listini — a mano o da CSV/Excel. Lo fai una volta sola: poi sono sempre lì, gestiti da un posto solo invece che sparsi tra PDF, chat e fogli.",
     meta: "IMPORT · CSV",
     mock: "catalog",
   },
@@ -28,7 +28,7 @@ const STEPS: readonly Step[] = [
     step: "02",
     title: "Ordini in 90 secondi.",
     description:
-      "Apri il catalogo, aggiungi, conferma, invii. Storico, resi e ricorrenti nella stessa dashboard, senza una telefonata.",
+      "Apri il catalogo, aggiungi, conferma, invii. Storico, resi e ricorrenti nella stessa dashboard — senza una telefonata. Il tempo che passavi a inseguire fornitori torna in cucina.",
     meta: "≈ 90 SECONDI",
     mock: "order",
   },
@@ -36,7 +36,7 @@ const STEPS: readonly Step[] = [
     step: "03",
     title: "Tutto organizzato.",
     description:
-      "Storico ordini, listini sempre aggiornati, food cost sotto controllo. Esporti in CSV o PDF quando vuoi.",
+      "Storico ordini, listini sempre aggiornati, food cost sotto controllo. Sai cosa spendi prima di spenderlo — e quando serve esporti tutto in CSV o PDF.",
     meta: "STORICO · EXPORT",
     mock: "history",
   },

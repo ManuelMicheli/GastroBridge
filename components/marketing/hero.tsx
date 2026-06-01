@@ -161,7 +161,7 @@ export function Hero() {
           className="absolute inset-0"
           style={{
             background:
-              "linear-gradient(100deg, rgba(15,15,16,0.94) 0%, rgba(46,21,32,0.82) 42%, rgba(78,21,32,0.5) 72%, rgba(15,15,16,0.4) 100%)",
+              "linear-gradient(100deg, rgba(15,15,16,0.92) 0%, rgba(30,18,22,0.66) 42%, rgba(40,16,22,0.28) 72%, rgba(15,15,16,0.3) 100%)",
             mixBlendMode: "multiply",
           }}
         />
