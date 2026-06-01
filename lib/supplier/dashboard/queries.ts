@@ -8,6 +8,19 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+// mv_supplier_kpi_daily / mv_stock_at_risk have no RLS and are no longer SELECTable
+// by anon/authenticated (see 20260601000000_secure_materialized_views.sql). They are
+// read with the service-role client, so we must first confirm — with the USER client,
+// i.e. against the real auth.uid() — that the caller is a member of this supplier.
+async function isSupplierMember(supplierId: string): Promise<boolean> {
+  const supabase = await createClient();
+  const { data } = await (supabase.rpc as any)("is_supplier_member", {
+    p_supplier_id: supplierId,
+  });
+  return data === true;
+}
 
 export type KpiDailyRow = {
   supplier_id: string;
@@ -104,7 +117,8 @@ export async function getKpiTiles(supplierId: string): Promise<KpiTiles> {
   };
 
   try {
-    const supabase = await createClient();
+    if (!(await isSupplierMember(supplierId))) return empty;
+    const admin = createAdminClient();
 
     const today = new Date();
     const start28 = new Date(today);
@@ -112,7 +126,7 @@ export async function getKpiTiles(supplierId: string): Promise<KpiTiles> {
     const cutoff14 = new Date(today);
     cutoff14.setDate(today.getDate() - 13);
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await (admin as any)
       .from("mv_supplier_kpi_daily")
       .select("day, revenue, orders_count, new_customers, avg_ticket")
       .eq("supplier_id", supplierId)
@@ -222,10 +236,13 @@ export async function getDashboardAlerts(supplierId: string): Promise<DashboardA
     pendingOverdueCount = 0;
   }
 
-  // 2. Lotti in scadenza ≤ 7gg
+  // 2. Lotti in scadenza ≤ 7gg — mv_stock_at_risk has no RLS, read via service-role
+  // after confirming membership with the user client.
   let expiringLotsCount = 0;
   try {
-    const { data } = await (supabase as any)
+    if (!(await isSupplierMember(supplierId))) throw new Error("not a member");
+    const admin = createAdminClient();
+    const { data } = await (admin as any)
       .from("mv_stock_at_risk")
       .select("lot_id")
       .eq("supplier_id", supplierId)
@@ -284,8 +301,9 @@ export async function getRevenueChart30Days(
   }
 
   try {
-    const supabase = await createClient();
-    const { data, error } = await (supabase as any)
+    if (!(await isSupplierMember(supplierId))) return days;
+    const admin = createAdminClient();
+    const { data, error } = await (admin as any)
       .from("mv_supplier_kpi_daily")
       .select("day, revenue")
       .eq("supplier_id", supplierId)

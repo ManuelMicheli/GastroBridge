@@ -179,16 +179,18 @@ export function PricingReveal() {
               )}
             </div>
 
+            {/* Prezzi non definiti — valore reale fuori dal DOM, mostriamo pallini */}
             <div className="flex items-baseline gap-2 mb-3">
               <span
-                className="font-display leading-none"
+                className="font-display leading-none select-none"
                 style={{
                   fontSize: "clamp(48px, 6vw, 88px)",
                   letterSpacing: "var(--type-marketing-display-ls)",
                   color: "var(--color-marketing-ink)",
+                  userSelect: "none",
                 }}
               >
-                {plan.price}
+                €•••
               </span>
               <span
                 className="font-mono uppercase"

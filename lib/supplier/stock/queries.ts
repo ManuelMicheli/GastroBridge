@@ -4,6 +4,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database, StockMovementType } from "@/types/database";
 
 type WarehouseRow = Database["public"]["Tables"]["warehouses"]["Row"];
@@ -300,9 +301,13 @@ export async function getCostHistory(
 export async function listAtRiskLots(
   supplierId: string,
 ): Promise<AtRiskLotRow[]> {
+  // Membership/permission verified above with the user client. mv_stock_at_risk
+  // has no RLS, so it is read with the service-role client (anon/authenticated no
+  // longer hold SELECT — see 20260601000000_secure_materialized_views.sql) and
+  // explicitly scoped to the now-authorized supplier.
   await assertReadPermission(supplierId);
-  const supabase = await createClient();
-  const { data, error } = await (supabase as any)
+  const admin = createAdminClient();
+  const { data, error } = await (admin as any)
     .from("mv_stock_at_risk")
     .select("*")
     .eq("supplier_id", supplierId)
@@ -326,7 +331,6 @@ export async function getStockAlertCounts(
   } catch {
     return { lowStockCount: 0, expiringCount: 0 };
   }
-  const supabase = await createClient();
 
   // Low stock: aggrega per product_id sommando quantita disponibile, confronta
   // contro la soglia di prodotto.
@@ -342,7 +346,10 @@ export async function getStockAlertCounts(
   // days_to_expiry <= withinDays.
   let expiringCount = 0;
   try {
-    const { data } = await (supabase as any)
+    // assertReadPermission() above already gated this supplier. mv_stock_at_risk
+    // has no RLS → read via service-role, scoped to the authorized supplier.
+    const admin = createAdminClient();
+    const { data } = await (admin as any)
       .from("mv_stock_at_risk")
       .select("lot_id, days_to_expiry")
       .eq("supplier_id", supplierId)

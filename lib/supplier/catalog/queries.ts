@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export type ProductListSort =
   | "created_desc"
@@ -202,7 +203,25 @@ export type SupplierCatalogSummary = {
 export async function getSupplierCatalogSummary(
   supplierId: string,
 ): Promise<SupplierCatalogSummary> {
-  const supabase = await createClient();
+  const empty: SupplierCatalogSummary = {
+    total: 0,
+    available: 0,
+    categories: 0,
+    priceMin: null,
+    priceMax: null,
+  };
+
+  // mv_supplier_catalog_summary has no RLS and is no longer SELECTable by
+  // anon/authenticated (see 20260601000000_secure_materialized_views.sql). Confirm
+  // membership with the user client, then read via the service-role client.
+  const userClient = await createClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- server client rpc overload doesn't resolve typed args
+  const { data: member } = await (userClient.rpc as any)("is_supplier_member", {
+    p_supplier_id: supplierId,
+  });
+  if (member !== true) return empty;
+
+  const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("mv_supplier_catalog_summary")
     .select(

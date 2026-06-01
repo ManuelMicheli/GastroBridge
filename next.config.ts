@@ -74,8 +74,7 @@ const nextConfig: NextConfig = {
       "base-uri 'self'",
       "form-action 'self'",
       "frame-ancestors 'none'",
-      // `upgrade-insecure-requests` is ignored when CSP is delivered
-      // report-only — skip until policy is promoted to enforced.
+      "upgrade-insecure-requests",
     ].join("; ");
 
     const securityHeaders = [
@@ -89,10 +88,11 @@ const nextConfig: NextConfig = {
       },
       // COOP/CORP can break Supabase auth popups/realtime — relax until verified.
       { key: "Cross-Origin-Opener-Policy", value: "same-origin-allow-popups" },
-      // Report-only CSP first to surface violations without breaking the app.
-      // Promote to enforced "Content-Security-Policy" after Vercel logs show
-      // no critical violations for 24h.
-      { key: "Content-Security-Policy-Report-Only", value: csp },
+      // Enforced CSP. `unsafe-inline` is still allowed for scripts/styles (Next.js
+      // inline bootstrap); tighten to nonce-based when Next supports strict-dynamic
+      // on stable. Even so, object-src 'none', base-uri 'self', frame-ancestors
+      // 'none' and the connect-src allowlist materially cut XSS / data-exfil paths.
+      { key: "Content-Security-Policy", value: csp },
     ];
 
     return [

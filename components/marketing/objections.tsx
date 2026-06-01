@@ -28,7 +28,7 @@ const ITEMS: readonly Item[] = [
   },
   {
     q: "Quanto costa?",
-    a: "Base €50/mese, Pro €150/mese — è il canone per usare lo strumento, niente percentuali sugli ordini. Prova gratis 14 giorni, senza carta, disdici quando vuoi.",
+    a: "Un canone fisso per usare lo strumento, niente percentuali sugli ordini. I prezzi sono in fase di definizione — li annunceremo presto. Prova gratis 14 giorni, senza carta, disdici quando vuoi.",
   },
   {
     q: "Privacy e proprietà dei dati?",

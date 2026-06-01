@@ -61,17 +61,19 @@ function PlanCard({ plan, role }: { plan: PlanDefinition; role: string }) {
         {plan.name}
       </h3>
 
+      {/* Prezzi non definiti — valore reale fuori dal DOM, mostriamo pallini */}
       <div className="flex items-baseline gap-2 mb-10">
         <span
-          className="font-display tabular-nums"
+          className="font-display tabular-nums select-none"
           style={{
             fontSize: "clamp(48px, 6vw, 72px)",
             lineHeight: "0.92",
             letterSpacing: "-0.03em",
             color: "var(--color-marketing-ink)",
+            userSelect: "none",
           }}
         >
-          {plan.price === 0 ? "—" : `€${plan.price}`}
+          {plan.price === 0 ? "—" : "€•••"}
         </span>
         {plan.price > 0 && (
           <span
@@ -83,18 +85,6 @@ function PlanCard({ plan, role }: { plan: PlanDefinition; role: string }) {
             }}
           >
             / {plan.period}
-          </span>
-        )}
-        {plan.price === 0 && (
-          <span
-            className="font-mono uppercase"
-            style={{
-              fontSize: "11px",
-              letterSpacing: "0.2em",
-              color: "var(--color-marketing-ink-subtle)",
-            }}
-          >
-            Gratis
           </span>
         )}
       </div>

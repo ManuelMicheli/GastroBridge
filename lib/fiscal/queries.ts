@@ -4,6 +4,7 @@
 // rows for restaurants they own.
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type {
   FiscalIntegrationStatus,
   FiscalProvider,
@@ -119,6 +120,26 @@ async function loose(): Promise<LooseClient> {
   return c as unknown as LooseClient;
 }
 
+// fiscal_daily_summary / fiscal_food_cost are materialized views WITHOUT RLS and are
+// no longer SELECTable by anon/authenticated (see 20260601000000_secure_materialized_views.sql).
+// They are read with the service-role client, so we must first confirm — with the USER
+// client, against the real auth.uid() — that the caller owns this restaurant. This
+// mirrors the fiscal_owns_restaurant() check used by the fiscal RLS policies.
+async function ownsRestaurant(restaurantId: string): Promise<boolean> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return false;
+  const { data } = await supabase
+    .from("restaurants")
+    .select("id")
+    .eq("id", restaurantId)
+    .eq("profile_id", user.id)
+    .maybeSingle();
+  return !!data;
+}
+
 export async function getFiscalEnabled(restaurantId: string): Promise<boolean> {
   const supabase = await loose();
   const { data } = await supabase
@@ -148,7 +169,8 @@ export async function getDailySummary(
   restaurantId: string,
   days = 30,
 ): Promise<DailySummaryRow[]> {
-  const supabase = await loose();
+  if (!(await ownsRestaurant(restaurantId))) return [];
+  const supabase = createAdminClient() as unknown as LooseClient;
   const since = new Date();
   since.setDate(since.getDate() - days);
   const { data } = await supabase
@@ -166,7 +188,8 @@ export async function getFoodCost(
   restaurantId: string,
   days = 30,
 ): Promise<FoodCostRow[]> {
-  const supabase = await loose();
+  if (!(await ownsRestaurant(restaurantId))) return [];
+  const supabase = createAdminClient() as unknown as LooseClient;
   const since = new Date();
   since.setDate(since.getDate() - days);
   const { data } = await supabase

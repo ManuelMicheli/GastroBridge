@@ -2,9 +2,24 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
 // When Upstash env vars are not configured, rate limiting becomes a no-op so
-// preview / local builds keep working. Production should set both vars.
+// preview / local builds keep working. Production MUST set both vars.
 const hasUpstash =
   !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN;
+
+// Fail fast at deploy: a production runtime without Upstash means login/API brute
+// force is completely unthrottled. Throw at module load so the misconfiguration is
+// caught immediately, not silently shipped. Skipped during `next build` (env may be
+// injected only at runtime) and outside production.
+if (
+  !hasUpstash &&
+  process.env.NODE_ENV === "production" &&
+  process.env.NEXT_PHASE !== "phase-production-build"
+) {
+  throw new Error(
+    "Rate limiting non configurato in produzione: imposta UPSTASH_REDIS_REST_URL e " +
+      "UPSTASH_REDIS_REST_TOKEN. Senza, login e API non hanno protezione brute-force.",
+  );
+}
 
 const redis = hasUpstash ? Redis.fromEnv() : null;
 
@@ -35,13 +50,20 @@ export async function applyLimit(
   key: string,
 ): Promise<LimitResult> {
   if (!limiter) return { allowed: true };
-  const { success, limit, remaining, reset } = await limiter.limit(key);
-  return {
-    allowed: success,
-    limit,
-    remaining,
-    resetMs: reset,
-  };
+  try {
+    const { success, limit, remaining, reset } = await limiter.limit(key);
+    return {
+      allowed: success,
+      limit,
+      remaining,
+      resetMs: reset,
+    };
+  } catch (err) {
+    // Redis/Upstash outage: fail OPEN so a transient infra problem can't lock
+    // every user out of login. Log loudly so the outage is visible.
+    console.error("[rate-limit] limiter error, failing open:", err);
+    return { allowed: true };
+  }
 }
 
 export function clientIp(headers: Headers): string {

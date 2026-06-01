@@ -102,48 +102,56 @@ export async function updateRelationshipNotes(id: string, input: UpdateNotesInpu
   const parsed = UpdateNotesSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Dati non validi" };
 
+  const restaurantId = await getRestaurantId();
+  if (!restaurantId) return { ok: false, error: "Ristorante non trovato" };
+
   const supabase = await createClient();
-  const { error } = await (supabase as any)
+  const { data, error } = await (supabase as any)
     .from("restaurant_suppliers")
     .update({ notes: parsed.data.notes ?? null })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("restaurant_id", restaurantId) // scope to caller's restaurant (defense-in-depth over RLS)
+    .select("id");
 
   if (error) return { ok: false, error: error.message };
+  if (!data || data.length === 0) return { ok: false, error: "Relazione non trovata" };
+  revalidatePath("/fornitori");
+  return { ok: true, data: undefined };
+}
+
+// Restaurant-side status changes. Each is scoped to the caller's own restaurant_id
+// so a forged relationship id from another tenant matches no row (RLS also blocks it,
+// but this returns a correct "not found" instead of a silent 0-row success).
+async function setRestaurantRelationshipStatus(
+  id: string,
+  status: "paused" | "active" | "archived",
+): Promise<Result> {
+  const restaurantId = await getRestaurantId();
+  if (!restaurantId) return { ok: false, error: "Ristorante non trovato" };
+
+  const supabase = await createClient();
+  const { data, error } = await (supabase as any)
+    .from("restaurant_suppliers")
+    .update({ status })
+    .eq("id", id)
+    .eq("restaurant_id", restaurantId)
+    .select("id");
+  if (error) return { ok: false, error: error.message };
+  if (!data || data.length === 0) return { ok: false, error: "Relazione non trovata" };
   revalidatePath("/fornitori");
   return { ok: true, data: undefined };
 }
 
 export async function pauseRelationshipByRestaurant(id: string): Promise<Result> {
-  const supabase = await createClient();
-  const { error } = await (supabase as any)
-    .from("restaurant_suppliers")
-    .update({ status: "paused" })
-    .eq("id", id);
-  if (error) return { ok: false, error: error.message };
-  revalidatePath("/fornitori");
-  return { ok: true, data: undefined };
+  return setRestaurantRelationshipStatus(id, "paused");
 }
 
 export async function resumeRelationshipByRestaurant(id: string): Promise<Result> {
-  const supabase = await createClient();
-  const { error } = await (supabase as any)
-    .from("restaurant_suppliers")
-    .update({ status: "active" })
-    .eq("id", id);
-  if (error) return { ok: false, error: error.message };
-  revalidatePath("/fornitori");
-  return { ok: true, data: undefined };
+  return setRestaurantRelationshipStatus(id, "active");
 }
 
 export async function archiveRelationship(id: string): Promise<Result> {
-  const supabase = await createClient();
-  const { error } = await (supabase as any)
-    .from("restaurant_suppliers")
-    .update({ status: "archived" })
-    .eq("id", id);
-  if (error) return { ok: false, error: error.message };
-  revalidatePath("/fornitori");
-  return { ok: true, data: undefined };
+  return setRestaurantRelationshipStatus(id, "archived");
 }
 
 // ===================================================================
