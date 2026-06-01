@@ -15,8 +15,8 @@ type Guarantee = {
 const GUARANTEES: readonly Guarantee[] = [
   {
     mark: "TUOI",
-    title: "I tuoi fornitori",
-    caption: "Continui a lavorare con i fornitori e le condizioni che hai già negoziato. GastroBridge è lo strumento, non l'intermediario.",
+    title: "La tua rete, digitale",
+    caption: "La rete di fornitori che hai costruito negli anni, ora in formato digitale. Stesse condizioni, stessi contatti, zero ricerche obbligate.",
   },
   {
     mark: "CSV",
@@ -147,38 +147,27 @@ export function Proof() {
               minHeight: "clamp(220px, 20vw, 300px)",
             }}
           >
-            <span
-              className="font-display leading-none"
+            <h3
+              className="font-display"
               style={{
-                fontSize: "clamp(40px, 4.5vw, 72px)",
-                letterSpacing: "var(--type-marketing-display-ls)",
+                fontSize: "clamp(26px, 2.8vw, 40px)",
+                lineHeight: 1.04,
+                letterSpacing: "-0.018em",
                 color: "var(--color-marketing-primary)",
               }}
             >
-              {g.mark}
-            </span>
-            <div className="mt-8">
-              <p
-                className="font-mono uppercase mb-3"
-                style={{
-                  fontSize: "13px",
-                  letterSpacing: "0.14em",
-                  color: "var(--color-marketing-ink)",
-                }}
-              >
-                {g.title}
-              </p>
-              <p
-                className="max-w-[34ch]"
-                style={{
-                  fontSize: "14px",
-                  lineHeight: 1.55,
-                  color: "var(--color-marketing-ink-muted)",
-                }}
-              >
-                {g.caption}
-              </p>
-            </div>
+              {g.title}
+            </h3>
+            <p
+              className="mt-8 max-w-[34ch]"
+              style={{
+                fontSize: "14px",
+                lineHeight: 1.55,
+                color: "var(--color-marketing-ink-muted)",
+              }}
+            >
+              {g.caption}
+            </p>
           </div>
         ))}
       </div>
