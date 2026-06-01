@@ -69,10 +69,11 @@ export async function signUp(formData: FormData) {
   const pwCheck = await validateNewPassword(password);
   if (!pwCheck.ok) return { error: pwCheck.error };
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/callback`,
       data: {
         role,
         company_name: companyName,
@@ -88,6 +89,19 @@ export async function signUp(formData: FormData) {
       return { error: error.message };
     }
     return { error: "Registrazione non riuscita. Verifica i dati e riprova." };
+  }
+
+  // When the email already belongs to a (confirmed) account, Supabase does NOT
+  // error — it returns a user with an empty `identities` array and sends no
+  // email. Surface this so the user is told the address is already linked and
+  // is nudged to log in. NOTE: this deliberately reveals account existence
+  // (email enumeration) — an explicit product choice over silent obfuscation.
+  if (data.user && (data.user.identities?.length ?? 0) === 0) {
+    return {
+      emailExists: true,
+      error:
+        "Questa email è già collegata a un account. Accedi invece di registrarti.",
+    };
   }
 
   const redirectTo = role === "supplier" ? "/supplier/dashboard" : "/dashboard";
