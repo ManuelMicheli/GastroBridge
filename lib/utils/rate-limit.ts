@@ -6,18 +6,19 @@ import { Redis } from "@upstash/redis";
 const hasUpstash =
   !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN;
 
-// Fail fast at deploy: a production runtime without Upstash means login/API brute
-// force is completely unthrottled. Throw at module load so the misconfiguration is
-// caught immediately, not silently shipped. Skipped during `next build` (env may be
-// injected only at runtime) and outside production.
+// Loud warning when Upstash is missing in production: login/API brute force is
+// unthrottled. We must NOT throw here — this module is imported by the Edge
+// middleware, which runs on every request, so a throw would 500 the entire site
+// (MIDDLEWARE_INVOCATION_FAILED). Warn instead and fall back to no-op limiting;
+// configure UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN in production.
 if (
   !hasUpstash &&
   process.env.NODE_ENV === "production" &&
   process.env.NEXT_PHASE !== "phase-production-build"
 ) {
-  throw new Error(
-    "Rate limiting non configurato in produzione: imposta UPSTASH_REDIS_REST_URL e " +
-      "UPSTASH_REDIS_REST_TOKEN. Senza, login e API non hanno protezione brute-force.",
+  console.error(
+    "[rate-limit] Upstash non configurato in produzione: login e API non hanno " +
+      "protezione brute-force. Imposta UPSTASH_REDIS_REST_URL e UPSTASH_REDIS_REST_TOKEN.",
   );
 }
 
