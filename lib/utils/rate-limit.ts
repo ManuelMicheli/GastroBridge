@@ -1,28 +1,34 @@
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
-// When Upstash env vars are not configured, rate limiting becomes a no-op so
-// preview / local builds keep working. Production MUST set both vars.
-const hasUpstash =
-  !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN;
+// REST credentials for the Upstash/Vercel-KV Redis. The Vercel Upstash Marketplace
+// integration injects KV_REST_API_URL / KV_REST_API_TOKEN; a manual Upstash setup
+// uses UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN. Accept either. Use the
+// full (write) token, not the read-only one — sliding-window limiting writes.
+const redisUrl = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
+const redisToken =
+  process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
 
-// Loud warning when Upstash is missing in production: login/API brute force is
+// When Redis is not configured, rate limiting becomes a no-op so preview / local
+// builds keep working. Production MUST provide it.
+const hasUpstash = !!redisUrl && !!redisToken;
+
+// Loud warning when Redis is missing in production: login/API brute force is
 // unthrottled. We must NOT throw here — this module is imported by the Edge
 // middleware, which runs on every request, so a throw would 500 the entire site
-// (MIDDLEWARE_INVOCATION_FAILED). Warn instead and fall back to no-op limiting;
-// configure UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN in production.
+// (MIDDLEWARE_INVOCATION_FAILED). Warn instead and fall back to no-op limiting.
 if (
   !hasUpstash &&
   process.env.NODE_ENV === "production" &&
   process.env.NEXT_PHASE !== "phase-production-build"
 ) {
   console.error(
-    "[rate-limit] Upstash non configurato in produzione: login e API non hanno " +
-      "protezione brute-force. Imposta UPSTASH_REDIS_REST_URL e UPSTASH_REDIS_REST_TOKEN.",
+    "[rate-limit] Redis non configurato in produzione: login e API non hanno " +
+      "protezione brute-force. Imposta KV_REST_API_URL/KV_REST_API_TOKEN (o le UPSTASH_*).",
   );
 }
 
-const redis = hasUpstash ? Redis.fromEnv() : null;
+const redis = hasUpstash ? new Redis({ url: redisUrl!, token: redisToken! }) : null;
 
 function makeLimiter(reqs: number, window: `${number} ${"s" | "m" | "h" | "d"}`, prefix: string) {
   if (!redis) return null;
