@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { getRequestUser } from "@/lib/supabase/request-user";
 import { BudgetForm } from "./budget-form";
 import { LargeTitle } from "@/components/ui/large-title";
 
@@ -9,14 +10,12 @@ export const metadata: Metadata = { title: "Budget mensile — Impostazioni" };
 // Implicit dynamic via auth cookies; no `force-dynamic` so client router cache works.
 
 export default async function BudgetSettingsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getRequestUser();
   if (!user) {
     return <div className="p-6 text-sage">Devi accedere per gestire il budget.</div>;
   }
 
+  const supabase = await createClient();
   const { data: restaurant } = (await supabase
     .from("restaurants")
     .select("id, name, monthly_budget_eur")

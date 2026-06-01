@@ -4,6 +4,7 @@ import { ChevronLeft, Bell, Mail, Smartphone, Inbox } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/server";
+import { getRequestUser } from "@/lib/supabase/request-user";
 import { PushSubscriptionManager } from "@/components/supplier/notifications/push-subscription-manager";
 import { RealtimeLivePrefs } from "@/components/supplier/notifications/live-prefs";
 import { LargeTitle } from "@/components/ui/large-title";
@@ -22,15 +23,13 @@ type ChannelKey = "in_app" | "email" | "push";
  * plus the live prefs card (chime + browser Notification API toggle).
  */
 export default async function RestaurantNotificationsSettingsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getRequestUser();
 
   let pushCount = 0;
   const emailVerified = Boolean(user?.email_confirmed_at);
 
   if (user) {
+    const supabase = await createClient();
     const { count } = await supabase
       .from("push_subscriptions")
       .select("id", { count: "exact", head: true })
