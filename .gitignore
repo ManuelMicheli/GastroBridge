@@ -45,3 +45,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+.env*.local
+
+# claude code scheduler lock (transient, per-machine)
+.claude/scheduled_tasks.lock
