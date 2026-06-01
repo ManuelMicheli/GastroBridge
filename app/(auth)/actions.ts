@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { SUPPLIER_PLATFORM_ENABLED } from "@/lib/utils/constants";
+import { validateNewPassword } from "@/lib/auth/pwned-password";
 import type { UserRole } from "@/types/database";
 
 // Generic error to avoid disclosing whether an account exists or whether the
@@ -61,6 +62,12 @@ export async function signUp(formData: FormData) {
         "La registrazione come fornitore non è ancora disponibile. Arriverà nella versione 2.",
     };
   }
+
+  // Reject weak / breached passwords (free equivalent of Supabase Pro's leaked
+  // password protection). Runs before signUp so a pwned password never creates
+  // an account.
+  const pwCheck = await validateNewPassword(password);
+  if (!pwCheck.ok) return { error: pwCheck.error };
 
   const { error } = await supabase.auth.signUp({
     email,
@@ -127,4 +134,12 @@ export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/login");
+}
+
+// Server-side password policy check for the password-change flow (client component
+// in impostazioni/sicurezza). Keeps the HaveIBeenPwned lookup on the server.
+export async function checkPasswordSafe(
+  password: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  return validateNewPassword(password);
 }

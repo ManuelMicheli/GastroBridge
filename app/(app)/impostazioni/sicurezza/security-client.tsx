@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { checkPasswordSafe } from "@/app/(auth)/actions";
 import { PageHeader } from "@/components/ui/page-header";
 import { LargeTitle } from "@/components/ui/large-title";
 import { SectionFrame } from "@/components/dashboard/restaurant/_awwwards/section-frame";
@@ -176,8 +177,8 @@ export function SecurityClient({
   }
 
   async function changePassword() {
-    if (pw.length < 8) {
-      toast.error("La password deve avere almeno 8 caratteri.");
+    if (pw.length < 10) {
+      toast.error("La password deve avere almeno 10 caratteri.");
       return;
     }
     if (pw !== pw2) {
@@ -185,6 +186,13 @@ export function SecurityClient({
       return;
     }
     setPwBusy(true);
+    // Server-side check: reject breached passwords (HaveIBeenPwned) before updating.
+    const safe = await checkPasswordSafe(pw);
+    if (!safe.ok) {
+      setPwBusy(false);
+      toast.error(safe.error);
+      return;
+    }
     const { error } = await supabase.auth.updateUser({ password: pw });
     setPwBusy(false);
     if (error) {
