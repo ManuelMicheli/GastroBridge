@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { createCatalog, updateCatalog } from "@/lib/catalogs/actions";
 import type { CatalogRow } from "@/lib/catalogs/types";
@@ -47,6 +48,14 @@ export function CatalogFormDialog({ open, onClose, catalog, onSaved }: Props) {
           {catalog ? "Modifica catalogo" : "Nuovo catalogo"}
         </h2>
 
+        <div
+          aria-hidden={!pending}
+          className={`h-0.5 -mt-1 transition-opacity duration-300 ${
+            pending ? "progress-indeterminate opacity-100" : "opacity-0"
+          }`}
+        />
+
+
         <div className="space-y-3">
           <label className="block">
             <span className="text-sm text-text-secondary">Nome fornitore *</span>
@@ -82,9 +91,10 @@ export function CatalogFormDialog({ open, onClose, catalog, onSaved }: Props) {
           <button
             onClick={submit}
             disabled={pending || supplierName.trim().length === 0}
-            className="px-4 py-2 rounded-lg bg-accent-green text-surface-base font-medium disabled:opacity-50"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-accent-green text-surface-base font-medium disabled:opacity-50"
           >
-            {pending ? "Salvo..." : "Salva"}
+            {pending && <Loader2 className="h-4 w-4 animate-spin" />}
+            {pending ? (catalog ? "Salvataggio…" : "Creazione…") : "Salva"}
           </button>
         </div>
       </div>
