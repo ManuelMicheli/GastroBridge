@@ -140,6 +140,11 @@ export function CatalogImportWizard({ open, onClose, catalogId, onImported }: Pr
               <input type="file" accept=".csv,.xls,.xlsx" className="hidden" disabled={parsing}
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
             </label>
+            <p className="rounded-lg bg-surface-base border border-border-subtle px-3 py-2 text-xs text-text-tertiary">
+              💡 Per un riconoscimento più preciso, fai in modo che la <strong>prima riga</strong> del file contenga
+              le intestazioni delle colonne (es. <em>nome, quantità, prezzo</em>) oppure un prodotto d'esempio con
+              questi valori.
+            </p>
             {parsing && (
               <p className="flex items-center gap-2 text-sm text-text-tertiary">
                 <Loader2 className="h-4 w-4 animate-spin" /> Analizzo il file…
