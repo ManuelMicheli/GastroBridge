@@ -2,8 +2,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowLeft, Check, Download, UploadCloud } from "lucide-react";
-import { parseCsv, parseXlsx, suggestMapping, type ParsedSheet } from "@/lib/catalogs/parse-file";
+import { ArrowLeft, Check, Download, UploadCloud, Loader2 } from "lucide-react";
+import { parseSmart, type ParsedSheet } from "@/lib/catalogs/parse-file";
 import { normalizeName, normalizeUnit } from "@/lib/catalogs/normalize";
 import type { Group, OrderLine } from "../_lib/types";
 
@@ -28,17 +28,18 @@ export function ImportWizard({
   onImported: (lines: OrderLine[], mode: "append" | "replace") => void;
 }) {
   const [step, setStep] = useState<WizardStep>("upload");
-  const [hasHeader, setHasHeader] = useState(true);
   const [sheet, setSheet] = useState<ParsedSheet | null>(null);
   const [mapping, setMapping] = useState<Mapping>({ name: "", unit: "", qty: "" });
   const [mode, setMode] = useState<"append" | "replace">("append");
   const [error, setError] = useState<string | null>(null);
+  const [parsing, setParsing] = useState(false);
 
   const reset = () => {
     setStep("upload");
     setSheet(null);
     setMapping({ name: "", unit: "", qty: "" });
     setError(null);
+    setParsing(false);
   };
   const closeAll = () => { reset(); onClose(); };
 
@@ -102,27 +103,28 @@ export function ImportWizard({
   const handleFile = async (file: File) => {
     setError(null);
     if (file.size > MAX_BYTES) { setError("File troppo grande (max 2MB)"); return; }
+    setParsing(true);
     try {
-      const ext = file.name.toLowerCase().split(".").pop() ?? "";
-      let parsed: ParsedSheet;
-      if (ext === "csv") parsed = await parseCsv(file, hasHeader);
-      else if (ext === "xlsx" || ext === "xls") parsed = await parseXlsx(file, hasHeader);
-      else { setError("Formato non supportato"); return; }
+      // parseSmart auto-detects the header row and name/unit columns. Quantity
+      // isn't a price, so prefer an explicit qty-keyword header and fall back to
+      // the numeric column parseSmart flagged (in an order list it's the qty).
+      const { sheet: parsed, mapping: suggested } = await parseSmart(file);
 
       if (parsed.rows.length === 0) { setError("Nessuna riga di dati nel file"); return; }
       if (parsed.rows.length > MAX_ROWS) { setError(`Troppe righe (max ${MAX_ROWS})`); return; }
 
       setSheet(parsed);
-      const suggested = suggestMapping(parsed.headers);
       const qtyHeader = parsed.headers.find((h) => /quant|q.tà|qta|qty/i.test(h));
       setMapping({
         name: suggested.name ?? parsed.headers[0] ?? "",
-        unit: suggested.unit ?? parsed.headers[1] ?? "",
-        qty:  qtyHeader ?? parsed.headers[2] ?? "",
+        unit: suggested.unit ?? "",
+        qty:  qtyHeader ?? suggested.price ?? parsed.headers[2] ?? parsed.headers[1] ?? "",
       });
       setStep("map");
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Errore lettura file");
+    } finally {
+      setParsing(false);
     }
   };
 
@@ -176,20 +178,21 @@ export function ImportWizard({
 
         {step === "upload" && (
           <div className="space-y-4">
-            <label className="flex items-center gap-2 text-sm text-text-secondary">
-              <input type="checkbox" checked={hasHeader} onChange={(e) => setHasHeader(e.target.checked)} />
-              Il file ha un&apos;intestazione sulla prima riga
-            </label>
             <label className="block rounded-xl border-2 border-dashed border-border-subtle p-12 text-center cursor-pointer hover:border-accent-green/40">
               <UploadCloud className="mx-auto h-8 w-8 text-text-tertiary" />
               <p className="mt-3 text-text-primary">Clicca per scegliere un file</p>
               <p className="mt-1 text-xs text-text-tertiary">CSV, XLS, XLSX · max 2MB · max 5000 righe</p>
-              <p className="mt-1 text-xs text-text-tertiary">Colonne attese: nome, quantità (unità opzionale)</p>
+              <p className="mt-1 text-xs text-text-tertiary">Riconosce nome e quantità automaticamente (unità opzionale)</p>
               <input
-                type="file" accept=".csv,.xls,.xlsx" className="hidden"
+                type="file" accept=".csv,.xls,.xlsx" className="hidden" disabled={parsing}
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
               />
             </label>
+            {parsing && (
+              <p className="flex items-center gap-2 text-sm text-text-tertiary">
+                <Loader2 className="h-4 w-4 animate-spin" /> Analizzo il file…
+              </p>
+            )}
             <a
               href="data:text/csv;charset=utf-8,nome;quantita%0AFarina%2000;10%0AOlio%20EVO;5%0APomodoro%20pelato;8%0AAceto%20Balsamico%20di%20Modena%20IGP;2"
               download="template-ordine-tipico.csv"
