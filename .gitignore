@@ -49,3 +49,4 @@ next-env.d.ts
 
 # claude code scheduler lock (transient, per-machine)
 .claude/scheduled_tasks.lock
+.tmp-pt/

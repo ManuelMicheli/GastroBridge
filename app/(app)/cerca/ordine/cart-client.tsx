@@ -269,6 +269,17 @@ export function OptimalCartClient({
   }, [order, averagePricePerLine]);
   const savingsVsAverage = Math.max(0, baselineTotal - grandTotal);
 
+  const today = () => new Date().toISOString().slice(0, 10);
+
+  const triggerDownload = (lines: string[], filename: string) => {
+    const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
   const exportCsv = () => {
     const lines = ["Fornitore;Prodotto;Unità;Quantità;Prezzo;Totale riga"];
     for (const b of buckets) {
@@ -285,12 +296,24 @@ export function OptimalCartClient({
     }
     lines.push("");
     lines.push(`;;;;;Totale;${grandTotal.toFixed(2)}`);
-    const blob = new Blob(["\uFEFF" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `carrello-ottimale-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+    triggerDownload(lines, `carrello-ottimale-${today()}.csv`);
+  };
+
+  /** Per-supplier CSV \u2014 only that fornitore's lines + subtotal. */
+  const exportBucketCsv = (b: SupplierBucket) => {
+    const lines = ["Prodotto;Unit\u00E0;Quantit\u00E0;Prezzo;Totale riga"];
+    for (const p of b.picks) {
+      lines.push([
+        quote(p.productName),
+        quote(p.unit),
+        p.qty.toString(),
+        p.price.toFixed(2),
+        p.lineTotal.toFixed(2),
+      ].join(";"));
+    }
+    lines.push("");
+    lines.push(`;;;;Totale;${b.subtotal.toFixed(2)}`);
+    triggerDownload(lines, `ordine-${slug(b.supplier.supplier_name)}-${today()}.csv`);
   };
 
   if (!hydrated) {
@@ -360,7 +383,7 @@ export function OptimalCartClient({
   const totalArticles = buckets.reduce((s, b) => s + b.picks.length, 0);
 
   return (
-    <div className="mx-auto max-w-[760px] px-4 py-8 print:py-0 print:max-w-none">
+    <div className="mx-auto max-w-[760px] lg:max-w-[1100px] xl:max-w-[1280px] px-4 py-8 print:py-0 print:max-w-none">
       <div className="print:hidden mb-5">
         <Link
           href="/cerca"
@@ -451,9 +474,19 @@ export function OptimalCartClient({
                     {b.picks.length} {b.picks.length === 1 ? "articolo" : "articoli"}
                   </p>
                 </div>
-                <span className="font-mono text-[13px] font-semibold tabular-nums text-accent-green">
-                  € {b.subtotal.toFixed(2)}
-                </span>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="font-mono text-[13px] font-semibold tabular-nums text-accent-green">
+                    € {b.subtotal.toFixed(2)}
+                  </span>
+                  <button
+                    onClick={() => exportBucketCsv(b)}
+                    title={`Scarica ordine ${b.supplier.supplier_name}`}
+                    aria-label={`Scarica ordine ${b.supplier.supplier_name}`}
+                    className="inline-flex items-center gap-1 rounded-md border border-border-subtle px-2 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-text-secondary transition hover:bg-surface-hover hover:text-text-primary print:hidden"
+                  >
+                    <Download className="h-3 w-3" /> CSV
+                  </button>
+                </div>
               </header>
 
               <div className="mt-3 overflow-x-auto">
@@ -642,4 +675,15 @@ function Stat({
 function quote(s: string): string {
   if (/[;"\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
   return s;
+}
+
+/** Filesystem-safe slug for per-supplier CSV filenames. */
+function slug(s: string): string {
+  return (
+    s
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "fornitore"
+  );
 }

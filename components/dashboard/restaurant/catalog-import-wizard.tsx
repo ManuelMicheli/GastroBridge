@@ -2,8 +2,8 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { UploadCloud, Check, ArrowLeft, Download, Wand2, Pencil } from "lucide-react";
-import { parseCsv, parseXlsx, suggestMapping, extractUnitFromText, type ParsedSheet } from "@/lib/catalogs/parse-file";
+import { UploadCloud, Check, ArrowLeft, Download, Wand2, Pencil, Loader2 } from "lucide-react";
+import { parseSmart, extractUnitFromText, type ParsedSheet } from "@/lib/catalogs/parse-file";
 import { normalizePrice } from "@/lib/catalogs/normalize";
 import { importCatalogItems } from "@/lib/catalogs/actions";
 import type { CatalogItemInput } from "@/lib/catalogs/schemas";
@@ -26,12 +26,12 @@ type Props = {
 
 export function CatalogImportWizard({ open, onClose, catalogId, onImported }: Props) {
   const [step, setStep]       = useState<Step>("upload");
-  const [hasHeader, setHasHeader] = useState(true);
   const [sheet, setSheet]     = useState<ParsedSheet | null>(null);
   const [mapping, setMapping] = useState<Mapping>({ name: "", unit: "", price: "" });
   const [autoDetected, setAutoDetected] = useState(false);
   const [showMappingEditor, setShowMappingEditor] = useState(false);
   const [mode, setMode]       = useState<"replace" | "append">("append");
+  const [parsing, setParsing] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const reset = () => {
@@ -40,35 +40,36 @@ export function CatalogImportWizard({ open, onClose, catalogId, onImported }: Pr
     setMapping({ name: "", unit: "", price: "" });
     setAutoDetected(false);
     setShowMappingEditor(false);
+    setParsing(false);
   };
   const closeAll = () => { reset(); onClose(); };
 
   const handleFile = async (file: File) => {
     if (file.size > MAX_BYTES) { toast.error("File troppo grande (max 2MB)"); return; }
+    setParsing(true);
     try {
-      const ext = file.name.toLowerCase().split(".").pop() ?? "";
-      let parsed: ParsedSheet;
-      if (ext === "csv") parsed = await parseCsv(file, hasHeader);
-      else if (ext === "xlsx" || ext === "xls") parsed = await parseXlsx(file, hasHeader);
-      else { toast.error("Formato non supportato"); return; }
+      // parseSmart auto-detects the header row (skipping title/preamble rows),
+      // picks the best worksheet, and proposes the column mapping — no need to
+      // ask the user whether the file has a header or which columns to use.
+      const { sheet: parsed, mapping: detected } = await parseSmart(file);
 
       if (parsed.rows.length === 0) { toast.error("Nessuna riga di dati nel file"); return; }
       if (parsed.rows.length > MAX_ROWS) { toast.error(`Troppe righe (max ${MAX_ROWS})`); return; }
 
-      const detected = suggestMapping(parsed.headers, parsed.rows);
-      const next: Mapping = {
+      setSheet(parsed);
+      setMapping({
         name:  detected.name  ?? "",
         unit:  detected.unit  ?? "",
         price: detected.price ?? "",
-      };
-      setSheet(parsed);
-      setMapping(next);
-      setAutoDetected(Boolean(detected.name && detected.price));
-      setShowMappingEditor(!detected.name || !detected.price);
+      });
+      setAutoDetected(detected.confident);
+      setShowMappingEditor(!detected.confident);
       setStep("preview");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Errore lettura file";
       toast.error(msg);
+    } finally {
+      setParsing(false);
     }
   };
 
@@ -119,6 +120,13 @@ export function CatalogImportWizard({ open, onClose, catalogId, onImported }: Pr
           <div className="text-xs text-text-tertiary">{step === "upload" ? "1/2 Carica" : "2/2 Anteprima"}</div>
         </header>
 
+        <div
+          aria-hidden={!pending && !parsing}
+          className={`h-0.5 -mt-2 transition-opacity duration-300 ${
+            pending || parsing ? "progress-indeterminate opacity-100" : "opacity-0"
+          }`}
+        />
+
         {step === "upload" && (
           <div className="space-y-4">
             <label className="block rounded-xl border-2 border-dashed border-border-subtle p-12 text-center cursor-pointer hover:border-accent-green/40">
@@ -126,18 +134,22 @@ export function CatalogImportWizard({ open, onClose, catalogId, onImported }: Pr
               <p className="mt-3 text-text-primary">Trascina o clicca per caricare il tuo catalogo</p>
               <p className="mt-1 text-xs text-text-tertiary">CSV, XLS, XLSX · max 2MB · max 5000 righe</p>
               <p className="mt-2 text-xs text-text-tertiary">
-                Riconosce automaticamente <strong>nome</strong>, <strong>unità/peso</strong> e <strong>prezzo</strong>.
+                Riconosce automaticamente <strong>nome</strong>, <strong>unità/peso</strong> e <strong>prezzo</strong> —
+                in qualsiasi ordine, con o senza intestazione.
               </p>
-              <input type="file" accept=".csv,.xls,.xlsx" className="hidden"
+              <input type="file" accept=".csv,.xls,.xlsx" className="hidden" disabled={parsing}
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
             </label>
-            <details className="text-sm text-text-tertiary">
-              <summary className="cursor-pointer hover:text-text-secondary">Opzioni avanzate</summary>
-              <label className="mt-2 flex items-center gap-2">
-                <input type="checkbox" checked={hasHeader} onChange={(e) => setHasHeader(e.target.checked)} />
-                Il file ha un&apos;intestazione sulla prima riga
-              </label>
-            </details>
+            <p className="rounded-lg bg-surface-base border border-border-subtle px-3 py-2 text-xs text-text-tertiary">
+              💡 Per un riconoscimento più preciso, fai in modo che la <strong>prima riga</strong> del file contenga
+              le intestazioni delle colonne (es. <em>nome, quantità, prezzo</em>) oppure un prodotto d'esempio con
+              questi valori.
+            </p>
+            {parsing && (
+              <p className="flex items-center gap-2 text-sm text-text-tertiary">
+                <Loader2 className="h-4 w-4 animate-spin" /> Analizzo il file…
+              </p>
+            )}
             <a href="/template-catalogo.csv" download
               className="inline-flex items-center gap-1 text-sm text-accent-green hover:underline">
               <Download className="h-4 w-4" /> Scarica template CSV
@@ -268,9 +280,10 @@ export function CatalogImportWizard({ open, onClose, catalogId, onImported }: Pr
               <button
                 onClick={confirmImport}
                 disabled={pending || validCount === 0 || !mappingComplete}
-                className="px-4 py-2 rounded-lg bg-accent-green text-surface-base font-medium disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-accent-green text-surface-base font-medium disabled:opacity-50"
               >
-                {pending ? "Importo..." : `Conferma (${validCount} righe)`}
+                {pending && <Loader2 className="h-4 w-4 animate-spin" />}
+                {pending ? "Importazione…" : `Conferma (${validCount} righe)`}
               </button>
             </div>
           </div>

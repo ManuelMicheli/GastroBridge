@@ -2,8 +2,8 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { UploadCloud, Check, ArrowLeft, Download, Wand2, Pencil } from "lucide-react";
-import { parseCsv, parseXlsx, suggestMapping, extractUnitFromText, type ParsedSheet } from "@/lib/catalogs/parse-file";
+import { UploadCloud, Check, ArrowLeft, Download, Wand2, Pencil, Loader2 } from "lucide-react";
+import { parseSmart, extractUnitFromText, type ParsedSheet } from "@/lib/catalogs/parse-file";
 import { normalizePrice } from "@/lib/catalogs/normalize";
 import { importSupplierProducts, type ProductImportRow } from "@/lib/products/import-actions";
 
@@ -62,13 +62,13 @@ const EMPTY_MAPPING: Mapping = {
 
 export function ProductImportWizard({ open, onClose, categories, onImported }: Props) {
   const [step, setStep] = useState<Step>("upload");
-  const [hasHeader, setHasHeader] = useState(true);
   const [sheet, setSheet] = useState<ParsedSheet | null>(null);
   const [mapping, setMapping] = useState<Mapping>(EMPTY_MAPPING);
   const [autoDetected, setAutoDetected] = useState(false);
   const [showMappingEditor, setShowMappingEditor] = useState(false);
   const [categoryId, setCategoryId] = useState<string>(categories[0]?.id ?? "");
   const [skipDuplicates, setSkipDuplicates] = useState(true);
+  const [parsing, setParsing] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const reset = () => {
@@ -77,22 +77,22 @@ export function ProductImportWizard({ open, onClose, categories, onImported }: P
     setMapping(EMPTY_MAPPING);
     setAutoDetected(false);
     setShowMappingEditor(false);
+    setParsing(false);
   };
   const closeAll = () => { reset(); onClose(); };
 
   const handleFile = async (file: File) => {
     if (file.size > MAX_BYTES) { toast.error("File troppo grande (max 2MB)"); return; }
+    setParsing(true);
     try {
-      const ext = file.name.toLowerCase().split(".").pop() ?? "";
-      let parsed: ParsedSheet;
-      if (ext === "csv") parsed = await parseCsv(file, hasHeader);
-      else if (ext === "xlsx" || ext === "xls") parsed = await parseXlsx(file, hasHeader);
-      else { toast.error("Formato non supportato"); return; }
+      // parseSmart auto-detects the header row (skipping title/preamble rows),
+      // picks the best worksheet, and proposes name/unit/price \u2014 no hasHeader
+      // flag and no manual column mapping needed for standard listini.
+      const { sheet: parsed, mapping: suggested } = await parseSmart(file);
 
       if (parsed.rows.length === 0) { toast.error("Nessuna riga di dati nel file"); return; }
       if (parsed.rows.length > MAX_ROWS) { toast.error(`Troppe righe (max ${MAX_ROWS})`); return; }
 
-      const suggested = suggestMapping(parsed.headers, parsed.rows);
       const lc = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
       const findByKeywords = (keys: string[], skip: Set<string>): string => {
         const found = parsed.headers.find((h) => !skip.has(h) && keys.some((k) => lc(h).includes(lc(k))));
@@ -114,13 +114,14 @@ export function ProductImportWizard({ open, onClose, categories, onImported }: P
         price: suggested.price ?? "",
         brand, description, origin, min_quantity,
       });
-      const haveRequired = Boolean(suggested.name && suggested.price);
-      setAutoDetected(haveRequired);
-      setShowMappingEditor(!haveRequired);
+      setAutoDetected(suggested.confident);
+      setShowMappingEditor(!suggested.confident);
       setStep("preview");
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Errore lettura file";
       toast.error(msg);
+    } finally {
+      setParsing(false);
     }
   };
 
@@ -230,18 +231,16 @@ export function ProductImportWizard({ open, onClose, categories, onImported }: P
               <p className="mt-1 text-xs text-sage">CSV, XLS, XLSX · max 2MB · max 5000 righe</p>
               <p className="mt-2 text-xs text-sage">
                 Riconosce automaticamente <strong>nome</strong>, <strong>unità/peso</strong>, <strong>prezzo</strong>,
-                brand, origine e quantità minima.
+                brand, origine e quantità minima — in qualsiasi ordine, con o senza intestazione.
               </p>
-              <input type="file" accept=".csv,.xls,.xlsx" className="hidden"
+              <input type="file" accept=".csv,.xls,.xlsx" className="hidden" disabled={parsing}
                 onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
             </label>
-            <details className="text-sm text-sage">
-              <summary className="cursor-pointer hover:text-charcoal">Opzioni avanzate</summary>
-              <label className="mt-2 flex items-center gap-2">
-                <input type="checkbox" checked={hasHeader} onChange={(e) => setHasHeader(e.target.checked)} />
-                Il file ha un&apos;intestazione sulla prima riga
-              </label>
-            </details>
+            {parsing && (
+              <p className="flex items-center gap-2 text-sm text-sage">
+                <Loader2 className="h-4 w-4 animate-spin" /> Analizzo il file…
+              </p>
+            )}
             <a href="/template-prodotti.csv" download
               className="inline-flex items-center gap-1 text-sm text-forest hover:underline">
               <Download className="h-4 w-4" /> Scarica template CSV

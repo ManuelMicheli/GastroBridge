@@ -17,15 +17,18 @@ export default function SignupPage() {
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailExists, setEmailExists] = useState(false);
 
   async function handleSubmit(formData: FormData) {
     if (!selectedRole) return;
     setIsLoading(true);
     setError(null);
+    setEmailExists(false);
     formData.set("role", selectedRole);
     const result = await signUp(formData);
     if (result?.error) {
       setError(result.error);
+      setEmailExists(Boolean(result.emailExists));
       toast(result.error);
       setIsLoading(false);
     } else if (result?.redirectTo) {
@@ -161,6 +164,24 @@ export default function SignupPage() {
             prefix={<Hash className="h-4 w-4" />}
             helperText="Facoltativa, puoi aggiungerla dopo"
           />
+
+          {emailExists && (
+            <div
+              role="alert"
+              className="rounded-xl border border-brand-primary/30 bg-brand-primary-subtle p-3.5"
+            >
+              <p className="text-sm font-medium text-brand-depth">
+                Questa email è già collegata a un account.
+              </p>
+              <Link
+                href="/login"
+                className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-brand-primary hover:underline"
+              >
+                Accedi al tuo account
+                <span aria-hidden>{"→"}</span>
+              </Link>
+            </div>
+          )}
 
           <Button type="submit" className="w-full" isLoading={isLoading}>
             Registrati come{" "}
