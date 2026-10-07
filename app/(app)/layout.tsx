@@ -10,6 +10,7 @@ import { getSectionSeenAt } from "@/lib/nav/section-seen";
 import { getRecentInAppNotifications } from "@/lib/notifications/queries";
 import { RestaurantRealtimeProvider } from "@/lib/realtime/restaurant-provider";
 import { accentBootScript } from "@/lib/appearance";
+import { contextCan, getRestaurantContext } from "@/lib/restaurants/context";
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard",    label: "Dashboard",       iconName: "LayoutDashboard" },
@@ -41,13 +42,26 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
     .then((seen) => getTotalUnreadMessagesForCurrentUser(seen))
     .catch(() => 0);
 
-  const [profile, initialNotifications, messagesBadge] = await Promise.all([
+  const [profile, initialNotifications, messagesBadge, ctx] = await Promise.all([
     userId ? getCachedProfile(userId) : Promise.resolve(null),
     user ? getRecentInAppNotifications(20).catch(() => []) : Promise.resolve([]),
     messagesBadgePromise,
+    user ? getRestaurantContext() : Promise.resolve(null),
   ]);
 
-  const navItems: NavItem[] = NAV_ITEMS.map((item) =>
+  // Team members (restaurant_members) work on someone else's restaurant:
+  // show its name and hide sections their role cannot use. Finanze (fiscal
+  // drawer) stays owner-only.
+  const isMember = !!ctx && !ctx.isOwner;
+  const hidden = new Set<string>();
+  if (ctx && !contextCan(ctx, "analytics.financial")) hidden.add("/analytics");
+  if (isMember) {
+    hidden.add("/finanze");
+    hidden.add("/finanze/ordini-consigliati");
+  }
+  const companyName = (isMember ? ctx.restaurantName : profile?.company_name) || "Ristorante";
+
+  const navItems: NavItem[] = NAV_ITEMS.filter((item) => !hidden.has(item.href)).map((item) =>
     item.href === "/messaggi" && messagesBadge > 0
       ? { ...item, badge: messagesBadge }
       : item,
@@ -69,7 +83,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
           navItems={navItems}
           mobileNavItems={MOBILE_NAV}
           role="restaurant"
-          companyName={profile?.company_name || "Ristorante"}
+          companyName={companyName}
           userEmail={user?.email || ""}
         >
           <div id="main-content" tabIndex={-1} className="outline-none">

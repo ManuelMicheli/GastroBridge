@@ -186,7 +186,7 @@ export function CatalogsClient({
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, []);
+  }, [canManage]);
 
   const profile = profileId ? initialCatalogs.find((c) => `${c.source}-${c.id}` === profileId) ?? null : null;
 

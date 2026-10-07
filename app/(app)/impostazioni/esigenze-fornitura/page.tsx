@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { contextCan, getRestaurantContext } from "@/lib/restaurants/context";
+import { RESTAURANT_ROLE_LABELS } from "@/lib/restaurants/permissions";
+import { RestrictedSettings } from "../_components/restricted-settings";
 import { getPreferences } from "@/lib/restaurants/preferences";
 import { PreferencesClient } from "./preferences-client";
 import { LargeTitle } from "@/components/ui/large-title";
@@ -25,22 +28,17 @@ export default async function SupplyPreferencesPage() {
     );
   }
 
-  const { data: restaurants } = await supabase
-    .from("restaurants")
-    .select("id, name, is_primary, created_at")
-    .eq("profile_id", user.id)
-    .order("is_primary", { ascending: false })
-    .order("created_at", { ascending: true })
-    .returns<
-      Array<{
-        id: string;
-        name: string;
-        is_primary: boolean | null;
-        created_at: string | null;
-      }>
-    >();
-
-  const primary = restaurants?.[0] ?? null;
+  // Active restaurant (owner or team member with settings.manage).
+  const ctx = await getRestaurantContext();
+  if (ctx && !contextCan(ctx, "settings.manage")) {
+    return (
+      <RestrictedSettings
+        title="Esigenze di fornitura"
+        body={`Le priorità di fornitura di ${ctx.restaurantName} sono gestite dal titolare o da un manager (il tuo ruolo: ${RESTAURANT_ROLE_LABELS[ctx.role]}).`}
+      />
+    );
+  }
+  const primary = ctx ? { id: ctx.restaurantId, name: ctx.restaurantName } : null;
 
   if (!primary) {
     return (

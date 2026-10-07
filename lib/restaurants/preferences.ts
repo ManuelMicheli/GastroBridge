@@ -7,6 +7,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { accessCan, getRestaurantAccess } from "@/lib/restaurants/context";
 import {
   PreferencesPatchSchema,
   CategoryPreferencePatchSchema,
@@ -155,14 +156,12 @@ async function assertOwnsRestaurant(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Non autenticato" };
 
-  const { data, error } = await supabase
-    .from("restaurants")
-    .select("id")
-    .eq("id", restaurantId)
-    .eq("profile_id", user.id)
-    .maybeSingle<{ id: string }>();
-  if (error) return { ok: false, error: error.message };
-  if (!data) return { ok: false, error: "Sede non trovata" };
+  // Owner, or a team member whose role has settings.manage.
+  const access = await getRestaurantAccess(restaurantId);
+  if (!access) return { ok: false, error: "Sede non trovata" };
+  if (!accessCan(access, "settings.manage")) {
+    return { ok: false, error: "Il tuo ruolo non consente di modificare le preferenze" };
+  }
   return { ok: true };
 }
 
