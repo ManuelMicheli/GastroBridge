@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useFocusTrap } from "@/components/ui/use-focus-trap";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { Search, X } from "lucide-react";
@@ -13,6 +14,9 @@ export function CommandPalette() {
   const { isOpen, close, searchItems } = useCommandPalette();
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  // Esc is handled by the provider; trap Tab and restore focus on close.
+  useFocusTrap(panelRef, isOpen, { autoFocus: false });
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
 
@@ -86,6 +90,10 @@ export function CommandPalette() {
 
           {/* Panel */}
           <motion.div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Cerca pagine e azioni"
             initial={{ opacity: 0, scale: 0.96, y: -10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.96, y: -10 }}

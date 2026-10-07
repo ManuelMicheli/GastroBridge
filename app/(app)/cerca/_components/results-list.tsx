@@ -99,6 +99,7 @@ export function ResultsList({
           <span>sort</span>
           {(["relevance", "price", "name"] as const).map((m) => (
             <button
+              aria-pressed={sort === m}
               key={m}
               onClick={() => onSortChange(m)}
               className={`rounded px-1.5 py-0.5 transition-colors ${

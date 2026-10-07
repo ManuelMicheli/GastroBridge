@@ -5,6 +5,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils/formatters";
+import { romeDateKey } from "@/lib/utils/formatters";
 
 export type CalTone = "amber" | "blue" | "accent" | "green" | "red" | "purple" | "neutral";
 
@@ -65,10 +66,10 @@ export function MonthCalendar({
   initialMonth?: Date;
 }) {
   const reduce = useReducedMotion();
+  // "Today" in Italian time, so server render and hydration agree.
   const today = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
+    const [y, m, d] = romeDateKey().split("-").map(Number);
+    return new Date(y!, (m ?? 1) - 1, d ?? 1);
   }, []);
   const [month, setMonth] = useState(() => {
     const base = initialMonth ?? today;
@@ -105,7 +106,7 @@ export function MonthCalendar({
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(base);
       d.setDate(base.getDate() + i);
-      return new Intl.DateTimeFormat("it-IT", { weekday: "short" }).format(d).replace(".", "");
+      return new Intl.DateTimeFormat("it-IT", { timeZone: "Europe/Rome", weekday: "short" }).format(d).replace(".", "");
     });
   }, [weekStartsOn]);
 
@@ -116,7 +117,7 @@ export function MonthCalendar({
     [events, todayKey],
   );
 
-  const monthLabel = new Intl.DateTimeFormat("it-IT", { month: "long", year: "numeric" }).format(month);
+  const monthLabel = new Intl.DateTimeFormat("it-IT", { timeZone: "Europe/Rome", month: "long", year: "numeric" }).format(month);
 
   function shift(n: number) {
     setDir(n);
@@ -232,10 +233,10 @@ export function MonthCalendar({
       <div className="flex min-w-0 flex-col gap-3 lg:gap-4">
         <section className="f-card f-rise p-5" style={{ ["--i" as string]: 1 }} aria-label={todayTitle}>
           <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--acc-700)]">
-            {todayTitle} · {new Intl.DateTimeFormat("it-IT", { weekday: "long" }).format(today)}
+            {todayTitle} · {new Intl.DateTimeFormat("it-IT", { timeZone: "Europe/Rome", weekday: "long" }).format(today)}
           </p>
           <p className="mt-1 text-[24px] font-semibold capitalize tracking-[-0.02em] text-[var(--f-ink)]">
-            {new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long" }).format(today)}
+            {new Intl.DateTimeFormat("it-IT", { timeZone: "Europe/Rome", day: "numeric", month: "long" }).format(today)}
           </p>
           <div className="mt-4 space-y-2.5">
             {todays.length === 0 ? (
@@ -261,14 +262,14 @@ export function MonthCalendar({
                       style={{ background: TONES[e.tone].bg, color: TONES[e.tone].fg }}
                     >
                       <span className="text-[9.5px] font-semibold uppercase">
-                        {new Intl.DateTimeFormat("it-IT", { month: "short" }).format(d).replace(".", "")}
+                        {new Intl.DateTimeFormat("it-IT", { timeZone: "Europe/Rome", month: "short" }).format(d).replace(".", "")}
                       </span>
                       <span className="mt-0.5 text-[15px] font-semibold tabular-nums">{d.getDate()}</span>
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-[13.5px] font-medium text-[var(--f-ink)]">{e.title}</span>
                       <span className="block truncate text-[12px] text-[var(--f-muted)]">
-                        <span className="capitalize">{new Intl.DateTimeFormat("it-IT", { weekday: "long" }).format(d)}</span>
+                        <span className="capitalize">{new Intl.DateTimeFormat("it-IT", { timeZone: "Europe/Rome", weekday: "long" }).format(d)}</span>
                         {e.subtitle ? ` · ${e.subtitle}` : ""}
                       </span>
                     </span>

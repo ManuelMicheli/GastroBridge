@@ -5,6 +5,9 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/supplier/context";
+import { ROLE_LABELS } from "@/lib/supplier/permissions";
+import { sendEmail } from "@/lib/notifications/email";
+import { renderTeamInviteEmail } from "@/lib/notifications/templates";
 import type { Database, SupplierRole } from "@/types/database";
 import {
   InviteStaffSchema,
@@ -96,38 +99,41 @@ export async function inviteMember(
     const admin = createAdminClient();
     const supabase = await createClient();
 
-    // 1. Trova o crea l'utente via admin API.
+    const { data: supplierRow } = await (supabase as any)
+      .from("suppliers")
+      .select("company_name")
+      .eq("id", supplierId)
+      .maybeSingle();
+    const companyName: string = supplierRow?.company_name ?? "il tuo fornitore";
+
+    const appUrl = (
+      process.env.NEXT_PUBLIC_APP_URL ?? process.env.NEXT_PUBLIC_SITE_URL ?? ""
+    ).replace(/\/$/, "");
+    const acceptPath = "/supplier/invito/accetta";
+
+    // 1. Nuovo utente → email di invito Supabase (imposta password e arriva
+    //    su /supplier/invito/accetta). `invited_supplier_id` fa sì che il
+    //    trigger handle_new_user crei solo il profilo (migration
+    //    20261007010000), senza un nuovo fornitore.
     let profileId: string | null = null;
-
-    const { data: existingProfile } = await (supabase as any)
-      .from("profiles")
-      .select("id")
-      .ilike("id", "%")
-      .limit(1);
-    void existingProfile; // evita warning lint su var non usata
-
-    // Cerca eventuale utente già esistente via admin.listUsers (paginato: fallback su invite)
+    let existingUser = false;
     try {
       const { data: inviteRes, error: inviteErr } =
         await admin.auth.admin.inviteUserByEmail(email, {
           data: {
-            supplier_id: supplierId,
-            role,
+            invited_supplier_id: supplierId,
+            supplier_role: role,
+            company_name: companyName,
             invited_by: invitedBy,
           },
-          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/supplier/invito/accetta`,
+          redirectTo: `${appUrl}${acceptPath}`,
         });
 
       if (inviteErr) {
-        // Se l'utente esiste già, generiamo comunque un magic link
+        // Utente già registrato: risolviamo l'id senza inviare nulla
+        // (generateLink non spedisce email) e mandiamo il nostro invito.
         const { data: linkRes, error: linkErr } =
-          await admin.auth.admin.generateLink({
-            type: "magiclink",
-            email,
-            options: {
-              redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? ""}/supplier/invito/accetta`,
-            },
-          });
+          await admin.auth.admin.generateLink({ type: "magiclink", email });
         if (linkErr || !linkRes?.user) {
           return {
             ok: false,
@@ -135,6 +141,7 @@ export async function inviteMember(
           };
         }
         profileId = linkRes.user.id;
+        existingUser = true;
       } else {
         profileId = inviteRes?.user?.id ?? null;
       }
@@ -149,8 +156,8 @@ export async function inviteMember(
       return { ok: false, error: "Impossibile risolvere utente invitato" };
     }
 
-    // 2. Assicura profiles row (in caso non esista ancora).
-    const { data: profileRow } = await (supabase as any)
+    // 2. Assicura profiles row (il trigger la crea; fallback difensivo).
+    const { data: profileRow } = await (admin as any)
       .from("profiles")
       .select("id")
       .eq("id", profileId)
@@ -159,7 +166,7 @@ export async function inviteMember(
       const { error: profErr } = await (admin as any).from("profiles").insert({
         id: profileId,
         role: "supplier",
-        company_name: email,
+        company_name: companyName,
       });
       if (profErr) return { ok: false, error: profErr.message };
     }
@@ -211,6 +218,19 @@ export async function inviteMember(
         return { ok: false, error: error?.message ?? "Errore creazione membro" };
       }
       memberRow = data as MemberRow;
+    }
+
+    // 5. Utente già registrato: invio dell'invito con il nostro template.
+    if (existingUser) {
+      const mail = renderTeamInviteEmail({
+        companyName,
+        roleLabel: ROLE_LABELS[role],
+        url: `${appUrl}/login?redirect=${encodeURIComponent(acceptPath)}`,
+      });
+      const sent = await sendEmail({ to: email, ...mail });
+      if (!sent.ok) {
+        console.warn("[staff:invite] invite email not sent", sent.error);
+      }
     }
 
     revalidatePath("/supplier/staff");
@@ -415,33 +435,42 @@ export async function revokeInvite(
 }
 
 export async function acceptInvite(
-  supplierId: string,
+  supplierId?: string | null,
 ): Promise<Result<MemberRow>> {
   try {
     const userId = await getCurrentUserId();
     if (!userId) return { ok: false, error: "Sessione non valida" };
 
+    // L'invitato legge la propria riga ("supplier_members self read").
     const supabase = await createClient();
-    const { data: existing } = await (supabase as any)
+    let query = (supabase as any)
       .from("supplier_members")
       .select("*")
-      .eq("supplier_id", supplierId)
       .eq("profile_id", userId)
       .eq("is_active", true)
-      .maybeSingle();
+      .order("invited_at", { ascending: false })
+      .limit(1);
+    if (supplierId) query = query.eq("supplier_id", supplierId);
+    else query = query.is("accepted_at", null);
+    const { data: rows } = await query;
+    const existing = Array.isArray(rows) ? rows[0] : null;
 
     if (!existing) {
-      return { ok: false, error: "Nessun invito attivo per questo fornitore" };
+      return { ok: false, error: "Nessun invito attivo per il tuo account" };
     }
     const row = existing as MemberRow;
     if (row.accepted_at) {
       return { ok: true, data: row };
     }
 
-    const { data, error } = await (supabase as any)
+    // Non è ancora membro (accepted_at nullo) quindi le policy non gli
+    // permettono l'UPDATE: lo fa il client admin, limitato alla sua riga.
+    const admin = createAdminClient();
+    const { data, error } = await (admin as any)
       .from("supplier_members")
       .update({ accepted_at: new Date().toISOString() })
       .eq("id", row.id)
+      .eq("profile_id", userId)
       .select("*")
       .single();
     if (error || !data) {

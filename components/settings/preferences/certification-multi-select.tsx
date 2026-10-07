@@ -27,6 +27,7 @@ export function CertificationMultiSelect({
         const active = value.includes(cert);
         return (
           <button
+            aria-pressed={active}
             key={cert}
             type="button"
             disabled={disabled}

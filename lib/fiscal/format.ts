@@ -25,6 +25,7 @@ export function formatCentsCompact(cents: number): string {
 export function formatDate(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString("it-IT", {
+    timeZone: "Europe/Rome",
     day: "2-digit",
     month: "short",
   });
@@ -33,6 +34,7 @@ export function formatDate(iso: string): string {
 export function formatDateTime(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleString("it-IT", {
+    timeZone: "Europe/Rome",
     day: "2-digit",
     month: "short",
     hour: "2-digit",

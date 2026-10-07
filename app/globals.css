@@ -372,7 +372,7 @@ body {
    ========================================= */
 [data-area="supplier"] {
   /* Canonical brand tokens (light) — ocra + bordeaux-marrone depth */
-  --color-brand-primary: #A87535;
+  --color-brand-primary: #946630;
   --color-brand-primary-hover: #8F5F2A;
   --color-brand-primary-active: #755025;
   --color-brand-primary-subtle: #F5EBD5;
@@ -396,14 +396,14 @@ body {
   --text-muted-light: #6B5F4A;
 
   /* Legacy forest* tokens → ocra family (supplier scope only) */
-  --color-forest: #A87535;
+  --color-forest: #946630;
   --color-forest-dark: #8F5F2A;
   --color-forest-light: #F5EBD5;
   --color-cream: #FBF8F1;
   --color-charcoal: #1A1A1A;
   /* Terracotta → ocra (NOT yellow — 5% rule: terracotta was used on
      wide surfaces like pending-requests banners, must stay muted). */
-  --color-terracotta: #A87535;
+  --color-terracotta: #946630;
   --color-terracotta-light: #F5EBD5;
   --color-sage: #6B5F4A;
   --color-sage-muted: #E8DCC0;
@@ -411,14 +411,14 @@ body {
   /* Accent-green family (KPIs, sidebar active, quick-action, link color)
      → remapped to ocra so shared dashboard components pick it up
      without needing per-component edits. */
-  --color-accent-green: #A87535;
+  --color-accent-green: #946630;
   --color-accent-green-muted: #F5EBD5;
-  --color-text-accent: #A87535;
-  --color-text-link: #A87535;
+  --color-text-accent: #946630;
+  --color-text-link: #946630;
 
   /* Accent-orange (used by KPI secondary series, loaded-order status, etc.)
      → ocra as well. Rule #3: large-surface terracotta/orange ≠ giallo. */
-  --color-accent-orange: #A87535;
+  --color-accent-orange: #946630;
   --color-accent-orange-muted: #F5EBD5;
 
   /* Border accents tinted ocra */
@@ -1279,14 +1279,16 @@ html[data-accent="bordeaux"] [data-area="supplier"] {
   --acc-600: #B91C3C; --acc-500: #D0435E; --acc-400: #E5798D; --acc-300: #F0A9B6;
   --acc-200: #F7CED6; --acc-100: #FBE7EB; --acc-50: #FDF3F5; --acc-ink: #6B1F2E;
 }
-/* Ocra — supplier default (existing ocra/avorio identity). */
+/* Ocra — supplier default (existing ocra/avorio identity).
+   600 darkened from #A87535 (3.99:1 on white) to #946630 (5.0:1) for AA
+   text/button contrast; same for Ambra 600 #C27413 (3.62) → #A9620F (4.73). */
 [data-area="supplier"],
 html[data-accent-area="supplier"],
 html[data-accent="ocra"],
 html[data-accent="ocra"] [data-area="restaurant"],
 html[data-accent="ocra"] [data-area="supplier"] {
   --acc-950: #241606; --acc-900: #3D270C; --acc-800: #5C3F18; --acc-700: #7E5524;
-  --acc-600: #A87535; --acc-500: #BF8F50; --acc-400: #D5AF7E; --acc-300: #E5CAA4;
+  --acc-600: #946630; --acc-500: #BF8F50; --acc-400: #D5AF7E; --acc-300: #E5CAA4;
   --acc-200: #EFDFC7; --acc-100: #F6ECD9; --acc-50: #FBF6EC; --acc-ink: #5C3F18;
 }
 /* Forest — homage to the original GastroBridge green #1B6B4A. */
@@ -1310,7 +1312,7 @@ html[data-accent="ambra"],
 html[data-accent="ambra"] [data-area="restaurant"],
 html[data-accent="ambra"] [data-area="supplier"] {
   --acc-950: #2A1603; --acc-900: #4A2806; --acc-800: #7A4210; --acc-700: #9A5712;
-  --acc-600: #C27413; --acc-500: #DB9233; --acc-400: #EAB466; --acc-300: #F2CE97;
+  --acc-600: #A9620F; --acc-500: #DB9233; --acc-400: #EAB466; --acc-300: #F2CE97;
   --acc-200: #F8E3C3; --acc-100: #FCF1E0; --acc-50: #FEF8EF; --acc-ink: #7A4210;
 }
 
@@ -1715,6 +1717,14 @@ html[data-accent="ambra"] [data-area="supplier"] {
 .f-chip:hover { color: var(--f-ink); }
 .f-chip[data-active="true"] { color: #fff; }
 .f-chip:focus-visible { outline: none; box-shadow: 0 0 0 2px color-mix(in oklab, var(--acc-600) 40%, transparent); }
+/* Fallback focus ring for every other interactive element of the logged-in
+   areas and auth (links, list rows, icon buttons without a primitive).
+   :where() keeps it at the lowest specificity, so primitives that define
+   their own ring (.f-btn, .f-chip, .f-input, …) still win. */
+:where([data-area="restaurant"], [data-area="supplier"]) :where(a, button, [role="button"], [role="tab"], [role="radio"], summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid var(--acc-600, #B91C3C);
+  outline-offset: 2px;
+}
 .f-chip-count { font-size: 11px; opacity: 0.6; font-variant-numeric: tabular-nums; }
 .f-chip-indicator { position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 0; border-radius: 9999px; background: linear-gradient(180deg, color-mix(in oklab, var(--acc-700) 65%, var(--acc-800)), var(--acc-800)); box-shadow: 0 4px 10px color-mix(in oklab, var(--acc-800) 22%, transparent); transition: transform 320ms var(--f-ease), width 320ms var(--f-ease), opacity 200ms; pointer-events: none; }
 }

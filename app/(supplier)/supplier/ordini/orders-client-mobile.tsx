@@ -51,6 +51,7 @@ function shortDate(iso: string | null): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
   return new Intl.DateTimeFormat("it-IT", {
+    timeZone: "Europe/Rome",
     day: "2-digit",
     month: "short",
   }).format(d);

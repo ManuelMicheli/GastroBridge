@@ -1,6 +1,7 @@
 "use client";
 
-import { forwardRef, type ButtonHTMLAttributes } from "react";
+import { forwardRef, type ButtonHTMLAttributes, type ComponentProps } from "react";
+import Link from "next/link";
 import { cn } from "@/lib/utils/formatters";
 import { Loader2 } from "lucide-react";
 
@@ -85,4 +86,31 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
 Button.displayName = "Button";
 
-export { Button, type ButtonProps, type ButtonVariant, type ButtonSize, type ButtonDensity };
+type ButtonLinkProps = ComponentProps<typeof Link> & {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  density?: ButtonDensity;
+};
+
+/**
+ * A link that looks like a Button. Use it instead of nesting <Button> inside
+ * <Link> (a <button> inside an <a> is invalid HTML and is announced twice by
+ * screen readers).
+ */
+function ButtonLink({
+  className,
+  variant = "primary",
+  size = "md",
+  density = "comfortable",
+  ...props
+}: ButtonLinkProps) {
+  const sizes = density === "compact" ? compactSizeStyles : sizeStyles;
+  return (
+    <Link
+      className={cn("f-btn", variantStyles[variant], sizes[size], className)}
+      {...props}
+    />
+  );
+}
+
+export { Button, ButtonLink, type ButtonProps, type ButtonVariant, type ButtonSize, type ButtonDensity };

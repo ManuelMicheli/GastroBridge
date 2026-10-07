@@ -42,6 +42,7 @@ export function SupplierList({
           <span>sort</span>
           {(["recent", "name", "rating"] as const).map((m) => (
             <button
+              aria-pressed={sort === m}
               key={m}
               onClick={() => onSortChange(m)}
               className={`rounded px-1.5 py-0.5 ${

@@ -2,8 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { toast } from "@/components/ui/toast";
@@ -144,11 +143,9 @@ export function NewProductForm({ supplierId, categories }: Props) {
         <Button type="submit" isLoading={isPending}>
           Salva prodotto
         </Button>
-        <Link href="/supplier/catalogo">
-          <Button variant="secondary" type="button">
-            Annulla
-          </Button>
-        </Link>
+        <ButtonLink href="/supplier/catalogo" variant="secondary">
+          Annulla
+        </ButtonLink>
       </div>
     </form>
   );

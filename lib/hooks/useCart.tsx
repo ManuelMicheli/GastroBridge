@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import type { CartItem, CartBySupplier } from "@/types/orders";
+import { scopedStorageKey, TYPICAL_ORDER_BASE_KEY } from "./user-storage";
 
 interface CartContextType {
   items: CartItem[];
@@ -12,6 +13,8 @@ interface CartContextType {
   getCartBySupplier: () => CartBySupplier[];
   totalItems: number;
   totalAmount: number;
+  /** localStorage key of the per-account "ordine tipico" (null when anonymous). */
+  typicalOrderKey: string | null;
 }
 
 const CartContext = createContext<CartContextType | null>(null);
@@ -124,6 +127,7 @@ export function CartProvider({
     <CartContext value={{
       items, addItem, removeItem, updateQuantity, clearCart,
       getCartBySupplier, totalItems, totalAmount,
+      typicalOrderKey: scopedStorageKey(TYPICAL_ORDER_BASE_KEY, userId),
     }}>
       {children}
     </CartContext>

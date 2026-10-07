@@ -2,6 +2,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { DeliveryStatus } from "@/types/database";
 
 export type DeliverySlot = {
@@ -246,25 +247,30 @@ export async function listDriversForSupplier(
   const members = data ?? [];
   if (members.length === 0) return [];
 
+  // `members` is non-empty only for members of this supplier (RLS on
+  // supplier_members). Profiles are readable only by their owner, and have
+  // no email column (the old select failed as a whole), so team names are
+  // read with the admin client.
   const profileIds = members.map((m) => m.profile_id);
-  const { data: profiles } = (await supabase
+  const admin = createAdminClient() as any;
+  const { data: profiles } = (await admin
     .from("profiles")
-    .select("id, company_name, email")
+    .select("id, company_name")
     .in("id", profileIds)) as {
-    data: Array<{ id: string; company_name: string | null; email: string | null }> | null;
+    data: Array<{ id: string; company_name: string | null }> | null;
   };
 
   const profileMap = new Map<string, { name: string }>();
   for (const p of profiles ?? []) {
     profileMap.set(p.id, {
-      name: p.company_name || p.email || "Driver",
+      name: p.company_name || "Autista",
     });
   }
 
   return members.map((m) => ({
     id: m.id,
     profile_id: m.profile_id,
-    display_name: profileMap.get(m.profile_id)?.name ?? "Driver",
+    display_name: profileMap.get(m.profile_id)?.name ?? "Autista",
   }));
 }
 

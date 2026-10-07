@@ -25,6 +25,7 @@ function csvEscape(value: string): string {
 
 function formatDateItaly(iso: string): string {
   return new Date(iso).toLocaleDateString("it-IT", {
+    timeZone: "Europe/Rome",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",

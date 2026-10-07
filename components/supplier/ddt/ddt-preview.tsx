@@ -11,12 +11,11 @@
 // Nota: il signedUrl embed scade dopo 5 min → se l'utente lascia aperto e
 // riclicca "Download", chiamiamo `getDdtSignedUrl` per rigenerarlo.
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { Download, Copy, Ban, Truck } from "lucide-react";
 import {
@@ -121,11 +120,9 @@ export function DdtPreview({
           >
             <Copy className="h-4 w-4" /> Ristampa COPIA
           </Button>
-          <Link href={`/supplier/consegne/${deliveryId}`}>
-            <Button size="sm" variant="ghost" type="button">
-              <Truck className="h-4 w-4" /> Vai alla consegna
-            </Button>
-          </Link>
+          <ButtonLink href={`/supplier/consegne/${deliveryId}`} size="sm" variant="ghost">
+            <Truck className="h-4 w-4" /> Vai alla consegna
+          </ButtonLink>
           {canAdmin && canCancel && (
             <Button
               size="sm"
@@ -174,7 +171,7 @@ export function DdtPreview({
                     </td>
                     <td className="px-4 py-2 text-sage">
                       {r.expiry_date
-                        ? new Date(r.expiry_date).toLocaleDateString("it-IT")
+                        ? new Date(r.expiry_date).toLocaleDateString("it-IT", { timeZone: "Europe/Rome" })
                         : "—"}
                     </td>
                   </tr>

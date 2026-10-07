@@ -34,7 +34,7 @@ export function ActivityHeatmap({ days }: { days: ActivityDay[] }) {
     return { weeks, max, total };
   }, [days, weekStartsOn]);
 
-  const fmt = new Intl.DateTimeFormat("it-IT", { weekday: "short", day: "numeric", month: "short" });
+  const fmt = new Intl.DateTimeFormat("it-IT", { timeZone: "Europe/Rome", weekday: "short", day: "numeric", month: "short" });
 
   return (
     <div>

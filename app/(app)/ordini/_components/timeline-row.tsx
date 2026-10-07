@@ -13,6 +13,7 @@ function formatTimestamp(iso: string, bucket: TimeBucket): string {
   if (bucket === "today" || bucket === "yesterday") {
     // HH:mm
     return new Intl.DateTimeFormat("it-IT", {
+      timeZone: "Europe/Rome",
       hour: "2-digit",
       minute: "2-digit",
     }).format(d);
@@ -20,6 +21,7 @@ function formatTimestamp(iso: string, bucket: TimeBucket): string {
   if (bucket === "this_week") {
     // "lun 11:30"
     return new Intl.DateTimeFormat("it-IT", {
+      timeZone: "Europe/Rome",
       weekday: "short",
       hour: "2-digit",
       minute: "2-digit",
@@ -27,6 +29,7 @@ function formatTimestamp(iso: string, bucket: TimeBucket): string {
   }
   // earlier: full date
   return new Intl.DateTimeFormat("it-IT", {
+    timeZone: "Europe/Rome",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",

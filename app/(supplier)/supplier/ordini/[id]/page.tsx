@@ -129,6 +129,9 @@ export default async function SupplierOrderDetailPage({
   const canOpenDelivery = memberCan(member, "delivery.execute");
   const canOpenDdt = memberCan(member, "ddt.generate");
   const logisticsLinks: { href: string; label: string }[] = [];
+  if (relationshipId) {
+    logisticsLinks.push({ href: `/supplier/messaggi/${relationshipId}`, label: "Messaggi con il cliente" });
+  }
   for (const d of deliveryRows ?? []) {
     if (canOpenDelivery) {
       logisticsLinks.push({ href: `/supplier/consegne/${d.id}`, label: "Consegna" });
@@ -144,7 +147,7 @@ export default async function SupplierOrderDetailPage({
   return (
     <>
     {logisticsLinks.length > 0 && (
-      <nav aria-label="Logistica ordine" className="mb-3 flex flex-wrap gap-3 text-sm">
+      <nav aria-label="Collegamenti ordine" className="mb-3 flex flex-wrap gap-3 text-sm">
         {logisticsLinks.map((l) => (
           <Link key={l.href} href={l.href} className="text-text-secondary underline-offset-4 hover:text-text-primary hover:underline">
             {l.label} →

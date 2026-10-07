@@ -4,7 +4,8 @@ import { ReviewCard } from "@/components/reviews/review-card";
 import { Star } from "lucide-react";
 import { LargeTitle } from "@/components/ui/large-title";
 import { SectionFrame } from "@/components/dashboard/supplier/_awwwards/section-frame";
-import { getCurrentSupplierMember } from "@/lib/supplier/current-member";
+import { getCurrentSupplierMember, memberCan } from "@/lib/supplier/current-member";
+import { ReviewReplyForm } from "@/components/reviews/review-reply-form";
 
 export const metadata: Metadata = { title: "Recensioni" };
 
@@ -41,6 +42,7 @@ export default async function SupplierReviewsPage() {
     .returns<ReviewRow[]>();
 
   const list = reviews ?? [];
+  const canReply = memberCan(member, "reviews.reply");
   const avg = supplier?.rating_avg ?? 0;
   const count = supplier?.rating_count ?? 0;
 
@@ -90,6 +92,11 @@ export default async function SupplierReviewsPage() {
                 <ReviewCard
                   key={review.id}
                   review={{ ...review, restaurant_name: restaurant?.name }}
+                  footer={
+                    canReply ? (
+                      <ReviewReplyForm reviewId={review.id} initialReply={review.supplier_reply} />
+                    ) : null
+                  }
                 />
               );
             })}
@@ -195,6 +202,11 @@ export default async function SupplierReviewsPage() {
                         ...review,
                         restaurant_name: restaurant?.name,
                       }}
+                      footer={
+                        canReply ? (
+                          <ReviewReplyForm reviewId={review.id} initialReply={review.supplier_reply} />
+                        ) : null
+                      }
                     />
                   );
                 })}

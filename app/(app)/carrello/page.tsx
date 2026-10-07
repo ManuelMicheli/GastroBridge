@@ -33,6 +33,7 @@ export default function CartPage() {
     clearCart,
     getCartBySupplier,
     totalAmount,
+    typicalOrderKey,
   } = useCart();
   const [pending, startTransition] = useTransition();
 
@@ -90,7 +91,7 @@ export default function CartPage() {
       }
       toast("Ordine inviato con successo!");
       clearCart();
-      try { localStorage.removeItem("gb.typical-order"); } catch { /* ignore */ }
+      try { if (typicalOrderKey) localStorage.removeItem(typicalOrderKey); } catch { /* ignore */ }
       // Single order → open it; mixed carts create two orders → list.
       const [onlyId, ...rest] = res.orderIds;
       router.push(onlyId && rest.length === 0 ? `/ordini/${onlyId}` : "/ordini");

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { X, LogOut } from "lucide-react";
 import { useRef } from "react";
 import { cn } from "@/lib/utils/formatters";
+import { useFocusTrap } from "@/components/ui/use-focus-trap";
 import { signOut } from "@/app/(auth)/actions";
 import { resolveIcon } from "../icons";
 import type { NavItem } from "../sidebar/sidebar-item";
@@ -23,6 +24,9 @@ type Props = {
 export function SidebarDrawer({ open, onClose, navItems, role, companyName }: Props) {
   const pathname = usePathname();
   const pointerStart = useRef<{ x: number; y: number } | null>(null);
+  const panelRef = useRef<HTMLElement>(null);
+  // Modal drawer: Esc closes, Tab stays inside, focus returns to the burger.
+  useFocusTrap(panelRef, open, { onEscape: onClose });
 
   function handlePointerDown(e: React.PointerEvent<HTMLElement>) {
     pointerStart.current = { x: e.clientX, y: e.clientY };
@@ -55,6 +59,11 @@ export function SidebarDrawer({ open, onClose, navItems, role, companyName }: Pr
 
           {/* Drawer */}
           <motion.aside
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Menu di navigazione"
+            tabIndex={-1}
             initial={{ x: "-100%" }}
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}

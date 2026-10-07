@@ -421,6 +421,7 @@ function formatDateIt(iso: string): string {
   try {
     const d = new Date(iso);
     return d.toLocaleDateString("it-IT", {
+      timeZone: "Europe/Rome",
       day: "2-digit",
       month: "2-digit",
       year: "numeric",

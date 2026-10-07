@@ -3,7 +3,10 @@ import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils/formatters";
-import { Star, Shield, MapPin, Phone, Globe } from "lucide-react";
+import Link from "next/link";
+import { Star, Shield, MapPin, Phone, Globe, MessageCircle } from "lucide-react";
+import { RelationshipActions } from "./relationship-actions";
+import type { RelationshipStatus } from "@/lib/relationships/types";
 import {
   listProductsForSupplier,
   getSupplierCatalogSummary,
@@ -66,6 +69,17 @@ export default async function SupplierDetailPage({
     }>();
 
   if (!supplier) notFound();
+
+  // Our relationship with this supplier (RLS: only the user's restaurants).
+  const { data: relationship } = await supabase
+    .from("restaurant_suppliers")
+    .select("id, status")
+    .eq("supplier_id", id)
+    .order("invited_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ id: string; status: RelationshipStatus }>();
+  const canMessage =
+    relationship && ["pending", "active", "paused"].includes(relationship.status);
 
   const sort = parseSort(sp.sort);
   const filters: ProductListFilters = {
@@ -160,6 +174,16 @@ export default async function SupplierDetailPage({
                 </span>
               )}
             </div>
+            {relationship && (
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                {canMessage && (
+                  <Link href={`/messaggi/${relationship.id}`} className="f-btn f-btn-outline f-btn-sm">
+                    <MessageCircle className="h-4 w-4" aria-hidden /> Messaggio
+                  </Link>
+                )}
+                <RelationshipActions relationshipId={relationship.id} status={relationship.status} />
+              </div>
+            )}
           </div>
         </div>
       </Card>

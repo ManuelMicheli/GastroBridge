@@ -9,8 +9,8 @@ import { TypicalOrderTable } from "./typical-order-table";
 import { ImportWizard } from "./import-wizard";
 import type { Group, OrderLine } from "../_lib/types";
 import type { ProductIndex } from "../_lib/product-index";
-
-const STORAGE_KEY = "gb.typical-order";
+import { useCart } from "@/lib/hooks/useCart";
+import { readScopedStorage, TYPICAL_ORDER_BASE_KEY } from "@/lib/hooks/user-storage";
 
 export function TypicalOrderPanel({
   groups,
@@ -26,24 +26,28 @@ export function TypicalOrderPanel({
   const [lines, setLines] = useState<OrderLine[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  // Per-account key (shared browsers): see lib/hooks/user-storage.ts.
+  const { typicalOrderKey } = useCart();
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as OrderLine[];
-        if (Array.isArray(parsed)) setLines(parsed);
-      }
+      const raw = readScopedStorage(typicalOrderKey, TYPICAL_ORDER_BASE_KEY);
+      const parsed = raw ? (JSON.parse(raw) as OrderLine[]) : [];
+      setLines(Array.isArray(parsed) ? parsed : []);
     } catch {
       /* ignore */
     }
     setHydrated(true);
-  }, []);
+  }, [typicalOrderKey]);
 
   useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(lines));
-  }, [lines, hydrated]);
+    if (!hydrated || !typicalOrderKey) return;
+    try {
+      localStorage.setItem(typicalOrderKey, JSON.stringify(lines));
+    } catch {
+      /* ignore */
+    }
+  }, [lines, hydrated, typicalOrderKey]);
 
   useEffect(() => {
     if (!pendingAdd) return;

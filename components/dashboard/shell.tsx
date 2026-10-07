@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { useTheme } from "next-themes";
+import { MotionConfig } from "motion/react";
 import { CollapsibleSidebar } from "./sidebar/collapsible-sidebar";
 import { DarkTopbar } from "./topbar/dark-topbar";
 import { type MobileNavItem } from "./mobile/dark-mobile-nav";
@@ -54,6 +55,9 @@ export function DashboardShell({
   const settingsHref = role === "supplier" ? "/supplier/impostazioni" : "/impostazioni";
 
   return (
+    // reducedMotion="user": every motion/react animation in the app follows
+    // the OS "reduce motion" setting (transforms off, opacity kept).
+    <MotionConfig reducedMotion="user">
     <AppearanceProvider area={role}>
       <CommandPaletteProvider navItems={navItems} role={role}>
         <div
@@ -143,5 +147,6 @@ export function DashboardShell({
         </div>
       </CommandPaletteProvider>
     </AppearanceProvider>
+    </MotionConfig>
   );
 }

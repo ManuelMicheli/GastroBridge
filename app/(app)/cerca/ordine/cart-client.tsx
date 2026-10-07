@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeft, Download, Printer, ShoppingCart, AlertTriangle, Plus } from "lucide-react";
 import { normalizeName, normalizeUnit } from "@/lib/catalogs/normalize";
 import { useCart } from "@/lib/hooks/useCart";
+import { readScopedStorage, TYPICAL_ORDER_BASE_KEY } from "@/lib/hooks/user-storage";
 import { toast } from "sonner";
 import type { UnitType } from "@/types/database";
 import {
@@ -60,7 +61,6 @@ function buildOffer(
 
 type OrderLine = { key: string; productName: string; unit: string; qty: number };
 
-const STORAGE_KEY = "gb.typical-order";
 
 type Pick = {
   itemId: string;
@@ -103,7 +103,7 @@ export function OptimalCartClient({
   const prefs = preferences ?? defaultPrefs;
   const connectedSet = useMemo(() => new Set(connectedSupplierIds), [connectedSupplierIds]);
   const router = useRouter();
-  const { addItem } = useCart();
+  const { addItem, typicalOrderKey } = useCart();
   const [order, setOrder] = useState<OrderLine[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
@@ -113,7 +113,7 @@ export function OptimalCartClient({
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      const raw = readScopedStorage(typicalOrderKey, TYPICAL_ORDER_BASE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as OrderLine[];
         if (Array.isArray(parsed)) setOrder(parsed);
@@ -122,7 +122,7 @@ export function OptimalCartClient({
       /* ignore */
     }
     setHydrated(true);
-  }, []);
+  }, [typicalOrderKey]);
 
   // Index: (normName::unit) -> list of raw entries per supplier
   type Entry = { supplier: SupplierLite; item: CatalogItemLite };

@@ -285,7 +285,7 @@ export function DdtBookClient({
                         {row.number}/{row.year}
                       </td>
                       <td className="px-4 py-3 text-charcoal">
-                        {new Date(row.issued_at).toLocaleDateString("it-IT")}
+                        {new Date(row.issued_at).toLocaleDateString("it-IT", { timeZone: "Europe/Rome" })}
                       </td>
                       <td className="px-4 py-3">
                         <Badge variant={CAUSALE_VARIANT[row.causale]}>

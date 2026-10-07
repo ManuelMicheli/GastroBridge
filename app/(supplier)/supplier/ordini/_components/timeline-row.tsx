@@ -16,18 +16,21 @@ function formatTimestamp(iso: string, bucket: TimeBucket): string {
   if (Number.isNaN(d.getTime())) return "—";
   if (bucket === "today" || bucket === "yesterday") {
     return new Intl.DateTimeFormat("it-IT", {
+      timeZone: "Europe/Rome",
       hour: "2-digit",
       minute: "2-digit",
     }).format(d);
   }
   if (bucket === "this_week") {
     return new Intl.DateTimeFormat("it-IT", {
+      timeZone: "Europe/Rome",
       weekday: "short",
       hour: "2-digit",
       minute: "2-digit",
     }).format(d);
   }
   return new Intl.DateTimeFormat("it-IT", {
+    timeZone: "Europe/Rome",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",

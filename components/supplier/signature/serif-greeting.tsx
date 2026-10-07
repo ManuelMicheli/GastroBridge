@@ -18,7 +18,7 @@ function greetingFor(hour: number): string {
 }
 
 function formatItalianDateTime(d: Date): string {
-  const day = d.toLocaleDateString("it-IT", { weekday: "long", day: "numeric", month: "long" });
+  const day = d.toLocaleDateString("it-IT", { timeZone: "Europe/Rome", weekday: "long", day: "numeric", month: "long" });
   const hh = d.getHours().toString().padStart(2, "0");
   const mm = d.getMinutes().toString().padStart(2, "0");
   return `${day} · h. ${hh}:${mm}`;

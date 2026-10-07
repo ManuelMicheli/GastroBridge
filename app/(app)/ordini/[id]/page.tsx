@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Check, Clock, Download, Package, Truck } from "lucide-react";
+import { ArrowLeft, Check, Clock, Download, MessageCircle, Package, Truck } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { OrderStatusBadge } from "@/components/ui/order-status-badge";
 import { PageHeader } from "@/components/ui/page-header";
@@ -12,7 +12,9 @@ import { formatCurrency, formatDate } from "@/lib/utils/formatters";
 import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
 import { deriveOrderStatus } from "@/lib/orders/derive-order-status";
 import { getWorkflowState } from "@/lib/orders/workflow-state";
+import { resolveRelationshipIdForPair } from "@/lib/messages/context";
 import { SupplierChangesBanner } from "./_components/supplier-changes-banner";
+import { OrderActions, type ReorderLine } from "./_components/order-actions";
 
 const TIMELINE_STEPS = [
   { key: "submitted", label: "Inviato", icon: Check },
@@ -88,7 +90,7 @@ export default async function OrderDetailPage({
     .from("orders")
     .select("*")
     .eq("id", id)
-    .single<{ id: string; total: number; status: string; notes: string | null; created_at: string }>();
+    .single<{ id: string; restaurant_id: string; total: number; status: string; notes: string | null; created_at: string }>();
 
   if (!order) notFound();
 
@@ -99,14 +101,72 @@ export default async function OrderDetailPage({
     .eq("order_id", id)
     .returns<SplitRow[]>();
 
-  type ItemRow = { id: string; supplier_id: string; quantity: number; subtotal: number; products: { name: string; unit: string } | null; suppliers: { company_name: string } | null };
+  type ItemRow = {
+    id: string;
+    product_id: string;
+    supplier_id: string;
+    quantity: number;
+    subtotal: number;
+    products: {
+      name: string;
+      unit: string;
+      price: number;
+      is_available: boolean;
+      brand: string | null;
+      image_url: string | null;
+      min_quantity: number | null;
+    } | null;
+    suppliers: { company_name: string } | null;
+  };
   const { data: items } = await supabase
     .from("order_items")
-    .select("*, products(name, unit), suppliers(company_name)")
+    .select("*, products(name, unit, price, is_available, brand, image_url, min_quantity), suppliers(company_name)")
     .eq("order_id", id)
     .returns<ItemRow[]>();
 
   const hasMarketplaceSplits = (splits ?? []).length > 0;
+
+  // "Riordina": same products and quantities at today's list price; lines
+  // whose product is gone or unavailable are skipped (price null).
+  const reorderByProduct = new Map<string, ReorderLine>();
+  for (const it of items ?? []) {
+    const prev = reorderByProduct.get(it.product_id);
+    if (prev) {
+      prev.quantity += Number(it.quantity);
+      continue;
+    }
+    const p = it.products;
+    reorderByProduct.set(it.product_id, {
+      productId: it.product_id,
+      supplierId: it.supplier_id,
+      supplierName: it.suppliers?.company_name ?? "Fornitore",
+      name: p?.name ?? "Prodotto",
+      brand: p?.brand ?? null,
+      unit: p?.unit ?? "pz",
+      unitPrice: p && p.is_available ? Number(p.price) : null,
+      quantity: Number(it.quantity),
+      imageUrl: p?.image_url ?? null,
+      minQuantity: Number(p?.min_quantity ?? 1),
+    });
+  }
+  const reorderLines = [...reorderByProduct.values()];
+
+  // "Annulla ordine": only while no supplier has taken it in charge (see
+  // cancelOrderByRestaurant, which re-checks on the server).
+  const canCancel =
+    order.status !== "cancelled" &&
+    (hasMarketplaceSplits
+      ? (splits ?? []).every((s) => getWorkflowState(s.status, s.supplier_notes) === "submitted")
+      : order.status === "submitted" || order.status === "draft");
+
+  // Conversation with each supplier of the order (relationship chat).
+  const relationshipBySupplier = new Map<string, string>();
+  await Promise.all(
+    (splits ?? []).map(async (s) => {
+      const relId = await resolveRelationshipIdForPair(order.restaurant_id, s.supplier_id);
+      if (relId) relationshipBySupplier.set(s.supplier_id, relId);
+    }),
+  );
   const catalogDetail = !hasMarketplaceSplits && order.notes
     ? parseCatalogOrderNotes(order.notes)
     : null;
@@ -214,6 +274,9 @@ export default async function OrderDetailPage({
             </span>
           }
         />
+        <div className="px-4 pt-1">
+          <OrderActions orderId={id} reorderLines={reorderLines} canCancel={canCancel} />
+        </div>
 
         {!isDraft && !isCancelled && (
           <GroupedList className="mt-2" label="Stato ordine">
@@ -354,6 +417,14 @@ export default async function OrderDetailPage({
                   }
                   showChevron
                 />
+                {relationshipBySupplier.get(split.supplier_id) && (
+                  <GroupedListRow
+                    href={`/messaggi/${relationshipBySupplier.get(split.supplier_id)}`}
+                    leading={<MessageCircle className="h-4 w-4" aria-hidden />}
+                    title="Scrivi al fornitore"
+                    showChevron
+                  />
+                )}
               </GroupedList>
             );
           })}
@@ -432,6 +503,7 @@ export default async function OrderDetailPage({
       <PageHeader
         title={`Ordine #${id.slice(0, 8)}`}
         subtitle={formatDate(order.created_at)}
+        actions={<OrderActions orderId={id} reorderLines={reorderLines} canCancel={canCancel} />}
         meta={
           <OrderStatusBadge
             status={effectiveStatus}
@@ -574,7 +646,16 @@ export default async function OrderDetailPage({
               <span>Subtotale</span>
               <span className="font-mono">{formatCurrency(split.subtotal)}</span>
             </div>
-            <div className="mt-3 flex justify-end">
+            <div className="mt-3 flex flex-wrap justify-end gap-2">
+              {relationshipBySupplier.get(split.supplier_id) && (
+                <Link
+                  href={`/messaggi/${relationshipBySupplier.get(split.supplier_id)}`}
+                  className="inline-flex items-center gap-2 rounded-md border border-border-subtle px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
+                >
+                  <MessageCircle className="h-4 w-4" aria-hidden />
+                  Messaggio
+                </Link>
+              )}
               <a
                 href={`/api/ordini/${id}/suppliers/${split.supplier_id}/pdf`}
                 className="inline-flex items-center gap-2 rounded-md border border-[color:var(--color-brand-primary)] px-3 py-2 text-sm font-medium text-[color:var(--color-brand-primary)] transition-colors hover:bg-[color:var(--color-brand-primary-subtle)]"

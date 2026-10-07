@@ -1,22 +1,16 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
 import { CheckCircle2, AlertTriangle } from "lucide-react";
 import { acceptInvite } from "@/lib/supplier/staff/actions";
 import { AutoRedirect } from "./auto-redirect";
 import type { SupplierRole } from "@/types/database";
+import { ROLE_LABELS } from "@/lib/supplier/permissions";
 
 export const metadata: Metadata = { title: "Accetta invito" };
 
-const ROLE_LABEL: Record<SupplierRole, string> = {
-  admin: "Admin",
-  sales: "Sales",
-  warehouse: "Magazzino",
-  driver: "Driver",
-};
 
 export default async function AcceptSupplierInvitePage() {
   const supabase = await createClient();
@@ -28,37 +22,10 @@ export default async function AcceptSupplierInvitePage() {
     redirect("/login?redirect=/supplier/invito/accetta");
   }
 
-  const meta = (user.user_metadata ?? {}) as {
-    supplier_id?: string;
-    role?: SupplierRole;
-    invited_by?: string;
-  };
-
-  const supplierId = meta.supplier_id;
-
-  if (!supplierId) {
-    return (
-      <div className="max-w-xl mx-auto py-12">
-        <Card className="text-center py-12">
-          <AlertTriangle className="h-12 w-12 text-terracotta mx-auto mb-4" />
-          <h1 className="text-xl font-bold text-charcoal mb-2">
-            Invito non valido
-          </h1>
-          <p className="text-sage mb-6">
-            Non troviamo i dati dell&apos;invito. Chiedi all&apos;amministratore
-            di inviare un nuovo invito.
-          </p>
-          <Link href="/supplier/dashboard">
-            <Button size="sm" variant="secondary">
-              Vai alla dashboard
-            </Button>
-          </Link>
-        </Card>
-      </div>
-    );
-  }
-
-  const result = await acceptInvite(supplierId);
+  // New invitees carry the supplier in their signup metadata; users who
+  // already had an account are matched on their pending membership.
+  const meta = (user.user_metadata ?? {}) as { invited_supplier_id?: string };
+  const result = await acceptInvite(meta.invited_supplier_id ?? null);
 
   if (!result.ok) {
     return (
@@ -69,11 +36,9 @@ export default async function AcceptSupplierInvitePage() {
             Impossibile accettare l&apos;invito
           </h1>
           <p className="text-sage mb-6">{result.error}</p>
-          <Link href="/supplier/dashboard">
-            <Button size="sm" variant="secondary">
+          <ButtonLink href="/supplier/dashboard" size="sm" variant="secondary">
               Vai alla dashboard
-            </Button>
-          </Link>
+            </ButtonLink>
         </Card>
       </div>
     );
@@ -82,10 +47,10 @@ export default async function AcceptSupplierInvitePage() {
   const { data: supplier } = await supabase
     .from("suppliers")
     .select("company_name")
-    .eq("id", supplierId)
+    .eq("id", result.data.supplier_id)
     .maybeSingle<{ company_name: string }>();
 
-  const roleLabel = ROLE_LABEL[result.data.role as SupplierRole] ?? result.data.role;
+  const roleLabel = ROLE_LABELS[result.data.role as SupplierRole] ?? result.data.role;
   const supplierName = supplier?.company_name ?? "il tuo team";
 
   return (
@@ -100,9 +65,7 @@ export default async function AcceptSupplierInvitePage() {
           Il tuo ruolo è <strong className="text-charcoal">{roleLabel}</strong>
           . Verrai reindirizzato alla dashboard…
         </p>
-        <Link href="/supplier/dashboard">
-          <Button size="sm">Vai subito alla dashboard</Button>
-        </Link>
+        <ButtonLink href="/supplier/dashboard" size="sm">Vai subito alla dashboard</ButtonLink>
       </Card>
     </div>
   );

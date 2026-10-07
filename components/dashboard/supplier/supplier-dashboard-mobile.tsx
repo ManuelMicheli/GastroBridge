@@ -8,6 +8,7 @@ import { LargeTitle } from "@/components/ui/large-title";
 import { GroupedList, GroupedListRow } from "@/components/ui/grouped-list";
 import { OrderStatusBadge } from "@/components/ui/order-status-badge";
 import { PullToRefresh } from "@/components/ui/pull-to-refresh";
+import { romeHour } from "@/lib/utils/formatters";
 
 type OrderRow = {
   id: string;
@@ -53,7 +54,7 @@ type Props = {
 };
 
 function greetingByHour(): string {
-  const h = new Date().getHours();
+  const h = romeHour();
   if (h < 6) return "Buonanotte";
   if (h < 13) return "Buongiorno";
   if (h < 18) return "Buon pomeriggio";
@@ -64,6 +65,7 @@ function shortDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
   return new Intl.DateTimeFormat("it-IT", {
+    timeZone: "Europe/Rome",
     day: "2-digit",
     month: "short",
   }).format(d);
@@ -95,6 +97,7 @@ export function SupplierDashboardMobile({
   const todayStr = useMemo(
     () =>
       new Intl.DateTimeFormat("it-IT", {
+        timeZone: "Europe/Rome",
         weekday: "long",
         day: "2-digit",
         month: "long",
