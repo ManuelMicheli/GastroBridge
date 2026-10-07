@@ -87,10 +87,13 @@ export async function fetchCurrentRestaurant(): Promise<{
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return null;
+  // Primary location first (same rule as /cerca and esigenze-fornitura).
   const { data } = await supabase
     .from("restaurants")
     .select("id, name")
     .eq("profile_id", user.id)
+    .order("is_primary", { ascending: false })
+    .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle<{ id: string; name: string }>();
   return data ?? null;

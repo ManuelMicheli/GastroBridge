@@ -24,7 +24,7 @@ export default function TeamPage() {
       <div className="px-3 lg:px-0 mt-3 lg:mt-0">
         <Card className="text-center py-16">
           <Users className="h-12 w-12 text-sage-muted mx-auto mb-4" />
-          <p className="text-sage mb-2">Funzionalita disponibile con il piano Business.</p>
+          <p className="text-sage mb-2">Funzionalità disponibile con il piano Business.</p>
           <p className="text-xs text-sage">Invita i membri del tuo team per gestire ordini e fornitori.</p>
         </Card>
       </div>

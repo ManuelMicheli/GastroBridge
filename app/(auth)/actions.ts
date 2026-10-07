@@ -1,14 +1,39 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import { SUPPLIER_PLATFORM_ENABLED } from "@/lib/utils/constants";
+import { NEXT_PATH_COOKIE, postLoginPath, safeNextPath } from "@/lib/auth/redirect";
+import {
+  RESTAURANT_PLANS,
+  SUPPLIER_PLANS,
+  SUPPLIER_PLATFORM_ENABLED,
+} from "@/lib/utils/constants";
 import { validateNewPassword } from "@/lib/auth/pwned-password";
 import type { UserRole } from "@/types/database";
 
 // Generic error to avoid disclosing whether an account exists or whether the
 // failure is due to wrong password vs missing user vs unconfirmed email.
 const GENERIC_AUTH_ERROR = "Credenziali non valide o email non confermata.";
+
+// Magic link / OAuth leave the site: remember the requested page in a
+// short-lived cookie that /callback consumes (keeps the Supabase redirect URL
+// allow-list unchanged).
+async function rememberNextPath(raw: string | null | undefined) {
+  const next = safeNextPath(raw);
+  const store = await cookies();
+  if (next) {
+    store.set(NEXT_PATH_COOKIE, next, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 15,
+    });
+  } else {
+    store.delete(NEXT_PATH_COOKIE);
+  }
+}
 
 export async function signIn(formData: FormData) {
   const supabase = await createClient();
@@ -30,19 +55,18 @@ export async function signIn(formData: FormData) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  let redirectTo = "/dashboard";
+  let role: string | null = null;
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", user.id)
       .single<{ role: string }>();
-
-    if (profile?.role === "supplier") {
-      redirectTo = "/supplier/dashboard";
-    }
+    role = profile?.role ?? null;
   }
 
+  // Honour ?redirect= (passed by the login form), path-only.
+  const redirectTo = postLoginPath(role, formData.get("redirect") as string | null);
   return { success: true, redirectTo };
 }
 
@@ -53,6 +77,13 @@ export async function signUp(formData: FormData) {
   const password = formData.get("password") as string;
   const companyName = formData.get("companyName") as string;
   const role = formData.get("role") as UserRole;
+  // Only known plan ids for the chosen role are stored.
+  const rawPlan = formData.get("plan");
+  const plan =
+    typeof rawPlan === "string" &&
+    (role === "supplier" ? SUPPLIER_PLANS : RESTAURANT_PLANS).some((p) => p.id === rawPlan)
+      ? rawPlan
+      : null;
 
   // v1 is restaurant-only. Reject supplier signups server-side even if the
   // disabled client control is bypassed. Supplier onboarding returns in v2.
@@ -69,13 +100,15 @@ export async function signUp(formData: FormData) {
   const pwCheck = await validateNewPassword(password);
   if (!pwCheck.ok) return { error: pwCheck.error };
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       data: {
         role,
         company_name: companyName,
+        // Plan picked on /pricing (?plan=), kept so it is not lost at signup.
+        ...(plan ? { plan } : {}),
       },
     },
   });
@@ -91,11 +124,14 @@ export async function signUp(formData: FormData) {
   }
 
   const redirectTo = role === "supplier" ? "/supplier/dashboard" : "/dashboard";
-  return { success: true, redirectTo };
+  // No session means email confirmation is required: the client must not
+  // navigate to the (protected) dashboard, middleware would bounce to /login.
+  return { success: true, redirectTo, hasSession: Boolean(data.session) };
 }
 
-export async function signInWithGoogle() {
+export async function signInWithGoogle(next?: string | null) {
   const supabase = await createClient();
+  await rememberNextPath(next);
 
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
@@ -117,6 +153,7 @@ export async function signInWithMagicLink(formData: FormData) {
   const supabase = await createClient();
 
   const email = formData.get("email") as string;
+  await rememberNextPath(formData.get("redirect") as string | null);
 
   // Always return the same success message — never reveal whether the email
   // is registered (enumeration vector). Real errors are swallowed.

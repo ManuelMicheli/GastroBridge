@@ -1,10 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import {
-  getActiveSupplierMember,
-  requireSupplierMember,
-} from "@/lib/supplier/context";
-import {
   getLots,
   getStockOverview,
   getWarehousesForCurrentMember,
@@ -12,6 +8,7 @@ import {
 import { hasPermission } from "@/lib/supplier/permissions";
 import type { SupplierRole } from "@/types/database";
 import { InventarioClient } from "./adjust-client";
+import { getCurrentSupplierMember } from "@/lib/supplier/current-member";
 
 export const dynamic = "force-dynamic";
 
@@ -29,11 +26,8 @@ export default async function InventarioPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: supplier } = await supabase
-    .from("suppliers")
-    .select("id")
-    .eq("profile_id", user.id)
-    .maybeSingle<{ id: string }>();
+  const member = await getCurrentSupplierMember();
+  const supplier = member ? { id: member.supplier_id } : null;
 
   if (!supplier?.id) {
     return (
@@ -44,16 +38,7 @@ export default async function InventarioPage({
   }
 
   const supplierId = supplier.id;
-  const member = (await getActiveSupplierMember(supplierId)) as
-    | { id: string; role: SupplierRole; supplier_id: string }
-    | null;
-
-  if (!member) {
-    // forza 403 lato layout/logica superiore
-    await requireSupplierMember(supplierId);
-  }
-
-  const role = (member?.role ?? null) as SupplierRole | null;
+  const role: SupplierRole | null = member?.role ?? null;
   const canAdjust = role ? hasPermission(role, "stock.adjust") : false;
 
   if (!canAdjust) {

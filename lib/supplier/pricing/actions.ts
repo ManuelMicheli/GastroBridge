@@ -616,3 +616,33 @@ export async function assignCustomer(
     };
   }
 }
+
+/**
+ * Rimuove l'assegnazione listino di un cliente (torna al listino
+ * predefinito). Permesso: `pricing.edit`.
+ */
+export async function unassignCustomer(
+  supplierId: string,
+  restaurantId: string,
+): Promise<Result> {
+  try {
+    if (!supplierId || !restaurantId) {
+      return { ok: false, error: "Dati non validi" };
+    }
+    await requirePermission(supplierId, "pricing.edit");
+    const supabase = await createClient();
+    const { error } = await (supabase as any)
+      .from("customer_price_assignments")
+      .delete()
+      .eq("supplier_id", supplierId)
+      .eq("restaurant_id", restaurantId);
+    if (error) return { ok: false, error: error.message };
+    revalidatePath("/supplier/listini");
+    return { ok: true, data: undefined };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Errore rimozione assegnazione",
+    };
+  }
+}

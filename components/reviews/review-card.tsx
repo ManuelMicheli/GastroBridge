@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { RatingStars } from "./rating-stars";
 import { formatRelativeTime } from "@/lib/utils/formatters";
 
@@ -12,9 +13,11 @@ interface ReviewCardProps {
     created_at: string;
     restaurant_name?: string;
   };
+  /** Extra content under the review (e.g. the supplier reply editor). */
+  footer?: ReactNode;
 }
 
-export function ReviewCard({ review }: ReviewCardProps) {
+export function ReviewCard({ review, footer }: ReviewCardProps) {
   return (
     <div className="bg-white rounded-2xl p-5 shadow-card">
       <div className="flex items-start justify-between mb-3">
@@ -31,7 +34,7 @@ export function ReviewCard({ review }: ReviewCardProps) {
 
       {(review.quality_rating || review.delivery_rating || review.service_rating) && (
         <div className="flex gap-4 text-xs text-sage mb-3">
-          {review.quality_rating && <span>Qualita: {review.quality_rating}/5</span>}
+          {review.quality_rating && <span>Qualità: {review.quality_rating}/5</span>}
           {review.delivery_rating && <span>Consegna: {review.delivery_rating}/5</span>}
           {review.service_rating && <span>Servizio: {review.service_rating}/5</span>}
         </div>
@@ -43,6 +46,7 @@ export function ReviewCard({ review }: ReviewCardProps) {
           <p className="text-sm text-charcoal">{review.supplier_reply}</p>
         </div>
       )}
+      {footer}
     </div>
   );
 }

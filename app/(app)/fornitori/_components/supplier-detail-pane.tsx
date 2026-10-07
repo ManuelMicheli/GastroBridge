@@ -1,11 +1,11 @@
 // app/(app)/fornitori/_components/supplier-detail-pane.tsx
 "use client";
 
-import Link from "next/link";
-import { ArrowUpRight, MapPin, Search, Shield, Star, X } from "lucide-react";
+import { ArrowUpRight, MapPin, MessageCircle, Search, Shield, Star, X } from "lucide-react";
 import { RelationshipStatusBadge } from "@/components/ui/relationship-status-badge";
-import { Button } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
 import { ratingColorClass, type RelationshipRow } from "../_lib/types";
+import { APP_TIME_ZONE } from "@/lib/utils/formatters";
 
 export function SupplierDetailPane({
   relationship,
@@ -146,26 +146,29 @@ export function SupplierDetailPane({
 
       <footer className="border-t border-border-subtle p-3">
         <div className="flex flex-col gap-2">
-          <Link href={`/fornitori/${s.id}`} className="w-full">
-            <Button
+          <ButtonLink href={`/fornitori/${s.id}`}
               variant="primary"
               size="md"
               density="compact"
-              className="w-full justify-center"
-            >
+             className="w-full justify-center w-full">
               <ArrowUpRight className="h-4 w-4" /> Vai al profilo completo
-            </Button>
-          </Link>
-          <Link href={`/cataloghi/${s.id}`} className="w-full">
-            <Button
+            </ButtonLink>
+          <ButtonLink href={`/cerca?suppliers=${encodeURIComponent(s.id)}`}
               variant="secondary"
               size="md"
               density="compact"
-              className="w-full justify-center"
-            >
+             className="w-full justify-center w-full">
               <Search className="h-4 w-4" /> Cerca nei suoi prodotti
-            </Button>
-          </Link>
+            </ButtonLink>
+          {relationship.status !== "archived" && relationship.status !== "rejected" && (
+            <ButtonLink href={`/messaggi/${relationship.id}`}
+                variant="secondary"
+                size="md"
+                density="compact"
+               className="w-full justify-center w-full">
+                <MessageCircle className="h-4 w-4" /> Messaggio
+              </ButtonLink>
+          )}
         </div>
       </footer>
     </aside>
@@ -176,6 +179,7 @@ function formatDate(iso: string): string {
   try {
     const d = new Date(iso);
     return d.toLocaleDateString("it-IT", {
+      timeZone: APP_TIME_ZONE,
       day: "2-digit",
       month: "short",
       year: "numeric",

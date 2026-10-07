@@ -304,7 +304,7 @@ export async function acceptOrderLines(
       if (!pendingIds.has(d.lineId)) {
         return {
           ok: false,
-          error: `Riga ${d.lineId} non e' in stato pending`,
+          error: `Riga ${d.lineId} non è in stato pending`,
         };
       }
     }
@@ -318,12 +318,12 @@ export async function acceptOrderLines(
         const ln = linesById.get(d.lineId);
         if (!ln) return { ok: false, error: `Riga ${d.lineId} non trovata` };
         if (!(d.quantityAccepted > 0)) {
-          return { ok: false, error: "La quantita' modificata deve essere positiva" };
+          return { ok: false, error: "La quantità modificata deve essere positiva" };
         }
         if (d.quantityAccepted > ln.quantity_requested * 2) {
           return {
             ok: false,
-            error: "Quantita' modificata troppo elevata rispetto alla richiesta",
+            error: "Quantità modificata troppo elevata rispetto alla richiesta",
           };
         }
       }
@@ -564,7 +564,7 @@ export async function pickItem(input: PickItemInput): Promise<PickItemResult> {
   const { splitItemId, lotId, quantityBase } = input;
   if (!splitItemId || !lotId) return { ok: false, error: "Parametri mancanti" };
   if (!Number.isFinite(quantityBase) || quantityBase <= 0) {
-    return { ok: false, error: "Quantita' non valida" };
+    return { ok: false, error: "Quantità non valida" };
   }
 
   try {
@@ -590,7 +590,7 @@ export async function pickItem(input: PickItemInput): Promise<PickItemResult> {
 
     const currentState = getWorkflowState(split.status, split.supplier_notes);
     if (currentState !== "confirmed" && currentState !== "preparing") {
-      return { ok: false, error: "Lo split non e' in fase di preparazione" };
+      return { ok: false, error: "Lo split non è in fase di preparazione" };
     }
 
     const { data, error } = await (supabase.rpc as any)("pick_split_item_tx", {
@@ -729,8 +729,13 @@ export async function markPacked(splitId: string): Promise<SimpleResult> {
 // -----------------------------------------------------------------------------
 
 /**
- * Transizione da `packed` a `shipping`. `shipping` e' un valore enum valido di
- * `order_status`, quindi non usiamo il tag workflow (lo rimuoviamo se presente).
+ * Transizione da `packed` a `shipping`.
+ *
+ * Stesso percorso della pagina Consegne: ogni consegna `planned`/`loaded`
+ * dello split passa per `startTransit` (consegna → in_transit, split →
+ * shipping, un solo evento `shipped`). Permesso: `delivery.execute`, come
+ * startTransit. Solo gli split legacy senza alcuna consegna (imballati prima
+ * del flusso picking) usano ancora l'aggiornamento diretto.
  */
 export async function markShipped(splitId: string): Promise<SimpleResult> {
   if (!splitId) return { ok: false, error: "splitId mancante" };
@@ -742,7 +747,7 @@ export async function markShipped(splitId: string): Promise<SimpleResult> {
     if (!splitRes.ok) return splitRes;
     const split = splitRes.split;
 
-    await requirePermission(split.supplier_id, "order.accept_line");
+    await requirePermission(split.supplier_id, "delivery.execute");
     const member = (await getActiveSupplierMember(split.supplier_id)) as
       | { id: string; role: string; supplier_id: string }
       | null;
@@ -756,6 +761,33 @@ export async function markShipped(splitId: string): Promise<SimpleResult> {
       };
     }
 
+    const { data: deliveryRows } = (await (supabase as any)
+      .from("deliveries")
+      .select("id, status")
+      .eq("order_split_id", splitId)) as {
+      data: { id: string; status: string }[] | null;
+    };
+    const deliveries = deliveryRows ?? [];
+    if (deliveries.length > 0) {
+      const startable = deliveries.filter(
+        (d) => d.status === "planned" || d.status === "loaded",
+      );
+      if (startable.length === 0) {
+        return {
+          ok: false,
+          error: "Nessuna consegna da avviare per questo ordine: controlla in Consegne",
+        };
+      }
+      const { startTransit } = await import("@/lib/supplier/delivery/actions");
+      for (const d of startable) {
+        const res = await startTransit(d.id);
+        if (!res.ok) return { ok: false, error: res.error };
+      }
+      revalidateSupplierOrders(splitId);
+      return { ok: true, data: { splitStatus: "shipping" as unknown as WorkflowState } };
+    }
+
+    // Legacy: split senza consegne collegate.
     const newNotes = stripWorkflowTag(split.supplier_notes) || null;
     const { error: upErr } = await (supabase as any)
       .from("order_splits")
@@ -802,15 +834,18 @@ export type TransitionSplitStatusResult =
   | { ok: false; error: string };
 
 /**
- * Transizioni legali permesse via drag & drop sulla kanban:
- *  - `confirmed → preparing`
- *  - `preparing → packed`
- *  - `packed → shipped`
- *  - `shipped → delivered`
+ * Transizioni via drag & drop sulla kanban. Ogni passaggio delega alla stessa
+ * azione del flusso reale (e quindi ai suoi permessi):
+ *  - `confirmed → preparing` → transitionToPreparing (`order.prepare`)
+ *  - `preparing → packed`    → markPacked: finalize_split_packing_tx, scarico
+ *                              stock, consegna `loaded`, DDT (`order.prepare`);
+ *                              fallisce finché il picking non è completo
+ *  - `packed → shipped`      → markShipped → startTransit (`delivery.execute`)
+ *  - `shipped → delivered`   → non consentito: serve la firma/POD da Consegne
  *
  * Le transizioni `pending*` / `stock_conflict` / `rejected` / `cancelled`
  * richiedono sempre il dettaglio ordine (accettazione per riga): in quei casi
- * l'azione ritorna un errore informativo cosi' il client puo' mostrare un toast.
+ * l'azione ritorna un errore informativo così il client può mostrare un toast.
  */
 export async function transitionSplitStatus(
   input: TransitionSplitStatusInput,
@@ -833,12 +868,6 @@ export async function transitionSplitStatus(
     if (!splitRes.ok) return splitRes;
     const split = splitRes.split;
 
-    await requirePermission(split.supplier_id, "order.accept_line");
-    const member = (await getActiveSupplierMember(split.supplier_id)) as
-      | { id: string; role: string; supplier_id: string }
-      | null;
-    if (!member) return { ok: false, error: "Membro fornitore non trovato" };
-
     const currentState = getWorkflowState(split.status, split.supplier_notes);
     const allowed = LEGAL[targetStatus];
     if (!allowed || !allowed.includes(currentState)) {
@@ -849,55 +878,31 @@ export async function transitionSplitStatus(
       };
     }
 
-    const nowIso = new Date().toISOString();
-
-    if (targetStatus === "packed") {
-      const wf = await setSplitWorkflow(supabase, splitId, "packed");
-      if (!wf.ok) return wf;
-      await emitSplitEvent(supabase, {
-        splitId,
-        eventType: "packed",
-        memberId: member.id,
-      });
-    } else {
-      const enumStatus =
-        targetStatus === "shipped" ? "shipping" : targetStatus;
-      const patch: Record<string, unknown> = {
-        status: enumStatus,
-        supplier_notes: stripWorkflowTag(split.supplier_notes) || null,
-      };
-      if (targetStatus === "shipped") patch.shipped_at = nowIso;
-      if (targetStatus === "delivered") patch.delivered_at = nowIso;
-      const { error } = await (supabase as any)
-        .from("order_splits")
-        .update(patch)
-        .eq("id", splitId);
-      if (error) return { ok: false, error: error.message };
-
-      if (targetStatus === "shipped" || targetStatus === "delivered") {
-        const restaurantProfileId = await resolveRestaurantProfileId(
-          supabase,
-          split.order_id,
-        );
-        await emitOrderEvent(supabase, {
-          splitId,
-          eventType: targetStatus,
-          memberId: member.id,
-          supplierId: split.supplier_id,
-          restaurantProfileIds: restaurantProfileId ? [restaurantProfileId] : undefined,
-        });
-      } else {
-        await emitSplitEvent(supabase, {
-          splitId,
-          eventType: "preparing",
-          memberId: member.id,
-        });
+    // Each step runs the same action as the real workflow, with its own
+    // permission check (order.prepare / delivery.execute).
+    let res: SimpleResult;
+    if (targetStatus === "preparing") {
+      res = await transitionToPreparing(splitId);
+    } else if (targetStatus === "packed") {
+      res = await markPacked(splitId);
+      if (!res.ok && !res.error.startsWith("Permesso mancante")) {
+        return {
+          ok: false,
+          error: `Completa prima il picking dalla pagina Preparazione dell'ordine (${res.error})`,
+        };
       }
+    } else if (targetStatus === "shipped") {
+      res = await markShipped(splitId);
+    } else {
+      return {
+        ok: false,
+        error:
+          "La consegna si chiude con la firma del cliente: registrala da Consegne",
+      };
     }
+    if (!res.ok) return res;
 
-    revalidateSupplierOrders(splitId);
     revalidatePath("/supplier/ordini/kanban");
-
     return { ok: true, data: { splitStatus: targetStatus } };
   } catch (err) {
     return { ok: false, error: errMsg(err, "Errore aggiornamento stato") };
@@ -908,14 +913,110 @@ export async function transitionSplitStatus(
 // confirmCustomerResponse
 // -----------------------------------------------------------------------------
 
+type CustomerResponseSplit = {
+  id: string;
+  supplier_id: string;
+  order_id: string;
+  status: string;
+  supplier_notes: string | null;
+  assigned_sales_member_id: string | null;
+};
+
+async function loadSplitAsAdmin(
+  splitId: string,
+): Promise<{ ok: true; split: CustomerResponseSplit } | { ok: false; error: string }> {
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient() as unknown as SupabaseClient<any, any, any>;
+  const { data, error } = await (admin as any)
+    .from("order_splits")
+    .select("id, supplier_id, order_id, status, supplier_notes, assigned_sales_member_id")
+    .eq("id", splitId)
+    .maybeSingle();
+  if (error) return { ok: false, error: error.message };
+  if (!data) return { ok: false, error: "Split ordine non trovato" };
+  return { ok: true, split: data as CustomerResponseSplit };
+}
+
+/**
+ * Applica la risposta del ristorante alle modifiche proposte dal fornitore
+ * (stato `pending_customer_confirmation`). L'autorizzazione è responsabilità
+ * del chiamante (token HMAC o proprietà dell'ordine): le scritture usano il
+ * client admin perché il ristorante non ha (né deve avere) permessi di
+ * scrittura su order_splits né permessi fornitore per la prenotazione stock.
+ */
+async function applyCustomerResponse(
+  split: CustomerResponseSplit,
+  accepted: boolean,
+): Promise<SimpleResult> {
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient() as unknown as SupabaseClient<any, any, any>;
+  const splitId = split.id;
+
+  const currentState = getWorkflowState(split.status, split.supplier_notes);
+  if (currentState !== "pending_customer_confirmation") {
+    return {
+      ok: false,
+      error: "L'ordine non è in attesa della tua conferma",
+    };
+  }
+
+  const revalidateAll = () => {
+    revalidateSupplierOrders(splitId);
+    revalidatePath(`/ordini/${split.order_id}`);
+  };
+
+  if (accepted) {
+    // Stessa prenotazione FEFO dell'accettazione fornitore (reserve_split_tx).
+    const warehouseId = await ensureSplitWarehouse(admin, splitId, split.supplier_id);
+    if (warehouseId) {
+      const { data, error } = await (admin.rpc as any)("reserve_split_tx", {
+        p_split_id: splitId,
+        p_member_id: split.assigned_sales_member_id,
+      });
+      if (error) {
+        return { ok: false, error: error.message ?? "Errore prenotazione stock" };
+      }
+      const payload = (data ?? {}) as { ok?: boolean };
+      if (payload.ok === false) {
+        // La RPC ha già registrato l'evento `stock_conflict`.
+        await setSplitWorkflow(admin, splitId, "stock_conflict");
+        revalidateAll();
+        return { ok: true, data: { splitStatus: "stock_conflict" } };
+      }
+    }
+
+    const wf = await setSplitWorkflow(admin, splitId, "confirmed");
+    if (!wf.ok) return wf;
+
+    await emitOrderEvent(admin, {
+      splitId,
+      eventType: "accepted",
+      supplierId: split.supplier_id,
+      note: "Conferma ricevuta dal ristorante",
+    });
+    revalidateAll();
+    return { ok: true, data: { splitStatus: "confirmed" } };
+  }
+
+  // Rifiuto cliente: cancellazione.
+  const wf = await setSplitWorkflow(admin, splitId, "cancelled");
+  if (!wf.ok) return wf;
+
+  await emitSplitEvent(admin, {
+    splitId,
+    eventType: "canceled",
+    note: "Rifiuto ricevuto dal ristorante",
+  });
+  revalidateAll();
+  return { ok: true, data: { splitStatus: "cancelled" } };
+}
+
 /**
  * Endpoint usato dalla pagina cliente `/ordini/[id]/conferma` per approvare o
  * rifiutare le modifiche fornitore (stato `pending_customer_confirmation`).
  *
- * Il token HMAC viene verificato stateless (vedi `verifyCustomerConfirmationToken`).
- * Non verifica l'autenticazione utente: chi ha il link email ha diritto di
- * rispondere (use case B2B). Se review richiede hardening, aggiungere controllo
- * `restaurant.profile_id === user.id` e single-use via tabella token.
+ * Il token HMAC viene verificato stateless (vedi `verifyCustomerConfirmationToken`)
+ * ed è l'unica credenziale richiesta (link email, use case B2B).
  */
 export async function confirmCustomerResponse(
   splitId: string,
@@ -930,63 +1031,49 @@ export async function confirmCustomerResponse(
     const verify = verifyCustomerConfirmationToken(token, splitId);
     if (!verify.ok) return { ok: false, error: verify.error };
 
-    const supabase = await createClient();
-
-    const splitRes = await loadSplitForSupplier(supabase, splitId);
+    const splitRes = await loadSplitAsAdmin(splitId);
     if (!splitRes.ok) return splitRes;
-    const split = splitRes.split;
+    return await applyCustomerResponse(splitRes.split, accepted);
+  } catch (err) {
+    return { ok: false, error: errMsg(err, "Errore conferma cliente") };
+  }
+}
 
-    const currentState = getWorkflowState(split.status, split.supplier_notes);
-    if (currentState !== "pending_customer_confirmation") {
-      return {
-        ok: false,
-        error: "Lo split non e' in attesa di conferma cliente",
-      };
+/**
+ * Variante in-app di `confirmCustomerResponse`: il ristorante loggato
+ * risponde dal dettaglio ordine senza token. Autorizzazione: l'utente deve
+ * essere il proprietario del ristorante dell'ordine.
+ */
+export async function respondToSupplierChanges(
+  splitId: string,
+  accepted: boolean,
+): Promise<SimpleResult> {
+  if (!splitId) return { ok: false, error: "Parametri mancanti" };
+
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { ok: false, error: "Sessione scaduta, effettua di nuovo l'accesso" };
+
+    const splitRes = await loadSplitAsAdmin(splitId);
+    if (!splitRes.ok) return splitRes;
+
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const admin = createAdminClient() as any;
+    const { data: order } = (await admin
+      .from("orders")
+      .select("id, restaurants:restaurant_id ( profile_id )")
+      .eq("id", splitRes.split.order_id)
+      .maybeSingle()) as {
+      data: { id: string; restaurants: { profile_id: string | null } | null } | null;
+    };
+    if (!order || order.restaurants?.profile_id !== user.id) {
+      return { ok: false, error: "Non sei autorizzato a confermare questo ordine" };
     }
 
-    if (accepted) {
-      const reserve = await reserveStockForSplit(split.supplier_id, splitId);
-      if (!reserve.ok && "conflicts" in reserve && reserve.conflicts) {
-        await setSplitWorkflow(supabase, splitId, "stock_conflict");
-        await emitSplitEvent(supabase, {
-          splitId,
-          eventType: "stock_conflict",
-          metadata: { conflicts: reserve.conflicts },
-        });
-        revalidateSupplierOrders(splitId);
-        return { ok: true, data: { splitStatus: "stock_conflict" } };
-      }
-      if (!reserve.ok) return { ok: false, error: reserve.error ?? "Errore prenotazione stock" };
-
-      const wf = await setSplitWorkflow(supabase, splitId, "confirmed");
-      if (!wf.ok) return wf;
-
-      const restaurantProfileId = await resolveRestaurantProfileId(
-        supabase,
-        split.order_id,
-      );
-      await emitOrderEvent(supabase, {
-        splitId,
-        eventType: "accepted",
-        supplierId: split.supplier_id,
-        restaurantProfileIds: restaurantProfileId ? [restaurantProfileId] : undefined,
-        note: "Conferma ricevuta dal ristorante",
-      });
-      revalidateSupplierOrders(splitId);
-      return { ok: true, data: { splitStatus: "confirmed" } };
-    }
-
-    // Rifiuto cliente: cancellazione.
-    const wf = await setSplitWorkflow(supabase, splitId, "cancelled");
-    if (!wf.ok) return wf;
-
-    await emitSplitEvent(supabase, {
-      splitId,
-      eventType: "canceled",
-      note: "Rifiuto ricevuto dal ristorante",
-    });
-    revalidateSupplierOrders(splitId);
-    return { ok: true, data: { splitStatus: "cancelled" } };
+    return await applyCustomerResponse(splitRes.split, accepted);
   } catch (err) {
     return { ok: false, error: errMsg(err, "Errore conferma cliente") };
   }
@@ -1019,10 +1106,10 @@ export async function cancelOrderSplit(splitId: string): Promise<SimpleResult> {
 
     const currentState = getWorkflowState(split.status, split.supplier_notes);
     if (currentState === "cancelled" || currentState === "rejected") {
-      return { ok: false, error: "Lo split e' gia' cancellato" };
+      return { ok: false, error: "Lo split è già cancellato" };
     }
     if (currentState === "delivered") {
-      return { ok: false, error: "Uno split gia' consegnato non puo' essere cancellato" };
+      return { ok: false, error: "Uno split già consegnato non può essere cancellato" };
     }
 
     // Se era confermato o packed → stock era prenotato, rilascialo.
@@ -1096,7 +1183,7 @@ async function sendCustomerConfirmationEmail(
   const shortId = splitId.slice(0, 8);
 
   const title = `Conferma richiesta per l'ordine #${shortId}`;
-  const intro = `Il fornitore ha proposto modifiche alle quantita' del tuo ordine. Per completare la conferma apri il link qui sotto entro 48 ore.`;
+  const intro = `Il fornitore ha proposto modifiche alle quantità del tuo ordine. Per completare la conferma apri il link qui sotto entro 48 ore.`;
 
   const html = `<!doctype html>
 <html lang="it"><head><meta charset="utf-8"><title>${title}</title></head>

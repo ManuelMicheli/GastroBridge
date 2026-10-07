@@ -1,9 +1,11 @@
+import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { WarehousesClient } from "./warehouses-client";
 import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
 import type { Database } from "@/types/database";
+import { getCurrentSupplierMember, memberCan } from "@/lib/supplier/current-member";
 
 type WarehouseRow = Database["public"]["Tables"]["warehouses"]["Row"];
 
@@ -11,15 +13,10 @@ export const metadata: Metadata = { title: "Sedi / Magazzini" };
 
 export default async function SupplierWarehousesPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: supplier } = await supabase
-    .from("suppliers")
-    .select("id")
-    .eq("profile_id", user?.id ?? "")
-    .maybeSingle<{ id: string }>();
+  const member = await getCurrentSupplierMember();
+  const supplier = member ? { id: member.supplier_id } : null;
+  // Same gate as the sidebar (lib/supplier/permissions.ts ROLE_MATRIX).
+  if (member && !memberCan(member, "settings.manage")) redirect("/supplier/dashboard");
 
   if (!supplier?.id) {
     return (

@@ -37,6 +37,7 @@ function formatItalianDate(isoDate: string): string {
   try {
     const d = new Date(`${isoDate}T00:00:00`);
     return d.toLocaleDateString("it-IT", {
+      timeZone: "Europe/Rome",
       weekday: "long",
       day: "2-digit",
       month: "long",
@@ -201,6 +202,12 @@ export default async function SupplierConsegnePage({
           >
             →
           </Link>
+          <Link
+            href="/supplier/consegne/calendario"
+            className="flex-1 rounded-md py-2 text-center text-[12px] font-medium active:bg-white/60"
+          >
+            Calendario
+          </Link>
         </div>
         {deliveries.length > 0 && (
           <div className="mx-3 mt-3 grid gap-3 sm:grid-cols-2">
@@ -264,6 +271,12 @@ export default async function SupplierConsegnePage({
                   className="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface-card px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-text-secondary transition-colors hover:border-accent-green hover:text-accent-green"
                 >
                   succ <ChevronRight className="h-3 w-3" aria-hidden />
+                </Link>
+                <Link
+                  href="/supplier/consegne/calendario"
+                  className="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface-card px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-text-secondary transition-colors hover:border-accent-green hover:text-accent-green"
+                >
+                  <Calendar className="h-3 w-3" aria-hidden /> calendario
                 </Link>
               </div>
             </div>

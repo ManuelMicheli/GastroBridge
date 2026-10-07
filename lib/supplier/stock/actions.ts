@@ -182,21 +182,21 @@ export async function receiveLot(
       .eq("id", data.salesUnitId)
       .maybeSingle();
     if (psuErr) return { ok: false, error: psuErr.message };
-    if (!psu) return { ok: false, error: "Unita di vendita non trovata" };
+    if (!psu) return { ok: false, error: "Unità di vendita non trovata" };
     if (psu.product_id !== data.productId) {
-      return { ok: false, error: "Unita non appartiene al prodotto" };
+      return { ok: false, error: "Unità non appartiene al prodotto" };
     }
     if (psu.is_active === false) {
-      return { ok: false, error: "Unita di vendita non attiva" };
+      return { ok: false, error: "Unità di vendita non attiva" };
     }
 
     const conversion = Number(psu.conversion_to_base);
     if (!Number.isFinite(conversion) || conversion <= 0) {
-      return { ok: false, error: "Conversione unita non valida" };
+      return { ok: false, error: "Conversione unità non valida" };
     }
     const quantityBase = data.quantitySalesUnit * conversion;
     if (!Number.isFinite(quantityBase) || quantityBase <= 0) {
-      return { ok: false, error: "Quantita carico non valida" };
+      return { ok: false, error: "Quantità carico non valida" };
     }
 
     // Verifica supplier ownership del magazzino (difesa in profondita' oltre RLS).
@@ -340,7 +340,7 @@ export async function adjustStock(
       if (!allocation.ok) {
         return {
           ok: false,
-          error: `Stock insufficiente: mancano ${allocation.shortBy} unita base`,
+          error: `Stock insufficiente: mancano ${allocation.shortBy} unità base`,
         };
       }
       for (const alloc of allocation.allocations) {

@@ -16,7 +16,7 @@ interface FiltersProps {
 }
 
 const UNIT_OPTIONS = [
-  { value: "", label: "Tutte le unita" },
+  { value: "", label: "Tutte le unità" },
   { value: "kg", label: "Chilogrammo" },
   { value: "lt", label: "Litro" },
   { value: "pz", label: "Pezzo" },
@@ -60,7 +60,7 @@ export function Filters({ filters, onFiltersChange, categories }: FiltersProps) 
           }
         />
         <Select
-          label="Unita"
+          label="Unità"
           options={UNIT_OPTIONS}
           value={filters.unit ?? ""}
           onChange={(e) =>

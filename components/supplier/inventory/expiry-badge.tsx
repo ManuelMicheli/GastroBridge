@@ -31,6 +31,7 @@ export function ExpiryBadge({ expiryDate, today, className }: Props) {
   const label = getExpiryLabel(info);
   const dateLabel = expiryDate
     ? new Date(expiryDate).toLocaleDateString("it-IT", {
+        timeZone: "Europe/Rome",
         day: "2-digit",
         month: "2-digit",
         year: "numeric",

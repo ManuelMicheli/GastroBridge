@@ -9,6 +9,7 @@ import { getTotalUnreadMessagesForCurrentUser } from "@/lib/messages/queries";
 import { getSectionSeenAt } from "@/lib/nav/section-seen";
 import { getRecentInAppNotifications } from "@/lib/notifications/queries";
 import { RestaurantRealtimeProvider } from "@/lib/realtime/restaurant-provider";
+import { accentBootScript } from "@/lib/appearance";
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard",    label: "Dashboard",       iconName: "LayoutDashboard" },
@@ -18,10 +19,10 @@ const NAV_ITEMS: NavItem[] = [
   { href: "/ordini",       label: "Ordini",          iconName: "ClipboardList" },
   { href: "/carrello",     label: "Carrello",        iconName: "ShoppingCart" },
   { href: "/messaggi",     label: "Messaggi",        iconName: "MessageCircle" },
-  { href: "/analytics",    label: "Analytics",       iconName: "BarChart3",     section: "Gestione" },
-  { href: "/finanze",      label: "Finanze",         iconName: "Receipt",       section: "Gestione" },
-  { href: "/finanze/ordini-consigliati", label: "Ordini consigliati", iconName: "Bell", section: "Gestione" },
-  { href: "/impostazioni", label: "Impostazioni",    iconName: "Settings",      section: "Gestione" },
+  { href: "/analytics",    label: "Analytics",       iconName: "BarChart3",     section: "Generale" },
+  { href: "/finanze",      label: "Finanze",         iconName: "Receipt",       section: "Generale" },
+  { href: "/finanze/ordini-consigliati", label: "Ordini consigliati", iconName: "Bell", section: "Generale" },
+  { href: "/impostazioni", label: "Impostazioni",    iconName: "Settings",      section: "Generale" },
 ];
 
 const MOBILE_NAV: MobileNavItem[] = [
@@ -53,7 +54,10 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   );
 
   const shell = (
-    <CartProvider>
+    <CartProvider userId={userId}>
+      {/* Applies the saved workspace accent before first paint (no flash). */}
+      <script dangerouslySetInnerHTML={{ __html: accentBootScript("restaurant") }} />
+
       <SidebarProvider>
         <a
           href="#main-content"

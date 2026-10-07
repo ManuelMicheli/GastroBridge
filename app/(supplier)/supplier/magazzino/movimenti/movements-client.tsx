@@ -78,6 +78,7 @@ const TYPE_OPTIONS: { value: StockMovementType | ""; label: string }[] = [
 ];
 
 const dateTimeFmt = new Intl.DateTimeFormat("it-IT", {
+  timeZone: "Europe/Rome",
   day: "2-digit",
   month: "2-digit",
   year: "numeric",

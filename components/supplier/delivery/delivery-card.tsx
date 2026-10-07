@@ -1,7 +1,6 @@
-import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
 import { MapPin, Clock, Truck, Phone, ExternalLink } from "lucide-react";
 import type { DeliveryRow } from "@/lib/supplier/delivery/queries";
 import type { DeliveryStatus } from "@/types/database";
@@ -144,11 +143,9 @@ export function DeliveryCard({ delivery }: { delivery: DeliveryRow }) {
           <Truck className="h-3.5 w-3.5" aria-hidden />
           {delivery.driver_member_id ? "Assegnata" : "Nessun driver"}
         </div>
-        <Link href={`/supplier/consegne/${delivery.id}`}>
-          <Button size="sm" variant="primary">
+        <ButtonLink href={`/supplier/consegne/${delivery.id}`} size="sm" variant="primary">
             Apri
-          </Button>
-        </Link>
+          </ButtonLink>
       </div>
     </Card>
   );

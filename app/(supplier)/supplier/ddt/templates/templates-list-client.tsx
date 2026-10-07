@@ -87,7 +87,7 @@ export function TemplatesListClient({ supplierId, initialTemplates }: Props) {
               </div>
               <p className="text-xs text-sage mt-1">
                 Creato il{" "}
-                {new Date(t.created_at).toLocaleDateString("it-IT")}
+                {new Date(t.created_at).toLocaleDateString("it-IT", { timeZone: "Europe/Rome" })}
               </p>
             </div>
             <div

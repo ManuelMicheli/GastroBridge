@@ -8,6 +8,7 @@ import {
 } from "@/lib/supplier/stock/queries";
 import { MovementsClient } from "./movements-client";
 import type { StockMovementType } from "@/types/database";
+import { getCurrentSupplierMember } from "@/lib/supplier/current-member";
 
 export const metadata: Metadata = { title: "Movimenti — Magazzino" };
 
@@ -58,11 +59,8 @@ export default async function MovimentiPage({
     );
   }
 
-  const { data: supplier } = await supabase
-    .from("suppliers")
-    .select("id")
-    .eq("profile_id", user.id)
-    .maybeSingle<{ id: string }>();
+  const member = await getCurrentSupplierMember();
+  const supplier = member ? { id: member.supplier_id } : null;
 
   if (!supplier?.id) {
     return (

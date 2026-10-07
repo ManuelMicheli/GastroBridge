@@ -101,7 +101,7 @@ export default async function CustomerConfirmPage({
     return (
       <ErrorCard
         title="Link non valido"
-        message="Il link di conferma e' incompleto. Controlla la email ricevuta dal fornitore e apri nuovamente il link."
+        message="Il link di conferma è incompleto. Controlla la email ricevuta dal fornitore e apri nuovamente il link."
       />
     );
   }
@@ -115,8 +115,8 @@ export default async function CustomerConfirmPage({
         title={scaduto ? "Link scaduto" : "Link non valido"}
         message={
           scaduto
-            ? "Questo link di conferma e' scaduto (validita' 48 ore). Contatta il fornitore per richiedere una nuova email di conferma."
-            : "Il token di conferma non e' valido. Potrebbe essere stato modificato o riferirsi a un altro ordine."
+            ? "Questo link di conferma è scaduto (validità 48 ore). Contatta il fornitore per richiedere una nuova email di conferma."
+            : "Il token di conferma non è valido. Potrebbe essere stato modificato o riferirsi a un altro ordine."
         }
       />
     );
@@ -155,17 +155,17 @@ export default async function CustomerConfirmPage({
   // Stato gia' finalizzato: mostra esito senza CTA.
   if (workflow !== "pending_customer_confirmation") {
     const alreadyMsg: Record<string, string> = {
-      confirmed: "Hai gia' confermato le modifiche proposte dal fornitore. L'ordine e' confermato.",
+      confirmed: "Hai già confermato le modifiche proposte dal fornitore. L'ordine è confermato.",
       cancelled: "Questo ordine risulta annullato. Nessuna ulteriore azione richiesta.",
       rejected: "Il fornitore ha rifiutato l'ordine. Nessuna ulteriore azione richiesta.",
-      stock_conflict: "Si e' verificato un conflitto di stock durante la prenotazione. Il fornitore ti ricontattera'.",
+      stock_conflict: "Si è verificato un conflitto di stock durante la prenotazione. Il fornitore ti ricontatterà.",
     };
     return (
       <ErrorCard
-        title="Conferma non piu' necessaria"
+        title="Conferma non più necessaria"
         message={
           alreadyMsg[workflow as string] ??
-          `L'ordine e' nello stato "${workflow}": la richiesta di conferma non e' piu' attiva.`
+          `L'ordine è nello stato "${workflow}": la richiesta di conferma non è più attiva.`
         }
       />
     );

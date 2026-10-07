@@ -4,11 +4,15 @@ export function formatEUR(value: number): string {
   return new Intl.NumberFormat("it-IT", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(value);
+    useGrouping: "always",
+  } as Intl.NumberFormatOptions).format(value);
 }
 
 export function formatInteger(value: number): string {
-  return new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0 }).format(value);
+  return new Intl.NumberFormat("it-IT", {
+    maximumFractionDigits: 0,
+    useGrouping: "always",
+  } as Intl.NumberFormatOptions).format(value);
 }
 
 export function formatEURCompact(value: number): string {
@@ -36,6 +40,7 @@ export function formatDateShort(iso: string): string {
 export function formatDateFull(iso: string): string {
   const date = new Date(`${iso}T00:00:00`);
   return date.toLocaleDateString("it-IT", {
+    timeZone: "Europe/Rome",
     day: "2-digit",
     month: "short",
     year: "numeric",

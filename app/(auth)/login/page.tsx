@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn, signInWithGoogle, signInWithMagicLink } from "../actions";
@@ -32,8 +32,16 @@ function GoogleIcon() {
   );
 }
 
-export default function LoginPage() {
+export default function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const router = useRouter();
+  // Page the user was sent away from (set by middleware / invite links).
+  // Validated server-side (lib/auth/redirect.ts).
+  const { redirect: redirectParam } = use(searchParams);
+  const redirectTo = Array.isArray(redirectParam) ? redirectParam[0] : redirectParam;
   const [isLoading, setIsLoading] = useState(false);
   const [showMagicLink, setShowMagicLink] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +49,7 @@ export default function LoginPage() {
   async function handleSubmit(formData: FormData) {
     setIsLoading(true);
     setError(null);
+    if (redirectTo) formData.set("redirect", redirectTo);
     const result = await signIn(formData);
     if (result?.error) {
       setError(result.error);
@@ -54,6 +63,7 @@ export default function LoginPage() {
   async function handleMagicLink(formData: FormData) {
     setIsLoading(true);
     setError(null);
+    if (redirectTo) formData.set("redirect", redirectTo);
     const result = await signInWithMagicLink(formData);
     if (result?.message) {
       toast(result.message);
@@ -62,16 +72,16 @@ export default function LoginPage() {
   }
 
   async function handleGoogleSignIn() {
-    const result = await signInWithGoogle();
+    const result = await signInWithGoogle(redirectTo ?? null);
     if (result?.error) {
       toast(result.error);
     }
   }
 
   return (
-    <div className="rounded-2xl border border-[color:var(--color-sage-muted)] bg-white p-7 shadow-[0_1px_2px_rgba(26,26,26,0.04),0_18px_48px_-20px_rgba(26,26,26,0.18)] sm:p-8">
+    <div className="f-card rounded-[24px] p-7 sm:p-8">
       <div className="mb-7">
-        <h2 className="font-display text-[27px] leading-tight text-charcoal">
+        <h2 className="text-[27px] font-semibold leading-tight tracking-[-0.025em] text-[var(--f-ink)]">
           Bentornato
         </h2>
         <p className="mt-1.5 text-sm text-sage">
@@ -135,7 +145,7 @@ export default function LoginPage() {
         <button
           type="button"
           onClick={handleGoogleSignIn}
-          className="inline-flex w-full items-center justify-center gap-2.5 rounded-xl border border-[color:var(--color-sage-muted)] bg-white py-3.5 font-body font-semibold text-charcoal transition-colors hover:bg-[#FAFAFA] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2"
+          className="f-btn f-btn-soft w-full"
         >
           <GoogleIcon />
           Continua con Google

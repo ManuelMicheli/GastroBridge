@@ -3,7 +3,7 @@
 
 import { forwardRef } from "react";
 import { getOrderStatusMeta } from "@/lib/orders/status-meta";
-import { StatusDot } from "@/components/ui/status-dot";
+import { Avatar, OrderStatusPill } from "@/components/fernly/primitives";
 import { formatCurrency } from "@/lib/utils/formatters";
 import type { OrderFeedRow, TimeBucket } from "../_lib/types";
 
@@ -13,6 +13,7 @@ function formatTimestamp(iso: string, bucket: TimeBucket): string {
   if (bucket === "today" || bucket === "yesterday") {
     // HH:mm
     return new Intl.DateTimeFormat("it-IT", {
+      timeZone: "Europe/Rome",
       hour: "2-digit",
       minute: "2-digit",
     }).format(d);
@@ -20,6 +21,7 @@ function formatTimestamp(iso: string, bucket: TimeBucket): string {
   if (bucket === "this_week") {
     // "lun 11:30"
     return new Intl.DateTimeFormat("it-IT", {
+      timeZone: "Europe/Rome",
       weekday: "short",
       hour: "2-digit",
       minute: "2-digit",
@@ -27,6 +29,7 @@ function formatTimestamp(iso: string, bucket: TimeBucket): string {
   }
   // earlier: full date
   return new Intl.DateTimeFormat("it-IT", {
+    timeZone: "Europe/Rome",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -43,8 +46,7 @@ export const TimelineRow = forwardRef<
     rowId: string;
   }
 >(function TimelineRow({ row, bucket, selected, onSelect, rowId }, ref) {
-  const meta = getOrderStatusMeta(row.status);
-  const statusLabel = meta.label;
+  const statusLabel = getOrderStatusMeta(row.status).label;
   const ts = formatTimestamp(row.createdAt, bucket);
   const shortId = row.id.slice(0, 8).toUpperCase();
 
@@ -55,45 +57,37 @@ export const TimelineRow = forwardRef<
       type="button"
       onClick={() => onSelect(row.id)}
       aria-pressed={selected}
+      aria-label={`Ordine ${shortId}, ${statusLabel}`}
       data-selected={selected ? "true" : "false"}
-      className={`group grid w-full grid-cols-[64px_14px_minmax(0,1fr)_auto_auto] items-center gap-x-3 border-l-2 px-3 text-left transition-colors ${
+      className={`group grid w-full grid-cols-[36px_minmax(0,1fr)_auto_auto] items-center gap-x-3 rounded-[14px] px-2 py-2 text-left transition-colors ${
         selected
-          ? "border-accent-green bg-accent-green/5"
-          : "border-transparent hover:border-accent-green hover:bg-surface-hover"
+          ? "bg-[var(--acc-50)] ring-1 ring-[color:color-mix(in_oklab,var(--acc-600)_35%,transparent)]"
+          : "hover:bg-[var(--f-fill)]"
       }`}
-      style={{ minHeight: 40 }}
+      style={{ minHeight: 52 }}
     >
-      {/* timestamp */}
-      <span className="font-mono text-[11px] tabular-nums text-text-tertiary">
-        {ts}
-      </span>
+      <Avatar name={row.supplierName ?? shortId} size={36} />
 
-      {/* status dot */}
-      <StatusDot tone={meta.tone} size={8} pulse={meta.pulse} />
-
-      {/* id + supplier */}
-      <span className="flex min-w-0 items-center gap-3">
-        <span className="font-mono text-[12px] text-text-primary">
-          #{shortId}
-        </span>
-        <span className="truncate text-[13px] text-text-secondary">
+      <span className="min-w-0">
+        <span className="block truncate text-[14px] font-medium text-[var(--f-ink)]">
           {row.supplierName ?? "—"}
           {row.supplierCount > 1 && (
-            <span className="ml-1 font-mono text-[10px] text-text-tertiary">
+            <span className="ml-1 text-[11.5px] font-normal text-[var(--f-muted)]">
               +{row.supplierCount - 1}
             </span>
           )}
         </span>
+        <span className="block truncate text-[12px] text-[var(--f-muted)]">
+          #{shortId} · {ts}
+        </span>
       </span>
 
-      {/* total */}
-      <span className="font-mono text-[13px] tabular-nums text-text-primary">
+      <span className="text-[14px] font-semibold tabular-nums text-[var(--f-ink)]">
         {formatCurrency(row.total)}
       </span>
 
-      {/* status label (desktop only) */}
-      <span className="hidden font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary md:inline">
-        {statusLabel}
+      <span className="hidden md:inline-flex">
+        <OrderStatusPill status={row.status} />
       </span>
     </button>
   );

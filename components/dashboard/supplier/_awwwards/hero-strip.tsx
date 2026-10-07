@@ -24,6 +24,7 @@ function formatISODate(d: Date): string {
 
 function formatClock(d: Date): string {
   return new Intl.DateTimeFormat("it-IT", {
+    timeZone: "Europe/Rome",
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,

@@ -39,23 +39,23 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
           {label && (
             <label
               htmlFor={selectId}
-              className="text-sm font-semibold text-charcoal"
+              className="f-label"
             >
               {label}
             </label>
           )}
           <div
             className={cn(
-              "flex items-center gap-2 w-full border-2 border-sage-muted rounded-xl px-4 font-body bg-white transition-colors duration-200 focus-within:border-forest disabled:opacity-50",
-              error && "border-red-500 focus-within:border-red-500"
+              "f-input flex items-center gap-2 !h-auto min-h-11 disabled:opacity-50",
+              error && "!border-[var(--f-danger)]"
             )}
           >
-            {prefix && <span className="text-sage shrink-0">{prefix}</span>}
+            {prefix && <span className="text-[var(--f-muted)] shrink-0">{prefix}</span>}
             <select
               ref={ref}
               id={selectId}
               className={cn(
-                "flex-1 py-3.5 bg-transparent text-charcoal focus:outline-none disabled:opacity-50 appearance-none pr-6 bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394A89A%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0_center] bg-no-repeat",
+                "flex-1 py-2.5 bg-transparent text-[var(--f-ink)] focus:outline-none disabled:opacity-50 appearance-none pr-6 bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394A89A%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0_center] bg-no-repeat",
                 className
               )}
               aria-invalid={error ? "true" : undefined}
@@ -72,10 +72,10 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
                 </option>
               ))}
             </select>
-            {suffix && <span className="text-sage shrink-0">{suffix}</span>}
+            {suffix && <span className="text-[var(--f-muted)] shrink-0">{suffix}</span>}
           </div>
           {error && (
-            <p className="text-sm text-red-600" role="alert">
+            <p className="text-[13px] text-[var(--f-danger)]" role="alert">
               {error}
             </p>
           )}
@@ -88,7 +88,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
         {label && (
           <label
             htmlFor={selectId}
-            className="text-sm font-semibold text-charcoal"
+            className="f-label"
           >
             {label}
           </label>
@@ -97,8 +97,8 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
           ref={ref}
           id={selectId}
           className={cn(
-            "w-full border-2 border-sage-muted rounded-xl py-3.5 px-4 font-body text-charcoal bg-white transition-colors duration-200 focus:border-forest focus:outline-none focus:ring-0 disabled:opacity-50 disabled:bg-gray-50 appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394A89A%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat pr-10",
-            error && "border-red-500 focus:border-red-500",
+            "f-input disabled:opacity-50 appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394A89A%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat pr-10",
+            error && "!border-[var(--f-danger)]",
             className
           )}
           aria-invalid={error ? "true" : undefined}
@@ -116,7 +116,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
           ))}
         </select>
         {error && (
-          <p className="text-sm text-red-600" role="alert">
+          <p className="text-[13px] text-[var(--f-danger)]" role="alert">
             {error}
           </p>
         )}

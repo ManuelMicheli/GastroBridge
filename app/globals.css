@@ -7,7 +7,6 @@
    ========================================= */
 @theme {
   /* DO NOT REMOVE — consumed by [data-area="restaurant"] and [data-area="supplier"].
-     The marketing area uses its own --color-marketing-* tokens (see bottom of file). */
   /* Legacy GastroBridge Brand (forest green — still used by the supplier area) */
   --color-forest: #1B6B4A;
   --color-forest-dark: #145238;
@@ -373,7 +372,7 @@ body {
    ========================================= */
 [data-area="supplier"] {
   /* Canonical brand tokens (light) — ocra + bordeaux-marrone depth */
-  --color-brand-primary: #A87535;
+  --color-brand-primary: #946630;
   --color-brand-primary-hover: #8F5F2A;
   --color-brand-primary-active: #755025;
   --color-brand-primary-subtle: #F5EBD5;
@@ -397,14 +396,14 @@ body {
   --text-muted-light: #6B5F4A;
 
   /* Legacy forest* tokens → ocra family (supplier scope only) */
-  --color-forest: #A87535;
+  --color-forest: #946630;
   --color-forest-dark: #8F5F2A;
   --color-forest-light: #F5EBD5;
   --color-cream: #FBF8F1;
   --color-charcoal: #1A1A1A;
   /* Terracotta → ocra (NOT yellow — 5% rule: terracotta was used on
      wide surfaces like pending-requests banners, must stay muted). */
-  --color-terracotta: #A87535;
+  --color-terracotta: #946630;
   --color-terracotta-light: #F5EBD5;
   --color-sage: #6B5F4A;
   --color-sage-muted: #E8DCC0;
@@ -412,14 +411,14 @@ body {
   /* Accent-green family (KPIs, sidebar active, quick-action, link color)
      → remapped to ocra so shared dashboard components pick it up
      without needing per-component edits. */
-  --color-accent-green: #A87535;
+  --color-accent-green: #946630;
   --color-accent-green-muted: #F5EBD5;
-  --color-text-accent: #A87535;
-  --color-text-link: #A87535;
+  --color-text-accent: #946630;
+  --color-text-link: #946630;
 
   /* Accent-orange (used by KPI secondary series, loaded-order status, etc.)
      → ocra as well. Rule #3: large-surface terracotta/orange ≠ giallo. */
-  --color-accent-orange: #A87535;
+  --color-accent-orange: #946630;
   --color-accent-orange-muted: #F5EBD5;
 
   /* Border accents tinted ocra */
@@ -909,174 +908,11 @@ body {
   --tone-rose-ring:    rgba(244, 114, 128, 0.30);
 }
 
-/* =========================================================
-   Area: Marketing — public landing (scoped).
-   Cream + bordeaux editorial palette. Amber for supplier
-   surfaces (nested [data-side="supplier"]). Does NOT touch
-   legacy forest/cream/terracotta tokens. Dark mode is
-   intentionally undefined: the public landing is cream-only.
-   ========================================================= */
-[data-area="marketing"] {
-  --color-marketing-bg: #FAFAF7;
-  --color-marketing-bg-soft: #F3F2EC;
-  --color-marketing-ink: #0F0F10;
-  --color-marketing-ink-muted: #4A4A4F;
-  --color-marketing-ink-subtle: #8A8A8F;
-  --color-marketing-rule: rgba(15, 15, 16, 0.10);
-  --color-marketing-rule-strong: rgba(15, 15, 16, 0.18);
-  --color-marketing-primary: #6B1F2E;
-  --color-marketing-primary-hover: #7C2536;
-  --color-marketing-primary-deep: #4E1520;
-  --color-marketing-primary-subtle: #F5E8EB;
-  --color-marketing-on-primary: #FAFAF7;
-  --color-marketing-accent-warm: #B8791F;
-  --color-marketing-accent-warm-deep: #8E5A14;
-  --color-marketing-accent-warm-subtle: #F4EAD7;
-  --color-marketing-on-warm: #0F0F10;
-
-  --type-marketing-mega: clamp(64px, 12vw, 200px);
-  --type-marketing-mega-lh: 0.88;
-  --type-marketing-mega-ls: -0.035em;
-  --type-marketing-display: clamp(44px, 7.5vw, 104px);
-  --type-marketing-display-lh: 0.96;
-  --type-marketing-display-ls: -0.025em;
-  --type-marketing-h2: clamp(32px, 4.5vw, 64px);
-  --type-marketing-h2-lh: 1.02;
-  --type-marketing-h2-ls: -0.018em;
-  --type-marketing-pull: clamp(24px, 2.4vw, 34px);
-  --type-marketing-pull-lh: 1.34;
-  --type-marketing-body: 17px;
-  --type-marketing-body-lh: 1.55;
-  --type-marketing-eyebrow: 11px;
-  --type-marketing-eyebrow-ls: 0.22em;
-
-  --gutter-marketing: clamp(20px, 5vw, 96px);
-  --rhythm-section: clamp(96px, 14vw, 192px);
-  --rhythm-block: clamp(48px, 6vw, 96px);
-
-  background: var(--color-marketing-bg);
-  color: var(--color-marketing-ink);
-}
-
-/* Supplier palette flip within marketing. Amber replaces bordeaux.
-   Two paths: legacy per-section [data-side], AND new root-level
-   [data-persona] on <html> (set by PersonaProvider for reactive switch). */
-[data-area="marketing"] [data-side="supplier"],
-:root[data-persona="supplier"] [data-area="marketing"] {
-  --color-marketing-primary: var(--color-marketing-accent-warm);
-  --color-marketing-primary-hover: var(--color-marketing-accent-warm-deep);
-  --color-marketing-primary-deep: var(--color-marketing-accent-warm-deep);
-  --color-marketing-primary-subtle: var(--color-marketing-accent-warm-subtle);
-  --color-marketing-on-primary: var(--color-marketing-on-warm);
-  --color-marketing-bg: #FBF8F1;
-  --color-marketing-bg-soft: #F1ECDF;
-}
-
-/* Dark theme tokens for the public landing (next-themes adds .dark on <html>). */
-.dark [data-area="marketing"] {
-  --color-marketing-bg: #09090F;
-  --color-marketing-bg-soft: #11111A;
-  --color-marketing-ink: #F5F4EE;
-  --color-marketing-ink-muted: #B4B3AE;
-  --color-marketing-ink-subtle: #6E6D69;
-  --color-marketing-rule: rgba(245, 244, 238, 0.10);
-  --color-marketing-rule-strong: rgba(245, 244, 238, 0.20);
-  --color-marketing-primary: #E84560;
-  --color-marketing-primary-hover: #F25A73;
-  --color-marketing-primary-deep: #B91C3C;
-  --color-marketing-primary-subtle: rgba(232, 69, 96, 0.14);
-  --color-marketing-on-primary: #09090F;
-  --color-marketing-accent-warm: #E8A355;
-  --color-marketing-accent-warm-deep: #B8791F;
-  --color-marketing-accent-warm-subtle: rgba(232, 163, 85, 0.14);
-}
-
-.dark :root[data-persona="supplier"] [data-area="marketing"],
-.dark [data-area="marketing"] [data-side="supplier"] {
-  --color-marketing-primary: var(--color-marketing-accent-warm);
-  --color-marketing-primary-hover: var(--color-marketing-accent-warm-deep);
-  --color-marketing-primary-deep: var(--color-marketing-accent-warm-deep);
-  --color-marketing-primary-subtle: var(--color-marketing-accent-warm-subtle);
-}
-
-/* Force-dark island within a light marketing area (e.g. cinematic closer). */
-[data-area="marketing"] [data-force-dark="true"] {
-  --color-marketing-bg: #09090F;
-  --color-marketing-bg-soft: #11111A;
-  --color-marketing-ink: #F5F4EE;
-  --color-marketing-ink-muted: #B4B3AE;
-  --color-marketing-ink-subtle: #6E6D69;
-  --color-marketing-rule: rgba(245, 244, 238, 0.10);
-  --color-marketing-rule-strong: rgba(245, 244, 238, 0.20);
-  --color-marketing-primary: #E84560;
-  --color-marketing-primary-hover: #F25A73;
-  --color-marketing-primary-deep: #B91C3C;
-  --color-marketing-primary-subtle: rgba(232, 69, 96, 0.14);
-  --color-marketing-on-primary: #09090F;
-  background: var(--color-marketing-bg);
-  color: var(--color-marketing-ink);
-}
-
-[data-area="marketing"] [data-force-dark="true"][data-side="supplier"],
-:root[data-persona="supplier"] [data-area="marketing"] [data-force-dark="true"] {
-  --color-marketing-primary: #E8A355;
-  --color-marketing-primary-hover: #F0B772;
-  --color-marketing-primary-deep: #B8791F;
-  --color-marketing-primary-subtle: rgba(232, 163, 85, 0.14);
-}
-
-/* Smooth palette swap on persona change (view-transition fallback). */
-@media (prefers-reduced-motion: no-preference) {
-  [data-area="marketing"],
-  [data-area="marketing"] * {
-    transition-property: background-color, color, border-color, fill, stroke;
-    transition-duration: 320ms;
-    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-  }
-}
-
-/* View-Transitions root cross-fade for persona swap. */
+/* View-Transitions root cross-fade (theme swap). */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation-duration: 360ms;
   animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-[data-area="marketing"] ::selection {
-  background: var(--color-marketing-primary);
-  color: var(--color-marketing-on-primary);
-}
-
-[data-area="marketing"] hr.rule {
-  border: 0;
-  border-top: 1px solid var(--color-marketing-rule);
-  margin: 0;
-}
-
-[data-area="marketing"] a.link-editorial {
-  position: relative;
-  display: inline-block;
-}
-[data-area="marketing"] a.link-editorial::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  bottom: -2px;
-  height: 1px;
-  width: 100%;
-  background: currentColor;
-  transform: scaleX(0);
-  transform-origin: left center;
-  transition: transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-[data-area="marketing"] a.link-editorial:hover::after {
-  transform: scaleX(1);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  [data-area="marketing"] a.link-editorial::after {
-    transition: none;
-  }
 }
 
 /* =========================================
@@ -1283,75 +1119,6 @@ body {
    No additional rule needed; kept here as documentation. */
 
 /* =========================================
-   Marketing Landing Page — Animations & States
-   ========================================= */
-
-/* @property declarations for smooth mesh gradient interpolation */
-@property --mesh-x1 { syntax: "<percentage>"; inherits: false; initial-value: 20%; }
-@property --mesh-y1 { syntax: "<percentage>"; inherits: false; initial-value: 30%; }
-@property --mesh-x2 { syntax: "<percentage>"; inherits: false; initial-value: 80%; }
-@property --mesh-y2 { syntax: "<percentage>"; inherits: false; initial-value: 60%; }
-@property --mesh-x3 { syntax: "<percentage>"; inherits: false; initial-value: 50%; }
-@property --mesh-y3 { syntax: "<percentage>"; inherits: false; initial-value: 80%; }
-
-/* Initial state for scroll-triggered elements — prevents FOUC */
-.gsap-reveal {
-  opacity: 0;
-  transform: translateY(20px);
-}
-
-/* Mesh gradient animation */
-@keyframes mesh-shift {
-  0%, 100% {
-    --mesh-x1: 20%;
-    --mesh-y1: 30%;
-    --mesh-x2: 80%;
-    --mesh-y2: 60%;
-    --mesh-x3: 50%;
-    --mesh-y3: 80%;
-  }
-  33% {
-    --mesh-x1: 40%;
-    --mesh-y1: 50%;
-    --mesh-x2: 60%;
-    --mesh-y2: 30%;
-    --mesh-x3: 30%;
-    --mesh-y3: 60%;
-  }
-  66% {
-    --mesh-x1: 60%;
-    --mesh-y1: 20%;
-    --mesh-x2: 30%;
-    --mesh-y2: 70%;
-    --mesh-x3: 70%;
-    --mesh-y3: 40%;
-  }
-}
-
-.mesh-gradient {
-  background:
-    radial-gradient(ellipse at var(--mesh-x1, 20%) var(--mesh-y1, 30%), rgba(27, 107, 74, 0.4) 0%, transparent 60%),
-    radial-gradient(ellipse at var(--mesh-x2, 80%) var(--mesh-y2, 60%), rgba(20, 82, 56, 0.5) 0%, transparent 60%),
-    radial-gradient(ellipse at var(--mesh-x3, 50%) var(--mesh-y3, 80%), rgba(45, 212, 122, 0.15) 0%, transparent 60%),
-    var(--color-forest-dark);
-  animation: mesh-shift 20s ease-in-out infinite;
-}
-
-/* Marquee animation */
-@keyframes marquee {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-
-.marquee-track {
-  animation: marquee 30s linear infinite;
-}
-
-.marquee-track:hover {
-  animation-play-state: paused;
-}
-
-/* =========================================
    Theme toggle — icon swap animation
    Used by components/ui/theme-toggle.tsx
    ========================================= */
@@ -1478,3 +1245,536 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .auth-anim { animation: none !important; }
 }
+
+/* =====================================================================
+   FERNLY LAYER — logged-in app redesign (restaurant + supplier + auth).
+   Spec: docs/superpowers/specs/2026-10-07-fernly-style-redesign.md
+   Declared last so it wins over the legacy area blocks above at equal
+   specificity.
+   ===================================================================== */
+
+/* Accent steps are registered so a change of preset interpolates
+   smoothly everywhere (gradients, svg fills, shadows) — spec §5. */
+@property --acc-950 { syntax: "<color>"; inherits: true; initial-value: #22060D; }
+@property --acc-900 { syntax: "<color>"; inherits: true; initial-value: #3A0B16; }
+@property --acc-800 { syntax: "<color>"; inherits: true; initial-value: #6B1F2E; }
+@property --acc-700 { syntax: "<color>"; inherits: true; initial-value: #8E1A33; }
+@property --acc-600 { syntax: "<color>"; inherits: true; initial-value: #B91C3C; }
+@property --acc-500 { syntax: "<color>"; inherits: true; initial-value: #D0435E; }
+@property --acc-400 { syntax: "<color>"; inherits: true; initial-value: #E5798D; }
+@property --acc-300 { syntax: "<color>"; inherits: true; initial-value: #F0A9B6; }
+@property --acc-200 { syntax: "<color>"; inherits: true; initial-value: #F7CED6; }
+@property --acc-100 { syntax: "<color>"; inherits: true; initial-value: #FBE7EB; }
+@property --acc-50  { syntax: "<color>"; inherits: true; initial-value: #FDF3F5; }
+@property --acc-ink { syntax: "<color>"; inherits: true; initial-value: #6B1F2E; }
+
+/* ---------- Accent presets ---------- */
+/* Bordeaux — restaurant default. Deep = marketing bordeaux, mid = carmine. */
+[data-area="restaurant"],
+html[data-accent-area="restaurant"],
+html[data-accent="bordeaux"],
+html[data-accent="bordeaux"] [data-area="restaurant"],
+html[data-accent="bordeaux"] [data-area="supplier"] {
+  --acc-950: #22060D; --acc-900: #3A0B16; --acc-800: #6B1F2E; --acc-700: #8E1A33;
+  --acc-600: #B91C3C; --acc-500: #D0435E; --acc-400: #E5798D; --acc-300: #F0A9B6;
+  --acc-200: #F7CED6; --acc-100: #FBE7EB; --acc-50: #FDF3F5; --acc-ink: #6B1F2E;
+}
+/* Ocra — supplier default (existing ocra/avorio identity).
+   600 darkened from #A87535 (3.99:1 on white) to #946630 (5.0:1) for AA
+   text/button contrast; same for Ambra 600 #C27413 (3.62) → #A9620F (4.73). */
+[data-area="supplier"],
+html[data-accent-area="supplier"],
+html[data-accent="ocra"],
+html[data-accent="ocra"] [data-area="restaurant"],
+html[data-accent="ocra"] [data-area="supplier"] {
+  --acc-950: #241606; --acc-900: #3D270C; --acc-800: #5C3F18; --acc-700: #7E5524;
+  --acc-600: #946630; --acc-500: #BF8F50; --acc-400: #D5AF7E; --acc-300: #E5CAA4;
+  --acc-200: #EFDFC7; --acc-100: #F6ECD9; --acc-50: #FBF6EC; --acc-ink: #5C3F18;
+}
+/* Forest — homage to the original GastroBridge green #1B6B4A. */
+html[data-accent="forest"],
+html[data-accent="forest"] [data-area="restaurant"],
+html[data-accent="forest"] [data-area="supplier"] {
+  --acc-950: #04170D; --acc-900: #0B3921; --acc-800: #17523A; --acc-700: #1B6B4A;
+  --acc-600: #1F7A52; --acc-500: #2E9463; --acc-400: #5ABB88; --acc-300: #8FD3AE;
+  --acc-200: #C2E8D2; --acc-100: #E3F4EA; --acc-50: #F1FAF5; --acc-ink: #17523A;
+}
+/* Ocean */
+html[data-accent="ocean"],
+html[data-accent="ocean"] [data-area="restaurant"],
+html[data-accent="ocean"] [data-area="supplier"] {
+  --acc-950: #061433; --acc-900: #0D2A6B; --acc-800: #1B3A8A; --acc-700: #2449A6;
+  --acc-600: #2F5FD0; --acc-500: #4C7BE0; --acc-400: #7FA2EC; --acc-300: #AEC4F4;
+  --acc-200: #D3E0FA; --acc-100: #E8EFFD; --acc-50: #F3F7FE; --acc-ink: #1B3A8A;
+}
+/* Ambra */
+html[data-accent="ambra"],
+html[data-accent="ambra"] [data-area="restaurant"],
+html[data-accent="ambra"] [data-area="supplier"] {
+  --acc-950: #2A1603; --acc-900: #4A2806; --acc-800: #7A4210; --acc-700: #9A5712;
+  --acc-600: #A9620F; --acc-500: #DB9233; --acc-400: #EAB466; --acc-300: #F2CE97;
+  --acc-200: #F8E3C3; --acc-100: #FCF1E0; --acc-50: #FEF8EF; --acc-ink: #7A4210;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html[data-accent-area],
+  [data-area="restaurant"],
+  [data-area="supplier"] {
+    transition:
+      --acc-950 460ms cubic-bezier(0.22, 1, 0.36, 1),
+      --acc-900 460ms cubic-bezier(0.22, 1, 0.36, 1),
+      --acc-800 460ms cubic-bezier(0.22, 1, 0.36, 1),
+      --acc-700 460ms cubic-bezier(0.22, 1, 0.36, 1),
+      --acc-600 460ms cubic-bezier(0.22, 1, 0.36, 1),
+      --acc-500 460ms cubic-bezier(0.22, 1, 0.36, 1),
+      --acc-400 460ms cubic-bezier(0.22, 1, 0.36, 1),
+      --acc-300 460ms cubic-bezier(0.22, 1, 0.36, 1),
+      --acc-200 460ms cubic-bezier(0.22, 1, 0.36, 1),
+      --acc-100 460ms cubic-bezier(0.22, 1, 0.36, 1),
+      --acc-50 460ms cubic-bezier(0.22, 1, 0.36, 1),
+      --acc-ink 460ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+
+/* ---------- Neutral surfaces (light) ----------
+   Also declared on :root so app primitives rendered outside an area scope
+   (error/not-found pages, portals, the root toaster) still resolve. */
+:root,
+[data-area="restaurant"],
+[data-area="supplier"] {
+  --f-canvas: #ECEEED;
+  --f-panel: #F5F6F6;
+  --f-card: #FFFFFF;
+  --f-fill: #F2F4F3;
+  --f-fill-2: #E9ECEB;
+  --f-line: rgba(16, 24, 20, 0.07);
+  --f-line-strong: rgba(16, 24, 20, 0.13);
+  --f-ink: #0B0F0D;
+  --f-ink-2: #3D4442;
+  --f-muted: #6B7270;
+  --f-faint: #9AA19E;
+  --f-hatch: #A7AEAB;
+  --f-shadow-card: 0 1px 2px rgba(16, 24, 20, 0.04), 0 8px 24px rgba(16, 24, 20, 0.045);
+  --f-shadow-hero: 0 2px 4px rgba(16, 24, 20, 0.08), 0 14px 32px color-mix(in oklab, var(--acc-900) 30%, transparent);
+  --f-shadow-pop: 0 2px 6px rgba(16, 24, 20, 0.06), 0 24px 56px rgba(16, 24, 20, 0.16);
+  --f-radius-card: 20px;
+  --f-radius-panel: 24px;
+  --f-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --f-hatch-bg: repeating-linear-gradient(135deg, var(--f-hatch) 0 1.6px, transparent 1.6px 7px);
+  --f-texture: repeating-radial-gradient(circle at 115% 130%, rgba(255, 255, 255, 0) 0 13px, rgba(255, 255, 255, 0.075) 13px 14px);
+  --f-success: #16A34A;
+  --f-success-bg: #EAF7EF;
+  --f-warning: #C2780A;
+  --f-warning-bg: #FDF4E3;
+  --f-danger: #DC2626;
+  --f-danger-bg: #FDECEC;
+  --f-info: #2563EB;
+  --f-info-bg: #EAF0FD;
+}
+
+[data-area="restaurant"],
+[data-area="supplier"] {
+  /* App typography — one geometric grotesk everywhere inside the app.
+     The serif display + mono "terminal" labels of the previous design
+     collapse onto the same family; tabular figures stay via font-variant. */
+  --font-display: var(--font-app), ui-sans-serif, system-ui, sans-serif;
+  --font-body: var(--font-app), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-app), ui-sans-serif, system-ui, sans-serif;
+  --font-num: var(--font-app), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-app), ui-sans-serif, system-ui, sans-serif;
+  accent-color: var(--acc-600);
+
+  /* Brand tokens → accent steps (every legacy alias follows the accent) */
+  --color-brand-primary: var(--acc-600);
+  --color-brand-primary-hover: var(--acc-700);
+  --color-brand-primary-active: var(--acc-800);
+  --color-brand-primary-subtle: var(--acc-50);
+  --color-brand-primary-border: var(--acc-200);
+  --color-brand-depth: var(--acc-800);
+  --color-brand-depth-subtle: var(--acc-50);
+  --color-brand-on-primary: #FFFFFF;
+  --color-forest: var(--acc-600);
+  --color-forest-dark: var(--acc-800);
+  --color-forest-light: var(--acc-50);
+  --color-accent-green: var(--acc-600);
+  --color-accent-green-muted: var(--acc-50);
+  --color-text-accent: var(--acc-600);
+  --color-text-link: var(--acc-700);
+  --color-border-accent: color-mix(in oklab, var(--acc-600) 30%, transparent);
+  --color-border-glow: color-mix(in oklab, var(--acc-600) 22%, transparent);
+  --glow-forest: 0 0 20px color-mix(in oklab, var(--acc-600) 14%, transparent);
+  --glow-forest-strong: 0 0 32px color-mix(in oklab, var(--acc-600) 22%, transparent);
+  --glow-accent: 0 0 24px color-mix(in oklab, var(--acc-600) 16%, transparent);
+  --glow-brand: 0 0 20px color-mix(in oklab, var(--acc-600) 14%, transparent);
+  --glow-brand-strong: 0 0 32px color-mix(in oklab, var(--acc-600) 22%, transparent);
+  --tone-brand-bg: var(--acc-50);
+  --tone-brand-fg: var(--acc-800);
+  --tone-brand-ring: var(--acc-200);
+  --caption-color: var(--f-muted);
+  --sticky-cta-shadow: 0 8px 20px color-mix(in oklab, var(--acc-800) 30%, transparent);
+  --pill-nav-ring: color-mix(in oklab, var(--acc-600) 10%, transparent);
+
+  --text-display-lg--font-weight: 600;
+  --text-display-xl--font-weight: 600;
+  --text-display-2xl--font-weight: 600;
+  --text-display-lg--letter-spacing: -0.022em;
+  --text-display-xl--letter-spacing: -0.024em;
+  --text-display-2xl--letter-spacing: -0.026em;
+}
+
+[data-area="restaurant"]:not(.dark),
+[data-area="supplier"]:not(.dark) {
+  --color-surface-base: var(--f-panel);
+  --color-surface-card: var(--f-card);
+  --color-surface-elevated: var(--f-card);
+  --color-surface-hover: #EEF0EF;
+  --color-surface-sidebar: var(--f-panel);
+  --color-surface-overlay: rgba(20, 24, 22, 0.28);
+  --surface-page: var(--f-panel);
+  --surface-muted: var(--f-fill);
+  --color-border-subtle: var(--f-line);
+  --color-border-default: var(--f-line-strong);
+  --color-card-border: var(--f-line);
+  --color-text-primary: var(--f-ink);
+  --color-text-secondary: var(--f-ink-2);
+  --color-text-tertiary: var(--f-muted);
+  --text-primary-light: var(--f-ink);
+  --text-muted-light: var(--f-muted);
+  --color-cream: var(--f-panel);
+  --color-charcoal: var(--f-ink);
+  --color-sage: var(--f-muted);
+  --color-sage-muted: var(--f-fill-2);
+  --elevation-card: var(--f-shadow-card);
+  --elevation-card-active: var(--f-shadow-card);
+  --elevation-card-hover: 0 2px 4px rgba(16, 24, 20, 0.05), 0 14px 32px rgba(16, 24, 20, 0.08);
+  --elevation-card-active-hover: 0 2px 4px rgba(16, 24, 20, 0.05), 0 14px 32px rgba(16, 24, 20, 0.08);
+  --elevation-modal: var(--f-shadow-pop);
+  --elevation-modal-active: var(--f-shadow-pop);
+  --shadow-card: var(--f-shadow-card);
+  --shadow-elevated: var(--f-shadow-pop);
+  --shadow-card-dark: var(--f-shadow-card);
+  --shadow-elevated-dark: var(--f-shadow-pop);
+  --ios-grouped-bg: #F1F2F2;
+  --ios-surface: #FFFFFF;
+  --ios-chrome-bg: rgba(245, 246, 246, 0.84);
+  --ios-fill-quinary: rgba(16, 24, 20, 0.05);
+  --ios-fill-quaternary: rgba(16, 24, 20, 0.09);
+  --ios-separator: rgba(16, 24, 20, 0.07);
+
+  /* Status tones → Fernly outline pills (semantic, accent-independent) */
+  --tone-neutral-bg: var(--f-fill);
+  --tone-neutral-fg: var(--f-muted);
+  --tone-neutral-ring: var(--f-line-strong);
+  --tone-amber-bg: var(--f-warning-bg);
+  --tone-amber-fg: var(--f-warning);
+  --tone-amber-ring: color-mix(in oklab, var(--f-warning) 45%, transparent);
+  --tone-blue-bg: var(--f-info-bg);
+  --tone-blue-fg: var(--f-info);
+  --tone-blue-ring: color-mix(in oklab, var(--f-info) 38%, transparent);
+  --tone-emerald-bg: var(--f-success-bg);
+  --tone-emerald-fg: var(--f-success);
+  --tone-emerald-ring: color-mix(in oklab, var(--f-success) 45%, transparent);
+  --tone-rose-bg: var(--f-danger-bg);
+  --tone-rose-fg: var(--f-danger);
+  --tone-rose-ring: color-mix(in oklab, var(--f-danger) 40%, transparent);
+  --tone-brand-bg: var(--acc-50);
+  --tone-brand-fg: var(--acc-700);
+  --tone-brand-ring: color-mix(in oklab, var(--acc-600) 38%, transparent);
+}
+
+/* Desktop content panel gutter (mobile keeps the fluid clamp) */
+@media (min-width: 1024px) {
+  [data-area="restaurant"],
+  [data-area="supplier"] {
+    --page-gutter: 28px;
+  }
+}
+
+/* Supplier keeps a warm avorio undertone on its panels */
+[data-area="supplier"]:not(.dark) {
+  --f-canvas: #EDEBE6;
+  --f-panel: #F7F5F1;
+  --f-fill: #F2EFE8;
+}
+
+/* Dark theme keeps working: the accent reads its light steps on dark. */
+.dark[data-area="restaurant"],
+.dark[data-area="supplier"] {
+  --acc-ink: var(--acc-300);
+  --color-brand-primary: var(--acc-400);
+  --color-brand-primary-hover: var(--acc-300);
+  --color-brand-primary-active: var(--acc-500);
+  --color-brand-primary-subtle: color-mix(in oklab, var(--acc-400) 14%, transparent);
+  --color-brand-primary-border: color-mix(in oklab, var(--acc-400) 30%, transparent);
+  --color-brand-depth: var(--acc-300);
+  --color-forest: var(--acc-400);
+  --color-forest-dark: var(--acc-500);
+  --color-forest-light: color-mix(in oklab, var(--acc-400) 14%, transparent);
+  --color-accent-green: var(--acc-400);
+  --color-accent-green-muted: color-mix(in oklab, var(--acc-400) 14%, transparent);
+  --color-text-accent: var(--acc-400);
+  --color-text-link: var(--acc-300);
+  --f-canvas: #08080B;
+  --f-panel: #0E0E12;
+  --f-card: #16161B;
+  --f-fill: #1C1C22;
+  --f-fill-2: #24242B;
+  --f-line: rgba(255, 255, 255, 0.07);
+  --f-line-strong: rgba(255, 255, 255, 0.13);
+  --f-ink: #F4F2F3;
+  --f-ink-2: #C9C4C7;
+  --f-muted: #8E888C;
+  --f-faint: #66626A;
+  --f-hatch: #4A464E;
+  --f-shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 8px 24px rgba(0, 0, 0, 0.35);
+  --color-surface-base: var(--f-panel);
+  --color-surface-card: var(--f-card);
+  --color-surface-sidebar: var(--f-panel);
+}
+
+/* ---------- Generic restyle of legacy card shells (all pages) ----------
+   Rounded-xl/2xl cards on the card surface become Fernly cards: bigger
+   radius, hairline, two-layer soft shadow. Unlayered on purpose so it wins
+   over Tailwind utilities — but scoped to the app areas only. */
+[data-area="restaurant"]:not(.dark) :where(.rounded-xl, .rounded-2xl):where(.bg-surface-card, .bg-white),
+[data-area="supplier"]:not(.dark) :where(.rounded-xl, .rounded-2xl):where(.bg-surface-card, .bg-white) {
+  border-radius: var(--f-radius-card);
+  border-color: var(--f-line);
+  box-shadow: var(--f-shadow-card);
+}
+[data-strong-card-borders] section.rounded-xl.bg-surface-card {
+  border-color: var(--f-line);
+}
+
+/* Legacy page titles (h1.text-2xl/3xl) read as Fernly page titles. */
+[data-area="restaurant"] h1:where(.text-2xl, .text-3xl),
+[data-area="supplier"] h1:where(.text-2xl, .text-3xl) {
+  font-size: 30px;
+  line-height: 1.12;
+  letter-spacing: -0.024em;
+  font-weight: 600;
+  color: var(--f-ink);
+}
+@media (max-width: 1023px) {
+  [data-area="restaurant"] h1:where(.text-2xl, .text-3xl),
+  [data-area="supplier"] h1:where(.text-2xl, .text-3xl) { font-size: 26px; }
+}
+
+/* Legacy filled CTAs (bg-accent-green / bg-brand-primary on a button or
+   link) across the remaining pages become Fernly primary pills. */
+[data-area="restaurant"]:not(.dark) :where(button, a):where(.bg-accent-green, .bg-brand-primary, .bg-forest),
+[data-area="supplier"]:not(.dark) :where(button, a):where(.bg-accent-green, .bg-brand-primary, .bg-forest) {
+  border-radius: 9999px;
+  color: #fff;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--acc-700) 65%, var(--acc-800)) 0%, var(--acc-800) 100%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.14) inset, 0 6px 14px color-mix(in oklab, var(--acc-800) 22%, transparent);
+}
+[data-area="restaurant"]:not(.dark) :where(button, a):where(.bg-accent-green, .bg-brand-primary, .bg-forest):hover,
+[data-area="supplier"]:not(.dark) :where(button, a):where(.bg-accent-green, .bg-brand-primary, .bg-forest):hover {
+  background: var(--acc-900);
+}
+
+/* The previous editorial design hard-coded Georgia/serif inline in many
+   mobile views; inside the app everything uses the app grotesk. */
+[data-area="restaurant"] [style*="Georgia"],
+[data-area="supplier"] [style*="Georgia"],
+[data-area="restaurant"] .font-serif,
+[data-area="supplier"] .font-serif {
+  font-family: var(--font-app), ui-sans-serif, system-ui, sans-serif !important;
+  letter-spacing: -0.015em;
+}
+
+[data-area="restaurant"] ::selection,
+[data-area="supplier"] ::selection {
+  background: color-mix(in oklab, var(--acc-600) 22%, transparent);
+}
+
+/* ---------- Fernly primitives (class API used by components/fernly) ----
+   In the components layer so Tailwind utilities passed by callers win. */
+@layer components {
+.f-canvas { background: var(--f-canvas); }
+.f-panel { background: var(--f-panel); border-radius: var(--f-radius-panel); }
+.f-card {
+  background: var(--f-card);
+  border-radius: var(--f-radius-card);
+  box-shadow: var(--f-shadow-card);
+  border: 1px solid var(--f-line);
+}
+.f-hero {
+  color: #fff;
+  background-color: var(--acc-900);
+  background-image:
+    var(--f-texture),
+    radial-gradient(120% 140% at 0% 0%, color-mix(in oklab, var(--acc-700) 80%, transparent) 0%, transparent 62%),
+    linear-gradient(135deg, var(--acc-800) 0%, var(--acc-900) 72%, var(--acc-950) 100%);
+  box-shadow: var(--f-shadow-hero);
+  border-color: transparent;
+}
+.f-deep {
+  color: #fff;
+  background-color: var(--acc-950);
+  background-image:
+    var(--f-texture),
+    linear-gradient(140deg, var(--acc-900) 0%, var(--acc-950) 78%);
+  border-color: transparent;
+}
+.f-hatch {
+  background-color: var(--f-fill);
+  background-image: var(--f-hatch-bg);
+}
+.f-title {
+  font-size: 30px;
+  line-height: 1.12;
+  letter-spacing: -0.024em;
+  font-weight: 600;
+  color: var(--f-ink);
+}
+@media (max-width: 1023px) {
+  .f-title { font-size: 26px; }
+}
+.f-subtitle { font-size: 14px; line-height: 20px; color: var(--f-muted); }
+.f-card-title { font-size: 16.5px; line-height: 22px; font-weight: 500; color: var(--f-ink); letter-spacing: -0.012em; }
+.f-eyebrow { font-size: 11px; line-height: 14px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 600; color: var(--f-muted); }
+.f-num { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; letter-spacing: -0.03em; }
+
+.f-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  height: 40px; padding: 0 18px; border-radius: 9999px;
+  font-size: 14px; font-weight: 500; line-height: 1; white-space: nowrap;
+  border: 1.5px solid transparent;
+  transition: background 180ms var(--f-ease), color 180ms var(--f-ease), border-color 180ms var(--f-ease), box-shadow 180ms var(--f-ease), transform 180ms var(--f-ease);
+  -webkit-tap-highlight-color: transparent;
+}
+.f-btn:active:not(:disabled) { transform: scale(0.98); }
+.f-btn:disabled, .f-btn[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+.f-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklab, var(--acc-600) 28%, transparent); }
+.f-btn-sm { height: 32px; padding: 0 14px; font-size: 13px; }
+.f-btn-xs { height: 28px; padding: 0 11px; font-size: 12px; gap: 5px; }
+.f-btn-lg { height: 46px; padding: 0 22px; font-size: 15px; }
+.f-btn-block { width: 100%; }
+.f-btn-primary {
+  color: #fff;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--acc-700) 65%, var(--acc-800)) 0%, var(--acc-800) 100%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.14) inset, 0 6px 14px color-mix(in oklab, var(--acc-800) 24%, transparent);
+}
+.f-btn-primary:hover { background: var(--acc-900); }
+.f-btn-outline { color: var(--f-ink); background: transparent; border-color: var(--f-ink); }
+.f-btn-outline:hover { background: var(--f-ink); color: var(--f-card); }
+.f-btn-soft { color: var(--f-ink); background: var(--f-card); border-color: var(--f-line-strong); border-width: 1px; }
+.f-btn-soft:hover { background: var(--f-fill); }
+.f-btn-ghost { color: var(--f-ink-2); background: transparent; }
+.f-btn-ghost:hover { background: var(--f-fill); color: var(--f-ink); }
+.f-btn-danger { color: #fff; background: var(--f-danger); }
+.f-btn-danger:hover { background: #B91C1C; }
+.f-btn-white { color: var(--acc-900); background: #fff; }
+.f-btn-white:hover { background: rgba(255, 255, 255, 0.86); }
+
+.f-icon-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 9999px; flex-shrink: 0;
+  background: var(--f-card); color: var(--f-ink);
+  border: 1px solid var(--f-line);
+  box-shadow: 0 1px 2px rgba(16, 24, 20, 0.04);
+  transition: background-color 160ms var(--f-ease), transform 160ms var(--f-ease);
+  position: relative;
+}
+.f-icon-btn:hover { background: var(--f-fill); }
+.f-icon-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px color-mix(in oklab, var(--acc-600) 28%, transparent); }
+
+.f-input {
+  width: 100%; height: 44px; padding: 0 14px; border-radius: 12px;
+  background: var(--f-fill); border: 1px solid transparent; color: var(--f-ink);
+  font-size: 14px;
+  transition: border-color 160ms var(--f-ease), box-shadow 160ms var(--f-ease), background-color 160ms var(--f-ease);
+}
+.f-input::placeholder { color: var(--f-faint); }
+.f-input:focus, .f-input:focus-visible, .f-input:focus-within {
+  outline: none; background: var(--f-card);
+  border-color: color-mix(in oklab, var(--acc-600) 55%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--acc-600) 16%, transparent);
+}
+.f-label { font-size: 13px; color: var(--f-muted); font-weight: 500; }
+
+/* Status pill (semantic, accent-independent) */
+.f-status {
+  display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px;
+  border-radius: 6px; border: 1px solid; font-size: 11.5px; font-weight: 500; line-height: 1;
+  white-space: nowrap;
+}
+.f-status[data-tone="success"] { color: var(--f-success); background: var(--f-success-bg); border-color: color-mix(in oklab, var(--f-success) 45%, transparent); }
+.f-status[data-tone="warning"] { color: var(--f-warning); background: var(--f-warning-bg); border-color: color-mix(in oklab, var(--f-warning) 45%, transparent); }
+.f-status[data-tone="danger"]  { color: var(--f-danger);  background: var(--f-danger-bg);  border-color: color-mix(in oklab, var(--f-danger) 40%, transparent); }
+.f-status[data-tone="info"]    { color: var(--f-info);    background: var(--f-info-bg);    border-color: color-mix(in oklab, var(--f-info) 40%, transparent); }
+.f-status[data-tone="accent"]  { color: var(--acc-700);   background: var(--acc-50);       border-color: color-mix(in oklab, var(--acc-600) 40%, transparent); }
+.f-status[data-tone="neutral"] { color: var(--f-muted);   background: var(--f-fill);       border-color: var(--f-line-strong); }
+
+.f-tag { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border-radius: 7px; font-size: 11.5px; font-weight: 500; white-space: nowrap; }
+
+/* Chip group with sliding active pill */
+.f-chips { display: inline-flex; align-items: center; gap: 2px; padding: 4px; border-radius: 9999px; background: var(--f-card); border: 1px solid var(--f-line); position: relative; isolation: isolate; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.f-chips::-webkit-scrollbar { display: none; }
+.f-chip { position: relative; z-index: 1; height: 32px; padding: 0 14px; border-radius: 9999px; font-size: 13px; font-weight: 500; color: var(--f-ink-2); transition: color 240ms var(--f-ease), background-color 200ms var(--f-ease); white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.f-chip:hover { color: var(--f-ink); }
+.f-chip[data-active="true"] { color: #fff; }
+.f-chip:focus-visible { outline: none; box-shadow: 0 0 0 2px color-mix(in oklab, var(--acc-600) 40%, transparent); }
+/* Fallback focus ring for every other interactive element of the logged-in
+   areas and auth (links, list rows, icon buttons without a primitive).
+   :where() keeps it at the lowest specificity, so primitives that define
+   their own ring (.f-btn, .f-chip, .f-input, …) still win. */
+:where([data-area="restaurant"], [data-area="supplier"]) :where(a, button, [role="button"], [role="tab"], [role="radio"], summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid var(--acc-600, #B91C3C);
+  outline-offset: 2px;
+}
+.f-chip-count { font-size: 11px; opacity: 0.6; font-variant-numeric: tabular-nums; }
+.f-chip-indicator { position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 0; border-radius: 9999px; background: linear-gradient(180deg, color-mix(in oklab, var(--acc-700) 65%, var(--acc-800)), var(--acc-800)); box-shadow: 0 4px 10px color-mix(in oklab, var(--acc-800) 22%, transparent); transition: transform 320ms var(--f-ease), width 320ms var(--f-ease), opacity 200ms; pointer-events: none; }
+}
+
+/* ---------- Motion ---------- */
+@keyframes f-rise {
+  from { opacity: 0; transform: translate3d(0, 14px, 0); filter: blur(6px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+@keyframes f-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes f-grow-y { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes f-grow-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes f-type { from { clip-path: inset(-10% 100% -10% 0); } to { clip-path: inset(-10% -2% -10% 0); } }
+@keyframes f-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+.f-draw { stroke-dasharray: 1; stroke-dashoffset: 0; animation: f-draw 1000ms cubic-bezier(0.22, 1, 0.36, 1) both; animation-delay: var(--d, 150ms); }
+@media (prefers-reduced-motion: reduce) { .f-draw { animation: none; } }
+@layer components {
+.f-rise { animation: f-rise 480ms var(--f-ease) both; animation-delay: calc(var(--i, 0) * 70ms + var(--d, 0ms)); }
+.f-fade { animation: f-fade 360ms var(--f-ease) both; animation-delay: calc(var(--i, 0) * 60ms + var(--d, 0ms)); }
+.f-grow-y { transform-origin: bottom; animation: f-grow-y 680ms var(--f-ease) both; animation-delay: calc(var(--i, 0) * 60ms + var(--d, 0ms)); }
+.f-grow-x { transform-origin: left; animation: f-grow-x 760ms var(--f-ease) both; animation-delay: calc(var(--i, 0) * 60ms + var(--d, 0ms)); }
+.f-type { animation: f-type 320ms cubic-bezier(0.4, 0, 0.2, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .f-rise, .f-fade, .f-grow-y, .f-grow-x, .f-type { animation: none !important; }
+  .f-chip-indicator { transition: none; }
+}
+}
+
+/* Toasts — dark accent pill, bottom-centre (sonner, mounted in app/layout) */
+[data-sonner-toaster] [data-sonner-toast].f-toast {
+  background: var(--acc-900, #3A0B16);
+  color: #fff;
+  border: 0;
+  border-radius: 9999px;
+  padding: 11px 18px;
+  font-family: var(--font-app), system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 10px 28px rgba(16, 24, 20, 0.22);
+  gap: 8px;
+  width: fit-content;
+  max-width: min(92vw, 460px);
+  left: 0;
+  right: 0;
+  margin-inline: auto;
+}
+[data-sonner-toaster] [data-sonner-toast].f-toast[data-type="error"] { background: #7F1D1D; }
+[data-sonner-toaster] [data-sonner-toast].f-toast [data-description] { color: rgba(255, 255, 255, 0.74); font-size: 12px; }
+[data-sonner-toaster] [data-sonner-toast].f-toast [data-icon] { color: rgba(255, 255, 255, 0.92); }
+[data-sonner-toaster] [data-sonner-toast].f-toast [data-button] { background: #fff; color: var(--acc-900, #3A0B16); border-radius: 9999px; font-weight: 600; }
+[data-sonner-toaster] [data-sonner-toast].f-toast [data-close-button] { background: rgba(255, 255, 255, 0.14); border: 0; color: #fff; }
+
+.f-scroll { scrollbar-width: thin; scrollbar-color: rgba(16, 24, 20, 0.14) transparent; }

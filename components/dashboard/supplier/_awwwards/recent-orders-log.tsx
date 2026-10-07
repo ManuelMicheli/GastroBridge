@@ -7,7 +7,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { formatCurrency } from "@/lib/utils/formatters";
+import { APP_TIME_ZONE, formatCurrency, romeDateKey } from "@/lib/utils/formatters";
 import { getOrderStatusMeta } from "@/lib/orders/status-meta";
 import { StatusDot } from "@/components/ui/status-dot";
 
@@ -22,20 +22,18 @@ export type SupplierDashboardOrderRow = {
 function formatTime(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  const now = new Date();
-  const sameDay =
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate();
+  const sameDay = romeDateKey(d) === romeDateKey();
 
   if (sameDay) {
     return new Intl.DateTimeFormat("it-IT", {
+      timeZone: APP_TIME_ZONE,
       hour: "2-digit",
       minute: "2-digit",
       hour12: false,
     }).format(d);
   }
   return new Intl.DateTimeFormat("it-IT", {
+    timeZone: APP_TIME_ZONE,
     day: "2-digit",
     month: "2-digit",
   }).format(d);

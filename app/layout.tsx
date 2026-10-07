@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DM_Serif_Display, Inter, JetBrains_Mono } from "next/font/google";
+import { DM_Serif_Display, Inter, JetBrains_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "@/components/ui/toast";
 import { PostHogProvider } from "@/components/providers/posthog-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
@@ -32,6 +32,16 @@ const jetbrainsMono = JetBrains_Mono({
   adjustFontFallback: false,
 });
 
+// App + auth font (geometric grotesk). Every page is an app or auth page, so
+// it is preloaded; the roots opt into it through `--font-app` (see the Fernly
+// layer in globals.css).
+const appFont = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-app",
+  display: "swap",
+});
+
 const SUPABASE_ORIGIN = (() => {
   try {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -47,12 +57,12 @@ export const metadata: Metadata = {
     template: "%s | GastroBridge",
   },
   description:
-    "Marketplace B2B per la ristorazione. Confronta prezzi, scopri fornitori e gestisci ordini Ho.Re.Ca. da un unico punto.",
+    "I tuoi fornitori, i tuoi listini. Un ordine in 90 secondi: gli ordini Ho.Re.Ca. della tua attività in un unico posto, senza commissioni.",
   keywords: [
     "fornitori ristorazione",
-    "marketplace B2B",
+    "ordini fornitori",
     "Ho.Re.Ca.",
-    "confronto prezzi alimentari",
+    "listini fornitori",
     "ordini ristorante",
   ],
   manifest: "/manifest.webmanifest",
@@ -68,7 +78,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "GastroBridge — Tutti i tuoi fornitori. Un solo posto.",
     description:
-      "Marketplace B2B per la ristorazione. Confronta prezzi, scopri fornitori e gestisci ordini da un unico punto.",
+      "I tuoi fornitori, i tuoi listini. Un ordine in 90 secondi: gli ordini Ho.Re.Ca. della tua attività in un unico posto, senza commissioni.",
     siteName: "GastroBridge",
     locale: "it_IT",
     type: "website",
@@ -96,7 +106,7 @@ export default function RootLayout({
       lang="it"
       translate="no"
       suppressHydrationWarning
-      className={`${dmSerifDisplay.variable} ${bodyFont.variable} ${jetbrainsMono.variable}`}
+      className={`${dmSerifDisplay.variable} ${bodyFont.variable} ${jetbrainsMono.variable} ${appFont.variable}`}
     >
       <head>
         <meta name="google" content="notranslate" />

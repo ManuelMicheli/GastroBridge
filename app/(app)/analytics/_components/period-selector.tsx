@@ -1,65 +1,50 @@
 "use client";
 
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { PERIOD_KEYS, PERIOD_LABELS, type PeriodKey } from "@/lib/analytics/period";
+import { Chips } from "@/components/fernly/chips";
 
 const SHORT_LABELS: Record<PeriodKey, string> = {
-  current: "Corrente",
-  prev: "Scorso",
+  current: "Mese",
+  prev: "Mese scorso",
   last3: "3M",
   last12: "12M",
-  year: "YTD",
+  year: "Anno",
 };
 
 type Props = {
   current: PeriodKey;
 };
 
+/** Range segmented control (?period=) — the active pill slides on change. */
 export function PeriodSelector({ current }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const [pending, startTransition] = useTransition();
+  // Optimistic selection so the pill moves immediately while data loads.
+  const [selected, setSelected] = useState<PeriodKey>(current);
+  useEffect(() => setSelected(current), [current]);
 
   function setPeriod(key: PeriodKey) {
     if (key === current) return;
+    setSelected(key);
     const next = new URLSearchParams(params);
     next.set("period", key);
     startTransition(() => {
-      router.replace(`${pathname}?${next.toString()}`);
+      router.replace(`${pathname}?${next.toString()}`, { scroll: false });
     });
   }
 
   return (
-    <div
-      role="radiogroup"
-      aria-label="Periodo"
-      className={`inline-flex items-center rounded-lg border border-border-subtle bg-surface-card p-0.5 transition-opacity ${
-        pending ? "opacity-60" : ""
-      }`}
-    >
-      {PERIOD_KEYS.map((key) => {
-        const isActive = key === current;
-        return (
-          <button
-            key={key}
-            type="button"
-            role="radio"
-            aria-checked={isActive}
-            onClick={() => setPeriod(key)}
-            disabled={pending}
-            title={PERIOD_LABELS[key]}
-            className={`rounded-md px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.08em] transition-colors ${
-              isActive
-                ? "bg-accent-green text-surface-base"
-                : "text-text-tertiary hover:text-text-primary hover:bg-surface-hover"
-            }`}
-          >
-            {SHORT_LABELS[key]}
-          </button>
-        );
-      })}
-    </div>
+    <Chips
+      ariaLabel="Periodo"
+      size="sm"
+      value={selected}
+      onChange={setPeriod}
+      className={pending ? "opacity-80" : undefined}
+      options={PERIOD_KEYS.map((k) => ({ value: k, label: SHORT_LABELS[k], title: PERIOD_LABELS[k] }))}
+    />
   );
 }

@@ -4,20 +4,20 @@ import { ReviewCard } from "@/components/reviews/review-card";
 import { Star } from "lucide-react";
 import { LargeTitle } from "@/components/ui/large-title";
 import { SectionFrame } from "@/components/dashboard/supplier/_awwwards/section-frame";
+import { getCurrentSupplierMember, memberCan } from "@/lib/supplier/current-member";
+import { ReviewReplyForm } from "@/components/reviews/review-reply-form";
 
 export const metadata: Metadata = { title: "Recensioni" };
 
 export default async function SupplierReviewsPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const member = await getCurrentSupplierMember();
 
   const { data: supplier } = await supabase
     .from("suppliers")
     .select("id, rating_avg, rating_count")
-    .eq("profile_id", user?.id ?? "")
-    .single<{
+    .eq("id", member?.supplier_id ?? "00000000-0000-0000-0000-000000000000")
+    .maybeSingle<{
       id: string;
       rating_avg: number;
       rating_count: number;
@@ -42,6 +42,7 @@ export default async function SupplierReviewsPage() {
     .returns<ReviewRow[]>();
 
   const list = reviews ?? [];
+  const canReply = memberCan(member, "reviews.reply");
   const avg = supplier?.rating_avg ?? 0;
   const count = supplier?.rating_count ?? 0;
 
@@ -91,6 +92,11 @@ export default async function SupplierReviewsPage() {
                 <ReviewCard
                   key={review.id}
                   review={{ ...review, restaurant_name: restaurant?.name }}
+                  footer={
+                    canReply ? (
+                      <ReviewReplyForm reviewId={review.id} initialReply={review.supplier_reply} />
+                    ) : null
+                  }
                 />
               );
             })}
@@ -196,6 +202,11 @@ export default async function SupplierReviewsPage() {
                         ...review,
                         restaurant_name: restaurant?.name,
                       }}
+                      footer={
+                        canReply ? (
+                          <ReviewReplyForm reviewId={review.id} initialReply={review.supplier_reply} />
+                        ) : null
+                      }
                     />
                   );
                 })}

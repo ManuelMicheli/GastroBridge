@@ -11,6 +11,7 @@ import {
 } from "@/lib/restaurants/preset-profiles";
 import type { PresetProfile } from "@/types/database";
 import { cn } from "@/lib/utils/formatters";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 type IconType = typeof Award;
 
@@ -49,12 +50,15 @@ export function PresetPicker({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const { confirm, dialog } = useConfirm();
 
-  const onPick = (preset: PresetProfile) => {
+  const onPick = async (preset: PresetProfile) => {
     if (
-      !confirm(
-        `Applicare il profilo "${PRESET_PROFILE_LABELS[preset]}"? Le preferenze attuali verranno sovrascritte.`
-      )
+      !(await confirm({
+        title: `Applicare il profilo “${PRESET_PROFILE_LABELS[preset]}”?`,
+        description: "Le preferenze attuali verranno sovrascritte.",
+        confirmLabel: "Applica profilo",
+      }))
     )
       return;
     startTransition(async () => {
@@ -69,15 +73,18 @@ export function PresetPicker({
   };
 
   return (
+    <>
+    {dialog}
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
       {ALL_PRESETS.map((preset) => {
         const Icon = PRESET_ICONS[preset];
         const isActive = current === preset;
         return (
           <button
+            aria-pressed={isActive}
             key={preset}
             type="button"
-            onClick={() => onPick(preset)}
+            onClick={() => void onPick(preset)}
             disabled={pending}
             className={cn(
               "flex flex-col items-start gap-2 rounded-2xl border-2 p-4 text-left transition-colors",
@@ -107,5 +114,6 @@ export function PresetPicker({
         );
       })}
     </div>
+    </>
   );
 }

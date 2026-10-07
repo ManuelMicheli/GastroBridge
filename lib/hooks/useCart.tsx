@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import type { CartItem, CartBySupplier } from "@/types/orders";
+import { scopedStorageKey, TYPICAL_ORDER_BASE_KEY } from "./user-storage";
 
 interface CartContextType {
   items: CartItem[];
@@ -12,27 +13,66 @@ interface CartContextType {
   getCartBySupplier: () => CartBySupplier[];
   totalItems: number;
   totalAmount: number;
+  /** localStorage key of the per-account "ordine tipico" (null when anonymous). */
+  typicalOrderKey: string | null;
 }
 
 const CartContext = createContext<CartContextType | null>(null);
 
-const CART_KEY = "gastrobridge_cart";
+// Pre-scoping key, shared by every account on the browser. Migrated once to
+// the first user that loads the app, then removed.
+const LEGACY_CART_KEY = "gastrobridge_cart";
 
-export function CartProvider({ children }: { children: ReactNode }) {
+function cartKey(userId: string): string {
+  return `${LEGACY_CART_KEY}:${userId}`;
+}
+
+export function CartProvider({
+  children,
+  userId,
+}: {
+  children: ReactNode;
+  /** Scopes the persisted cart per account (no persistence when empty). */
+  userId?: string;
+}) {
   const [items, setItems] = useState<CartItem[]>([]);
+  const key = userId ? cartKey(userId) : null;
+  // Key whose contents are currently loaded in `items` (set in the same
+  // render as the items): never write one account's cart under another
+  // account's key, nor the empty initial state over a stored cart.
+  const [hydratedKey, setHydratedKey] = useState<string | null>(null);
 
   // Load from localStorage
   useEffect(() => {
+    if (!key) {
+      setItems([]);
+      setHydratedKey(null);
+      return;
+    }
     try {
-      const stored = localStorage.getItem(CART_KEY);
-      if (stored) setItems(JSON.parse(stored));
-    } catch {}
-  }, []);
+      let stored = localStorage.getItem(key);
+      const legacy = localStorage.getItem(LEGACY_CART_KEY);
+      if (legacy !== null) {
+        if (stored === null) {
+          stored = legacy;
+          localStorage.setItem(key, legacy);
+        }
+        localStorage.removeItem(LEGACY_CART_KEY);
+      }
+      setItems(stored ? JSON.parse(stored) : []);
+    } catch {
+      setItems([]);
+    }
+    setHydratedKey(key);
+  }, [key]);
 
   // Save to localStorage
   useEffect(() => {
-    localStorage.setItem(CART_KEY, JSON.stringify(items));
-  }, [items]);
+    if (!key || hydratedKey !== key) return;
+    try {
+      localStorage.setItem(key, JSON.stringify(items));
+    } catch {}
+  }, [items, key, hydratedKey]);
 
   const addItem = useCallback((item: CartItem) => {
     setItems((prev) => {
@@ -87,10 +127,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
     <CartContext value={{
       items, addItem, removeItem, updateQuantity, clearCart,
       getCartBySupplier, totalItems, totalAmount,
+      typicalOrderKey: scopedStorageKey(TYPICAL_ORDER_BASE_KEY, userId),
     }}>
       {children}
     </CartContext>
   );
+}
+
+/** Cart context or null when rendered outside a CartProvider (e.g. supplier shell). */
+export function useCartOptional() {
+  return useContext(CartContext);
 }
 
 export function useCart() {

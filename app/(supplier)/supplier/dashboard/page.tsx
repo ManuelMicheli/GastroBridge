@@ -16,6 +16,7 @@ import {
   getTopProducts,
   getRecentDeliveries,
 } from "@/lib/supplier/dashboard/queries";
+import { getCurrentSupplierMember } from "@/lib/supplier/current-member";
 
 export const metadata: Metadata = { title: "Dashboard Fornitore — GastroBridge" };
 
@@ -30,16 +31,12 @@ export default async function SupplierDashboardPage() {
 
   const supabase = await createClient();
 
-  const [profile, supplierRes] = await Promise.all([
+  const [profile, member] = await Promise.all([
     userId ? getCachedProfile(userId) : Promise.resolve(null),
-    supabase
-      .from("suppliers")
-      .select("id")
-      .eq("profile_id", userId)
-      .single() as unknown as Promise<{ data: { id: string } | null }>,
+    getCurrentSupplierMember(),
   ]);
 
-  const supplierId = supplierRes.data?.id;
+  const supplierId = member?.supplier_id;
 
   // No supplier record — empty dashboard
   if (!supplierId) {
@@ -156,7 +153,7 @@ export default async function SupplierDashboardPage() {
       .filter((s) => ordersMap.get(s.order_id)?.created_at?.slice(0, 10) === key)
       .reduce((sum, s) => sum + (s.subtotal || 0), 0);
     chartData.push({
-      label: d.toLocaleDateString("it-IT", { day: "2-digit", month: "short" }),
+      label: d.toLocaleDateString("it-IT", { timeZone: "Europe/Rome", day: "2-digit", month: "short" }),
       value: dayTotal,
     });
   }

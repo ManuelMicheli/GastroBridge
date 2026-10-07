@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
 import { RoleGate } from "@/components/supplier/shared/role-gate";
 import { FeatureFlagGate } from "@/components/supplier/shared/feature-flag-gate";
 import { isPhase1Enabled } from "@/lib/supplier/feature-flags";
@@ -102,11 +101,9 @@ async function Inner({ supplierId }: { supplierId: string }) {
             Personalizza logo, colori e testi dei Documenti di Trasporto.
           </p>
         </div>
-        <Link href="/supplier/ddt/templates/nuovo">
-          <Button size="sm">
+        <ButtonLink href="/supplier/ddt/templates/nuovo" size="sm">
             <Plus className="h-4 w-4" /> Nuovo template
-          </Button>
-        </Link>
+          </ButtonLink>
       </div>
 
       {!res.ok ? (

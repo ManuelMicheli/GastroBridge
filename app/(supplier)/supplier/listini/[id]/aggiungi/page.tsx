@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { AddProductsClient } from "./add-products-client";
 import type { Database } from "@/types/database";
+import { getCurrentSupplierMember, memberCan } from "@/lib/supplier/current-member";
 
 type PriceListDb = Database["public"]["Tables"]["price_lists"]["Row"];
 
@@ -34,14 +35,10 @@ export default async function AddProductsPage({
     .maybeSingle<PriceListDb>();
   if (!list) notFound();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { data: supplier } = await supabase
-    .from("suppliers")
-    .select("id")
-    .eq("profile_id", user?.id ?? "")
-    .maybeSingle<{ id: string }>();
+  const member = await getCurrentSupplierMember();
+  const supplier = member ? { id: member.supplier_id } : null;
+  // Same gate as the sidebar (lib/supplier/permissions.ts ROLE_MATRIX).
+  if (member && !memberCan(member, "pricing.edit")) redirect("/supplier/dashboard");
   if (!supplier?.id || supplier.id !== list.supplier_id) notFound();
 
   // Existing (product_id, sales_unit_id) pairs in this list

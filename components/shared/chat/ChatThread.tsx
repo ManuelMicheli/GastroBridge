@@ -223,6 +223,7 @@ export function ChatThread({
                             className="tabular-nums"
                           >
                             {new Date(m.created_at).toLocaleTimeString("it-IT", {
+                              timeZone: "Europe/Rome",
                               hour: "2-digit",
                               minute: "2-digit",
                             })}

@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { InviteSupplierSchema, UpdateNotesSchema, type InviteSupplierInput, type UpdateNotesInput } from "./schemas";
 import type { RestaurantSupplierRow, Result } from "./types";
+import { getCurrentSupplierMember } from "@/lib/supplier/current-member";
 
 async function currentUserId(): Promise<string | null> {
   const supabase = await createClient();
@@ -25,17 +26,12 @@ async function getRestaurantId(): Promise<string | null> {
   return data?.id ?? null;
 }
 
+// Resolved via supplier_members so staff work too (not only the owner).
+// Managing client relationships is a commercial action: admin + sales only.
 async function getSupplierId(): Promise<string | null> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const { data } = await supabase
-    .from("suppliers")
-    .select("id")
-    .eq("profile_id", user.id)
-    .limit(1)
-    .maybeSingle<{ id: string }>();
-  return data?.id ?? null;
+  const member = await getCurrentSupplierMember();
+  if (!member || (member.role !== "admin" && member.role !== "sales")) return null;
+  return member.supplier_id;
 }
 
 // ===================================================================

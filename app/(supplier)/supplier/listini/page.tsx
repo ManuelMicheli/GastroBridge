@@ -1,8 +1,10 @@
+import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { ListiniClient } from "./listini-client";
 import type { Database } from "@/types/database";
+import { getCurrentSupplierMember, memberCan } from "@/lib/supplier/current-member";
 
 type PriceListRow = Database["public"]["Tables"]["price_lists"]["Row"];
 
@@ -15,15 +17,10 @@ type ListinoSummary = PriceListRow & {
 
 export default async function ListiniPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: supplier } = await supabase
-    .from("suppliers")
-    .select("id")
-    .eq("profile_id", user?.id ?? "")
-    .maybeSingle<{ id: string }>();
+  const member = await getCurrentSupplierMember();
+  const supplier = member ? { id: member.supplier_id } : null;
+  // Same gate as the sidebar (lib/supplier/permissions.ts ROLE_MATRIX).
+  if (member && !memberCan(member, "pricing.read")) redirect("/supplier/dashboard");
 
   if (!supplier?.id) {
     return (

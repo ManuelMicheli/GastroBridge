@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -41,6 +42,7 @@ export function IntegrazioniClient({
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const { confirm, dialog } = useConfirm();
   const [secretJustShown, setSecretJustShown] = useState<{
     id: string;
     secret: string;
@@ -312,11 +314,14 @@ export function IntegrazioniClient({
                   )}
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       if (
-                        confirm(
-                          "Eliminare l'integrazione? Gli scontrini storici restano visibili.",
-                        )
+                        await confirm({
+                          title: "Eliminare l'integrazione?",
+                          description: "Gli scontrini storici restano visibili.",
+                          confirmLabel: "Elimina",
+                          tone: "danger",
+                        })
                       ) {
                         run(() => deleteFiscalIntegration(i.id));
                       }
@@ -472,6 +477,7 @@ export function IntegrazioniClient({
           </div>
         </div>
       )}
+      {dialog}
     </div>
   );
 }

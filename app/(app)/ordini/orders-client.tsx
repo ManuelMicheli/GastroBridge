@@ -11,19 +11,37 @@ import {
 } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Keyboard, Search, X } from "lucide-react";
+import { Keyboard, Plus, Search, X } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { EmptyOrdersIllustration } from "@/components/illustrations";
 import { formatCurrency } from "@/lib/utils/formatters";
 import { CheatsheetOverlay, useSearchKeyboard } from "@/components/shared/awwwards";
 
-import type { OrderFeedRow, OrderStats } from "./_lib/types";
+import type { OrderDelivery, OrderFeedRow, OrderStats } from "./_lib/types";
 import { readUrlState, writeUrlState } from "./_lib/url-state";
 import { StatusChips } from "./_components/status-chips";
 import { Timeline } from "./_components/timeline";
 import { OrderPeek } from "./_components/order-peek";
 import { OrdersClientMobile } from "./orders-client-mobile";
+import { OrderBoard } from "./_components/order-board";
+import { Chips } from "@/components/fernly/chips";
+import { Drawer } from "@/components/fernly/drawer";
+import { MonthCalendar, type CalEvent, type CalTone } from "@/components/fernly/month-calendar";
+import { useWeekStartsOn } from "@/components/fernly/appearance-provider";
+import { getOrderStatusMeta } from "@/lib/orders/status-meta";
+
+type ViewMode = "board" | "list" | "calendar";
+
+function deliveryTone(status: string): CalTone {
+  const tone = getOrderStatusMeta(status).tone;
+  if (tone === "emerald") return "green";
+  if (tone === "rose") return "red";
+  if (tone === "blue") return "blue";
+  if (tone === "brand") return "accent";
+  if (tone === "amber") return "amber";
+  return "neutral";
+}
 
 const CHEATSHEET_ROWS = [
   { keys: ["⌘", "K"], label: "Focus ricerca" },
@@ -46,9 +64,11 @@ function normalize(s: string): string {
 export function OrdersClient({
   orders,
   stats,
+  deliveries = [],
 }: {
   orders: OrderFeedRow[];
   stats: OrderStats;
+  deliveries?: OrderDelivery[];
 }) {
   const router = useRouter();
   const sp = useSearchParams();
@@ -64,6 +84,14 @@ export function OrdersClient({
   const [selectedId, setSelectedId] = useState<string | null>(initial.selectedId);
   const [helpOpen, setHelpOpen] = useState(false);
   const [peekOpenMobile, setPeekOpenMobile] = useState(false);
+  // Desktop view: status board (default), the existing list + peek, or the
+  // delivery calendar. A deep link with ?sel= keeps opening the list.
+  const [view, setView] = useState<ViewMode>(() => {
+    const v = sp.get("view");
+    if (v === "list" || v === "calendar" || v === "board") return v;
+    return initial.selectedId ? "list" : "board";
+  });
+  const weekStartsOn = useWeekStartsOn();
 
   const deferredQuery = useDeferredValue(query);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -105,11 +133,12 @@ export function OrdersClient({
         statuses,
         selectedId,
       });
+      if (view !== "board") params.set("view", view);
       const qs = params.toString();
       router.replace(qs ? `/ordini?${qs}` : "/ordini", { scroll: false });
     }, 300);
     return () => clearTimeout(t);
-  }, [query, statuses, selectedId, router]);
+  }, [query, statuses, selectedId, view, router]);
 
   const toggleStatus = useCallback((s: string) => {
     setStatuses((prev) => {
@@ -126,6 +155,24 @@ export function OrdersClient({
     setSelectedId(id);
     setPeekOpenMobile(true);
   }, []);
+
+  const orderById = useMemo(() => new Map(orders.map((o) => [o.id, o])), [orders]);
+  const calendarEvents = useMemo<CalEvent[]>(
+    () =>
+      deliveries.map((d, i) => {
+        const o = orderById.get(d.orderId);
+        return {
+          id: `${d.orderId}-${i}`,
+          date: d.date,
+          title: d.supplierName ?? `Ordine #${d.orderId.slice(0, 8).toUpperCase()}`,
+          subtitle: getOrderStatusMeta(d.status).label,
+          tone: deliveryTone(d.status),
+          href: `/ordini/${d.orderId}`,
+          meta: o ? formatCurrency(o.total) : undefined,
+        };
+      }),
+    [deliveries, orderById],
+  );
 
   // Keyboard
   const focusSearch = useCallback(() => searchInputRef.current?.focus(), []);
@@ -172,6 +219,11 @@ export function OrdersClient({
         <PageHeader
           title="Ordini"
           subtitle="Gestione ordini e ricezione merce dai tuoi fornitori."
+          actions={
+            <Link href="/cerca" className="f-btn f-btn-primary">
+              <Plus className="h-4 w-4" /> Nuovo ordine
+            </Link>
+          }
         />
         <EmptyState
           title="Nessun ordine ancora"
@@ -190,131 +242,148 @@ export function OrdersClient({
         <OrdersClientMobile orders={orders} stats={stats} />
       </div>
 
-      {/* Desktop terminal-dense view */}
-      <div className="hidden lg:flex h-[calc(100vh-var(--chrome-top,64px))] flex-col">
-      {/* Top bar: title + stats */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-4 py-3">
-        <div className="flex min-w-0 items-baseline gap-3">
-          <h1 className="font-mono text-[12px] uppercase tracking-[0.12em] text-text-primary">
-            Ordini
-          </h1>
-          <span className="font-mono text-[11px] tabular-nums text-text-tertiary">
-            {stats.totalCount} totali
-          </span>
-          <span aria-hidden className="text-text-tertiary">
-            ·
-          </span>
-          <span className="font-mono text-[11px] tabular-nums text-text-tertiary">
-            {formatCurrency(stats.monthTotal)}{" "}
-            <span className="uppercase tracking-[0.06em]">questo mese</span>
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setHelpOpen(true)}
-            className="hidden items-center gap-1 rounded-lg border border-border-subtle px-2 py-1.5 font-mono text-[10px] uppercase tracking-wide text-text-tertiary hover:bg-surface-hover md:inline-flex"
-            title="Scorciatoie"
-          >
-            <Keyboard className="h-3.5 w-3.5" /> ?
-          </button>
-        </div>
-      </div>
-
-      {/* Chips row */}
-      <div className="border-b border-border-subtle px-4 py-2.5">
-        <StatusChips
-          counts={stats.statusCounts}
-          selected={statuses}
-          onToggle={toggleStatus}
-          onClear={clearStatuses}
-        />
-      </div>
-
-      {/* Search row */}
-      <div className="flex items-center gap-2 border-b border-border-subtle px-4 py-2">
-        <div className="relative flex flex-1 items-center">
-          <Search
-            aria-hidden
-            className="absolute left-2 h-3.5 w-3.5 text-text-tertiary"
-          />
-          <input
-            ref={searchInputRef}
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Cerca per id, fornitore, note..."
-            className="w-full rounded-md border border-border-subtle bg-surface-canvas py-1.5 pl-7 pr-7 font-mono text-[12px] text-text-primary placeholder:text-text-tertiary focus:border-accent-green focus:outline-none"
-            aria-label="Cerca ordini"
-          />
-          {query && (
-            <button
-              onClick={() => setQuery("")}
-              className="absolute right-1.5 rounded-sm p-0.5 text-text-tertiary hover:bg-surface-hover hover:text-text-primary"
-              aria-label="Pulisci ricerca"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          )}
-        </div>
-        <span className="font-mono text-[10px] tabular-nums text-text-tertiary">
-          {filtered.length}/{orders.length}
-        </span>
-      </div>
-
-      {/* Main: timeline (left) + peek (right on desktop) */}
-      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_420px]">
-        <div className="min-h-0 overflow-y-auto">
-          <Timeline
-            rows={filtered}
-            selectedId={selectedId}
-            onSelect={onSelect}
-            emptyLabel={
-              orders.length > 0
-                ? "Nessun ordine corrisponde ai filtri"
-                : "Nessun ordine"
-            }
-          />
-          {filtered.length === 0 && orders.length > 0 && (
-            <div className="px-4 pb-8 pt-4 text-center">
+      {/* Desktop — Fernly board / list / calendar */}
+      <div className="hidden lg:block">
+        <PageHeader
+          title="Ordini"
+          subtitle={`${stats.totalCount} ordini · ${formatCurrency(stats.monthTotal)} questo mese`}
+          meta={
+            <Chips
+              size="sm"
+              ariaLabel="Vista"
+              value={view}
+              onChange={setView}
+              options={[
+                { value: "board", label: "Bacheca" },
+                { value: "list", label: "Elenco" },
+                { value: "calendar", label: "Calendario consegne" },
+              ]}
+            />
+          }
+          actions={
+            <>
               <button
-                onClick={() => {
-                  setQuery("");
-                  setStatuses(new Set());
-                }}
-                className="font-mono text-[10px] uppercase tracking-[0.08em] text-accent-green hover:underline"
+                onClick={() => setHelpOpen(true)}
+                className="f-icon-btn"
+                title="Scorciatoie"
+                aria-label="Scorciatoie da tastiera"
               >
-                Pulisci filtri
+                <Keyboard className="h-4 w-4" />
               </button>
-            </div>
-          )}
-        </div>
+              <Link href="/cerca" className="f-btn f-btn-primary">
+                <Plus className="h-4 w-4" strokeWidth={2.2} /> Nuovo ordine
+              </Link>
+            </>
+          }
+        />
 
-        {/* Desktop peek */}
-        <div className="hidden border-l border-border-subtle lg:block">
-          <OrderPeek row={selectedRow} onClose={() => setSelectedId(null)} />
-        </div>
-
-        {/* Mobile peek: full-width sheet from right */}
-        {selectedRow && peekOpenMobile && (
-          <div
-            className="fixed inset-0 z-30 bg-black/40 lg:hidden"
-            onClick={() => setPeekOpenMobile(false)}
-          >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="absolute inset-y-0 right-0 w-full max-w-md bg-surface-card shadow-2xl"
-            >
-              <OrderPeek
-                row={selectedRow}
-                onClose={() => {
-                  setPeekOpenMobile(false);
-                  setSelectedId(null);
-                }}
-              />
+        {view === "calendar" ? (
+          <MonthCalendar
+            events={calendarEvents}
+            weekStartsOn={weekStartsOn}
+            todayTitle="Oggi"
+            upcomingTitle="Prossime consegne"
+            emptyToday="Nessuna consegna prevista oggi."
+            emptyUpcoming="Nessuna consegna in programma."
+            legend={[
+              { tone: "amber", label: "In attesa" },
+              { tone: "blue", label: "Confermata" },
+              { tone: "accent", label: "In consegna" },
+              { tone: "green", label: "Consegnata" },
+              { tone: "red", label: "Annullata" },
+            ]}
+          />
+        ) : (
+          <>
+            {/* Filters: status chips · search · count */}
+            <div className="f-fade mb-5 flex items-center justify-between gap-3" style={{ ["--d" as string]: "100ms" }}>
+              <div className="min-w-0 flex-1">
+                <StatusChips
+                  counts={stats.statusCounts}
+                  selected={statuses}
+                  onToggle={toggleStatus}
+                  onClear={clearStatuses}
+                />
+              </div>
+              <div className="flex shrink-0 items-center gap-3">
+                <span className="text-[12.5px] text-[var(--f-muted)] tabular-nums">
+                  {filtered.length} ordini mostrati
+                </span>
+                <label className="relative flex h-10 w-[260px] items-center">
+                  <Search aria-hidden className="pointer-events-none absolute left-3.5 h-4 w-4 text-[var(--f-muted)]" />
+                  <input
+                    ref={searchInputRef}
+                    type="search"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Cerca per id, fornitore, note..."
+                    className="h-10 w-full rounded-full border border-[var(--f-line)] bg-[var(--f-card)] pl-10 pr-9 text-[13.5px] text-[var(--f-ink)] outline-none placeholder:text-[var(--f-faint)] focus:border-[color:color-mix(in_oklab,var(--acc-600)_50%,transparent)] focus:shadow-[0_0_0_3px_color-mix(in_oklab,var(--acc-600)_14%,transparent)]"
+                    aria-label="Cerca ordini"
+                  />
+                  {query && (
+                    <button
+                      onClick={() => setQuery("")}
+                      className="absolute right-2.5 rounded-full p-1 text-[var(--f-muted)] hover:bg-[var(--f-fill)]"
+                      aria-label="Pulisci ricerca"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </label>
+              </div>
             </div>
-          </div>
+
+            {view === "board" ? (
+              <>
+                <OrderBoard rows={filtered} selectedId={selectedId} onSelect={onSelect} />
+                <Drawer
+                  open={selectedRow !== null && peekOpenMobile}
+                  onClose={() => setPeekOpenMobile(false)}
+                  label="Dettaglio ordine"
+                >
+                  <div className="-mx-6 -mt-8">
+                    <OrderPeek
+                      row={selectedRow}
+                      onClose={() => {
+                        setPeekOpenMobile(false);
+                        setSelectedId(null);
+                      }}
+                    />
+                  </div>
+                </Drawer>
+              </>
+            ) : (
+              <div className="grid grid-cols-[minmax(0,1fr)_400px] gap-4">
+                <section className="f-card f-rise min-h-0 overflow-hidden" aria-label="Elenco ordini">
+                  <div className="f-scroll max-h-[calc(100vh-300px)] min-h-[360px] overflow-y-auto pb-3">
+                    <Timeline
+                      rows={filtered}
+                      selectedId={selectedId}
+                      onSelect={onSelect}
+                      emptyLabel="Nessun ordine corrisponde ai filtri"
+                    />
+                    {filtered.length === 0 && (
+                      <div className="px-4 pb-8 pt-2 text-center">
+                        <button
+                          onClick={() => {
+                            setQuery("");
+                            setStatuses(new Set());
+                          }}
+                          className="f-btn f-btn-sm f-btn-outline"
+                        >
+                          Pulisci filtri
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </section>
+                <aside className="f-card f-rise sticky top-[96px] self-start min-h-[420px] overflow-hidden" style={{ ["--i" as string]: 1 }}>
+                  <OrderPeek row={selectedRow} onClose={() => setSelectedId(null)} />
+                </aside>
+              </div>
+            )}
+          </>
         )}
-      </div>
 
       <CheatsheetOverlay open={helpOpen} onClose={() => setHelpOpen(false)} />
 

@@ -236,6 +236,7 @@ export function ZoneEditorDialog({
               const active = provinces.includes(p);
               return (
                 <button
+                  aria-pressed={active}
                   key={p}
                   type="button"
                   onClick={() => toggleProvince(p)}
@@ -312,6 +313,7 @@ export function ZoneEditorDialog({
               const active = days.includes(d.value);
               return (
                 <button
+                  aria-pressed={active}
                   key={d.value}
                   type="button"
                   onClick={() => toggleDay(d.value)}

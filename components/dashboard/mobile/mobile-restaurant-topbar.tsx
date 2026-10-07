@@ -17,7 +17,8 @@ const BACK_MAP: Array<[RegExp, string, string]> = [
   [/^\/cataloghi\/[^/]+/, "/cataloghi", "Cataloghi"],
   [/^\/impostazioni\/[^/]+/, "/impostazioni", "Account"],
   [/^\/cerca\/ordine/, "/cerca", "Cerca"],
-  [/^\/carrello\/conferma/, "/carrello", "Carrello"],
+  [/^\/finanze\/[^/]+/, "/finanze", "Finanze"],
+  [/^\/messaggi\/[^/]+/, "/messaggi", "Messaggi"],
 ];
 
 // Top-level route title
@@ -31,6 +32,7 @@ const TITLE_MAP: Record<string, string> = {
   "/analytics": "Analytics",
   "/impostazioni": "Account",
   "/messaggi": "Messaggi",
+  "/finanze": "Finanze",
 };
 
 function resolveTitle(pathname: string): {

@@ -15,10 +15,7 @@ export const SUPPLIER_PLATFORM_ENABLED = false;
 // ==========================================
 
 export const ROUTES = {
-  // Marketing
   HOME: "/",
-  PRICING: "/pricing",
-  FOR_SUPPLIERS: "/fornitori",
 
   // Auth
   LOGIN: "/login",
@@ -87,7 +84,7 @@ export const RESTAURANT_PLANS: PlanDefinition[] = [
       "Catalogo vivo, prezzi aggiornati",
       "Ordini illimitati",
       "0% commissioni su ogni ordine",
-      "Stripe + cassetto fiscale",
+      "Cassetto fiscale",
       "Storico ed export CSV/PDF",
     ],
   },

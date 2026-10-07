@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
@@ -132,7 +132,7 @@ const LINE_STATUS_VARIANT: Record<string, "default" | "success" | "warning" | "i
 const REJECTION_REASONS = [
   "Prodotto esaurito",
   "Fuori catalogo",
-  "Quantita' non disponibile",
+  "Quantità non disponibile",
   "Prezzo non sostenibile",
   "Zona di consegna non coperta",
   "Altro",
@@ -376,7 +376,7 @@ export function OrderDetailClient({
         return;
       }
       if (d.action === "modify" && !(Number(d.quantityAccepted) > 0)) {
-        toast.error(`Quantita' non valida per ${l.productName}`);
+        toast.error(`Quantità non valida per ${l.productName}`);
         return;
       }
     }
@@ -504,12 +504,10 @@ export function OrderDetailClient({
             </p>
             <div className="flex gap-2">
               {canMarkPacked && (
-                <Link href={`/supplier/ordini/${splitId}/preparazione`}>
-                  <Button size="sm" variant="secondary">
+                <ButtonLink href={`/supplier/ordini/${splitId}/preparazione`} size="sm" variant="secondary">
                     <Package className="h-4 w-4" />
                     Vai al picking
-                  </Button>
-                </Link>
+                  </ButtonLink>
               )}
               {canMarkShipped && (
                 <Button
@@ -671,6 +669,7 @@ export function OrderDetailClient({
                             <div className="flex flex-col gap-2">
                               <div className="flex gap-1">
                                 <button
+                                  aria-pressed={action === "accept"}
                                   type="button"
                                   title="Accetta (A)"
                                   onClick={() =>
@@ -688,6 +687,7 @@ export function OrderDetailClient({
                                   <Check className="h-3.5 w-3.5" />
                                 </button>
                                 <button
+                                  aria-pressed={action === "modify"}
                                   type="button"
                                   title="Modifica (M)"
                                   onClick={() => {
@@ -707,6 +707,7 @@ export function OrderDetailClient({
                                   <Edit3 className="h-3.5 w-3.5" />
                                 </button>
                                 <button
+                                  aria-pressed={action === "reject"}
                                   type="button"
                                   title="Rifiuta (R)"
                                   onClick={() => {

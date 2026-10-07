@@ -11,6 +11,7 @@ import { getRelationshipById } from "@/lib/relationships/queries";
 import { getMessagesForRelationship } from "@/lib/messages/queries";
 import { formatDate } from "@/lib/utils/formatters";
 import { ClientActions } from "../client-actions";
+import { getCurrentSupplierMember } from "@/lib/supplier/current-member";
 
 type Params = Promise<{ id: string }>;
 
@@ -27,13 +28,8 @@ export default async function ClienteDetailPage({ params }: { params: Params }) 
   if (!rel) notFound();
 
   // Verifica: l'utente deve essere il fornitore della relazione
-  const { data: supplier } = await supabase
-    .from("suppliers")
-    .select("id")
-    .eq("id", rel.supplier_id)
-    .eq("profile_id", user.id)
-    .maybeSingle<{ id: string }>();
-  if (!supplier) notFound();
+  const member = await getCurrentSupplierMember();
+  if (!member || member.supplier_id !== rel.supplier_id) notFound();
 
   const { data: restaurant } = await supabase
     .from("restaurants")
@@ -56,7 +52,7 @@ export default async function ClienteDetailPage({ params }: { params: Params }) 
   const { data: splits } = await (supabase as any)
     .from("order_splits")
     .select("id, subtotal, status, order_id, orders!inner(id, created_at, restaurant_id, total)")
-    .eq("supplier_id", supplier.id)
+    .eq("supplier_id", member.supplier_id)
     .eq("orders.restaurant_id", rel.restaurant_id)
     .order("created_at", { ascending: false, foreignTable: "orders" })
     .limit(10) as {
@@ -130,6 +126,12 @@ export default async function ClienteDetailPage({ params }: { params: Params }) 
                 <List className="h-4 w-4" /> Listino personalizzato
               </Link>
             )}
+            <Link
+              href={`/supplier/messaggi/${rel.id}`}
+              className="inline-flex items-center gap-1 text-sm text-accent-green hover:underline"
+            >
+              <MessageCircle className="h-4 w-4" /> Apri conversazione
+            </Link>
           </div>
         </div>
       </Card>

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { getLots } from "@/lib/supplier/stock/queries";
 import { LotsClient } from "./lots-client";
+import { getCurrentSupplierMember } from "@/lib/supplier/current-member";
 
 export const metadata: Metadata = { title: "Lotti — Magazzino" };
 
@@ -19,16 +19,8 @@ export default async function SupplierLotsPage({
   searchParams: Promise<SearchParams>;
 }) {
   const params = await searchParams;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: supplier } = await supabase
-    .from("suppliers")
-    .select("id")
-    .eq("profile_id", user?.id ?? "")
-    .maybeSingle<{ id: string }>();
+  const member = await getCurrentSupplierMember();
+  const supplier = member ? { id: member.supplier_id } : null;
 
   if (!supplier?.id) {
     return (

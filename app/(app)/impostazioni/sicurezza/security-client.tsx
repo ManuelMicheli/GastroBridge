@@ -1,5 +1,6 @@
 "use client";
 
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -20,6 +21,7 @@ import {
   Lock,
   ChevronLeft,
 } from "lucide-react";
+import { APP_TIME_ZONE } from "@/lib/utils/formatters";
 
 type Props = {
   email: string;
@@ -37,6 +39,7 @@ function formatRelative(iso: string | null): string {
   if (!Number.isFinite(t)) return "—";
   const d = new Date(t);
   return d.toLocaleString("it-IT", {
+    timeZone: APP_TIME_ZONE,
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -84,6 +87,7 @@ export function SecurityClient({
   const [qr, setQr] = useState<string | null>(null);
   const [factorId, setFactorId] = useState<string | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
+  const { confirm, dialog } = useConfirm();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -163,7 +167,12 @@ export function SecurityClient({
   async function unenroll() {
     const fid = factorIds[0];
     if (!fid) return;
-    const ok = window.confirm("Disattivare MFA? Perderai il secondo fattore e l'accesso ad aree protette.");
+    const ok = await confirm({
+      title: "Disattivare MFA?",
+      description: "Perderai il secondo fattore e l'accesso ad aree protette.",
+      confirmLabel: "Disattiva MFA",
+      tone: "danger",
+    });
     if (!ok) return;
     setBusy(true);
     const { error } = await supabase.auth.mfa.unenroll({ factorId: fid });
@@ -205,9 +214,11 @@ export function SecurityClient({
   }
 
   async function signOutOthers() {
-    const ok = window.confirm(
-      "Disconnettere tutte le altre sessioni? Resterai connesso solo su questo dispositivo."
-    );
+    const ok = await confirm({
+      title: "Disconnettere le altre sessioni?",
+      description: "Resterai connesso solo su questo dispositivo.",
+      confirmLabel: "Disconnetti",
+    });
     if (!ok) return;
     setSessBusy(true);
     const { error } = await supabase.auth.signOut({ scope: "others" });
@@ -559,6 +570,7 @@ export function SecurityClient({
 
         <SectionFrame label="Aree protette">{protectedBody}</SectionFrame>
       </div>
+      {dialog}
     </>
   );
 }

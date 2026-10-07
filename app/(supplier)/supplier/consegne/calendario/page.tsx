@@ -1,9 +1,11 @@
+import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { DeliveryCalendar } from "@/components/supplier/delivery/delivery-calendar";
 import { CalendarClient } from "./calendar-client";
 import type { Database } from "@/types/database";
+import { getCurrentSupplierMember, memberCan } from "@/lib/supplier/current-member";
 
 export const metadata: Metadata = {
   title: "Calendario consegne — Fornitore",
@@ -98,15 +100,10 @@ export default async function DeliveryCalendarPage({ searchParams }: PageProps) 
   const anchor = parseISODate(sp.start);
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: supplier } = await supabase
-    .from("suppliers")
-    .select("id")
-    .eq("profile_id", user?.id ?? "")
-    .maybeSingle<{ id: string }>();
+  const member = await getCurrentSupplierMember();
+  const supplier = member ? { id: member.supplier_id } : null;
+  // Same gate as the sidebar (lib/supplier/permissions.ts ROLE_MATRIX).
+  if (member && !memberCan(member, "delivery.execute")) redirect("/supplier/dashboard");
 
   if (!supplier?.id) {
     return (
@@ -223,13 +220,16 @@ export default async function DeliveryCalendarPage({ searchParams }: PageProps) 
       : new Date(rangeStart.getFullYear(), rangeStart.getMonth() + 1, 1);
 
   const labelMonth = rangeStart.toLocaleDateString("it-IT", {
+    timeZone: "Europe/Rome",
     month: "long",
     year: "numeric",
   });
   const labelWeek = `${rangeStart.toLocaleDateString("it-IT", {
+    timeZone: "Europe/Rome",
     day: "2-digit",
     month: "short",
   })} – ${addDays(rangeStart, 6).toLocaleDateString("it-IT", {
+    timeZone: "Europe/Rome",
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -245,35 +245,27 @@ export default async function DeliveryCalendarPage({ searchParams }: PageProps) 
   });
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <div className="space-y-5 px-1 pt-3 lg:px-0 lg:pt-0">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
         <div>
-          <h1 className="text-2xl font-semibold text-text-primary">
-            Calendario consegne
-          </h1>
-          <p className="text-sm text-text-secondary mt-1">
-            {view === "week" ? labelWeek : labelMonth.charAt(0).toUpperCase() + labelMonth.slice(1)}
+          <h1 className="f-title f-type">Calendario consegne</h1>
+          <p className="f-subtitle mt-1 capitalize">
+            {view === "week" ? labelWeek : labelMonth}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex rounded-lg border border-border-subtle bg-surface-card p-1">
+          <div className="f-chips">
             <Link
               href={`/supplier/consegne/calendario?view=week&start=${toISODate(startOfWeek(new Date()))}`}
-              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                view === "week"
-                  ? "bg-accent-green text-surface-base"
-                  : "text-text-secondary hover:text-text-primary"
-              }`}
+              data-active={view === "week"}
+              className={`f-chip ${view === "week" ? "!bg-[linear-gradient(180deg,color-mix(in_oklab,var(--acc-700)_65%,var(--acc-800)),var(--acc-800))]" : ""}`}
             >
               Settimana
             </Link>
             <Link
               href={`/supplier/consegne/calendario?view=month&start=${toISODate(startOfMonth(new Date()))}`}
-              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                view === "month"
-                  ? "bg-accent-green text-surface-base"
-                  : "text-text-secondary hover:text-text-primary"
-              }`}
+              data-active={view === "month"}
+              className={`f-chip ${view === "month" ? "!bg-[linear-gradient(180deg,color-mix(in_oklab,var(--acc-700)_65%,var(--acc-800)),var(--acc-800))]" : ""}`}
             >
               Mese
             </Link>

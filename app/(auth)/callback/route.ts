@@ -1,21 +1,17 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-
-function safeNextPath(raw: string | null): string {
-  // Restrict to same-origin relative paths to prevent open redirects.
-  // Reject protocol-relative (`//host`), absolute URLs, and backslash variants.
-  if (!raw) return "/dashboard";
-  if (!raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\")) {
-    return "/dashboard";
-  }
-  return raw;
-}
+import { NEXT_PATH_COOKIE, postLoginPath } from "@/lib/auth/redirect";
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
-  const next = safeNextPath(requestUrl.searchParams.get("next"));
+  // `next` from the query, else the cookie set before magic link / OAuth.
+  const cookieStoreForNext = await cookies();
+  const rawNext =
+    requestUrl.searchParams.get("next") ??
+    cookieStoreForNext.get(NEXT_PATH_COOKIE)?.value ??
+    null;
 
   if (code) {
     const cookieStore = await cookies();
@@ -50,9 +46,10 @@ export async function GET(request: NextRequest) {
           .eq("id", user.id)
           .single();
 
-        const redirectTo =
-          profile?.role === "supplier" ? "/supplier/dashboard" : next;
-        return NextResponse.redirect(new URL(redirectTo, request.url));
+        const redirectTo = postLoginPath(profile?.role, rawNext);
+        const res = NextResponse.redirect(new URL(redirectTo, request.url));
+        res.cookies.delete(NEXT_PATH_COOKIE);
+        return res;
       }
     }
   }

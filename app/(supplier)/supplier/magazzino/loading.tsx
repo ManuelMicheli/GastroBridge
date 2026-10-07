@@ -1,5 +1,5 @@
-import { SectionLoadingSkeleton } from "@/components/shared/section-loading-skeleton";
+import { PageSkeleton } from "@/components/fernly/route-states";
 
-export default function SupplierMagazzinoLoading() {
-  return <SectionLoadingSkeleton variant="dashboard" />;
+export default function Loading() {
+  return <PageSkeleton variant="dashboard" />;
 }

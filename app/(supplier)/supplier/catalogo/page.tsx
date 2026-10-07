@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -12,6 +13,7 @@ import { CatalogTable } from "@/components/supplier/catalog/catalog-table";
 import { LargeTitle } from "@/components/ui/large-title";
 import { GroupedList, GroupedListRow } from "@/components/ui/grouped-list";
 import { formatCurrency } from "@/lib/utils/formatters";
+import { getCurrentSupplierMember, memberCan } from "@/lib/supplier/current-member";
 
 export const metadata: Metadata = { title: "Catalogo" };
 
@@ -50,15 +52,10 @@ export default async function CatalogPage({
 }) {
   const sp = await searchParams;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: supplier } = await supabase
-    .from("suppliers")
-    .select("id")
-    .eq("profile_id", user?.id ?? "")
-    .single<{ id: string }>();
+  const member = await getCurrentSupplierMember();
+  const supplier = member ? { id: member.supplier_id } : null;
+  // Same gate as the sidebar (lib/supplier/permissions.ts ROLE_MATRIX).
+  if (member && !memberCan(member, "catalog.read")) redirect("/supplier/dashboard");
 
   const supplierId = supplier?.id ?? null;
 

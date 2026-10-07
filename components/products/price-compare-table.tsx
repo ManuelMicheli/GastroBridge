@@ -11,7 +11,7 @@ import type { PriceCompareRow, ProductBadge } from "@/types/products";
 
 const BADGE_CONFIG: Record<ProductBadge, { label: string; variant: "success" | "warning" | "info" | "default" }> = {
   "miglior-prezzo": { label: "Miglior prezzo", variant: "success" },
-  "piu-venduto": { label: "Piu venduto", variant: "info" },
+  "piu-venduto": { label: "Più venduto", variant: "info" },
   "nuovo": { label: "Nuovo", variant: "warning" },
   "consegna-domani": { label: "Consegna domani", variant: "info" },
   "bio": { label: "BIO", variant: "success" },
@@ -51,7 +51,7 @@ export function PriceCompareTable({ rows, productName, unit, onAddToCart }: Pric
               <th className="px-6 py-3 text-xs font-semibold text-sage uppercase tracking-wider">Prezzo/{formatUnitShort(unit)}</th>
               <th className="px-6 py-3 text-xs font-semibold text-sage uppercase tracking-wider">Consegna</th>
               <th className="px-6 py-3 text-xs font-semibold text-sage uppercase tracking-wider">Rating</th>
-              <th className="px-6 py-3 text-xs font-semibold text-sage uppercase tracking-wider">Quantita</th>
+              <th className="px-6 py-3 text-xs font-semibold text-sage uppercase tracking-wider">Quantità</th>
               <th className="px-6 py-3"></th>
             </tr>
           </thead>

@@ -551,6 +551,7 @@ export function ProfileClient({ supplierId, initialProfile }: Props) {
               const active = form.certifications.includes(c);
               return (
                 <button
+                  aria-pressed={active}
                   key={c}
                   type="button"
                   onClick={() => toggleCert(c)}

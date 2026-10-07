@@ -17,6 +17,7 @@ import {
 } from "@/lib/supplier/stock/queries";
 import { formatCurrency } from "@/lib/utils/formatters";
 import { SectionFrame } from "@/components/dashboard/supplier/_awwwards/section-frame";
+import { getCurrentSupplierMember } from "@/lib/supplier/current-member";
 
 export const metadata: Metadata = { title: "Giacenze — Magazzino" };
 
@@ -126,11 +127,8 @@ export default async function MagazzinoPage({
 
   if (!user) return <TerminalError body="Sessione non valida" />;
 
-  const { data: supplier } = await supabase
-    .from("suppliers")
-    .select("id")
-    .eq("profile_id", user.id)
-    .maybeSingle<{ id: string }>();
+  const member = await getCurrentSupplierMember();
+  const supplier = member ? { id: member.supplier_id } : null;
 
   if (!supplier?.id) {
     return (

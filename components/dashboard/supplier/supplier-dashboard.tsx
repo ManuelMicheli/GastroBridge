@@ -147,6 +147,7 @@ function formatDeliveryWhen(d: RecentDelivery): string {
   const ts = d.delivered_at ?? d.scheduled_date;
   try {
     return new Date(ts).toLocaleDateString("it-IT", {
+      timeZone: "Europe/Rome",
       day: "2-digit",
       month: "short",
     });

@@ -1,7 +1,6 @@
 // app/(app)/ordini/_components/status-chips.tsx
 "use client";
 
-import { ORDER_STATUS_LABELS } from "@/lib/utils/constants";
 import { StatusDot } from "@/components/ui/status-dot";
 import { getOrderStatusMeta } from "@/lib/orders/status-meta";
 
@@ -49,7 +48,16 @@ export function StatusChips({
   if (present.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="f-chips min-w-0 max-w-full" role="group" aria-label="Filtra per stato">
+      <button
+        type="button"
+        onClick={onClear}
+        data-active={selected.size === 0}
+        aria-pressed={selected.size === 0}
+        className={`f-chip ${selected.size === 0 ? "!bg-[linear-gradient(180deg,color-mix(in_oklab,var(--acc-700)_65%,var(--acc-800)),var(--acc-800))]" : ""}`}
+      >
+        Tutti
+      </button>
       {present.map(([status, count]) => {
         const active = selected.has(status);
         const tone = getOrderStatusMeta(status).tone;
@@ -58,36 +66,18 @@ export function StatusChips({
             key={status}
             type="button"
             onClick={() => onToggle(status)}
-            className={`group inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.08em] transition-colors ${
-              active
-                ? "border-accent-green bg-accent-green/10 text-accent-green"
-                : "border-border-subtle text-text-secondary hover:bg-surface-hover"
-            }`}
+            data-active={active}
+            className={`f-chip ${active ? "!bg-[linear-gradient(180deg,color-mix(in_oklab,var(--acc-700)_65%,var(--acc-800)),var(--acc-800))]" : ""}`}
             aria-pressed={active}
           >
-            <StatusDot tone={tone} size={8} />
+            <StatusDot tone={tone} size={7} />
             <span className="whitespace-nowrap">
-              {ORDER_STATUS_LABELS[status] ?? status}
+              {getOrderStatusMeta(status).label}
             </span>
-            <span
-              className={`font-mono tabular-nums ${
-                active ? "text-accent-green" : "text-text-tertiary"
-              }`}
-            >
-              {count}
-            </span>
+            <span className="f-chip-count">{count}</span>
           </button>
         );
       })}
-      {selected.size > 0 && (
-        <button
-          type="button"
-          onClick={onClear}
-          className="inline-flex items-center rounded-full px-2 py-1 font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary hover:text-text-primary"
-        >
-          Pulisci
-        </button>
-      )}
     </div>
   );
 }

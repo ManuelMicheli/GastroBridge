@@ -1,5 +1,5 @@
-import { SectionLoadingSkeleton } from "@/components/shared/section-loading-skeleton";
+import { PageSkeleton } from "@/components/fernly/route-states";
 
-export default function SupplierConsegneLoading() {
-  return <SectionLoadingSkeleton variant="list" />;
+export default function Loading() {
+  return <PageSkeleton variant="list" />;
 }

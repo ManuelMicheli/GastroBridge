@@ -33,12 +33,11 @@ export function FloatingPillNav({ items }: Props) {
       <nav
         aria-label="Navigazione principale"
         className={cn(
-          "mx-4 flex min-h-[60px] items-stretch rounded-[30px]",
-          "bg-[color:var(--ios-chrome-bg)]",
-          "[backdrop-filter:var(--ios-chrome-blur)] [-webkit-backdrop-filter:var(--ios-chrome-blur)]",
-          "ring-[0.5px] ring-[color:var(--pill-nav-ring)]",
-          "shadow-[var(--pill-nav-shadow)]",
-          "px-1"
+          "mx-4 flex min-h-[62px] items-stretch gap-1 rounded-full p-1.5",
+          "bg-[color-mix(in_oklab,var(--f-card)_88%,transparent)]",
+          "[backdrop-filter:blur(18px)_saturate(170%)] [-webkit-backdrop-filter:blur(18px)_saturate(170%)]",
+          "border border-[var(--f-line)]",
+          "shadow-[0_2px_6px_rgba(16,24,20,0.05),0_14px_34px_rgba(16,24,20,0.12)]",
         )}
       >
         {items.map((item) => {
@@ -53,36 +52,35 @@ export function FloatingPillNav({ items }: Props) {
               key={item.href}
               href={item.href}
               className={cn(
-                "group relative flex flex-1 flex-col items-center justify-center gap-0.5 px-1 py-1 rounded-full",
-                "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-brand-primary)]",
-                isActive
-                  ? "text-[color:var(--color-brand-primary)]"
-                  : "text-[color:var(--text-muted-light,#6B6B6B)]"
+                "group relative flex flex-1 flex-col items-center justify-center gap-1 rounded-full px-1",
+                "transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--acc-600)]",
+                isActive ? "text-white" : "text-[var(--f-muted)]",
               )}
               aria-current={isActive ? "page" : undefined}
             >
               {isActive && (
                 <span
                   aria-hidden="true"
-                  className="absolute top-1.5 h-[3px] w-7 rounded-full bg-[color:var(--color-brand-primary)]"
+                  className="absolute inset-0 rounded-full bg-[linear-gradient(180deg,color-mix(in_oklab,var(--acc-700)_65%,var(--acc-800)),var(--acc-800))] shadow-[0_6px_14px_color-mix(in_oklab,var(--acc-800)_28%,transparent)]"
                 />
               )}
-              <span className="relative mt-1.5">
-                <Icon
-                  className="h-[19px] w-[19px]"
-                  fill={isActive ? "currentColor" : "none"}
-                  strokeWidth={isActive ? 1.5 : 1.75}
-                />
+              <span className="relative">
+                <Icon className="h-[19px] w-[19px]" strokeWidth={isActive ? 2 : 1.75} />
                 {showBadge && (
                   <span
-                    className="absolute -top-1.5 -right-2 flex min-w-[16px] h-[16px] items-center justify-center rounded-full bg-[color:var(--color-brand-primary)] px-1 text-[9px] font-semibold text-[color:var(--color-brand-on-primary)] ring-2 ring-[color:var(--ios-chrome-bg)]"
+                    className={cn(
+                      "absolute -right-2.5 -top-2 flex h-[16px] min-w-[16px] items-center justify-center rounded-full px-1 text-[9px] font-semibold ring-2",
+                      isActive
+                        ? "bg-[#fff] text-[var(--acc-900)] ring-[var(--acc-800)]"
+                        : "bg-[var(--acc-900)] text-white ring-[var(--f-card)]",
+                    )}
                     aria-label={`${item.badgeCount} elementi`}
                   >
                     {item.badgeCount! > 99 ? "99+" : item.badgeCount}
                   </span>
                 )}
               </span>
-              <span className="text-[9px] font-medium uppercase tracking-[0.06em] leading-none">
+              <span className="relative text-[10px] font-semibold leading-none">
                 {item.label}
               </span>
             </Link>
