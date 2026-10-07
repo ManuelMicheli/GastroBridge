@@ -15,10 +15,7 @@ export const SUPPLIER_PLATFORM_ENABLED = false;
 // ==========================================
 
 export const ROUTES = {
-  // Marketing
   HOME: "/",
-  PRICING: "/pricing",
-  FOR_SUPPLIERS: "/fornitori",
 
   // Auth
   LOGIN: "/login",

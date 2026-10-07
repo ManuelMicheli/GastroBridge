@@ -32,15 +32,14 @@ const jetbrainsMono = JetBrains_Mono({
   adjustFontFallback: false,
 });
 
-// Logged-in app + auth font (geometric grotesk). Not preloaded so the public
-// marketing pages keep their exact first-paint budget; the app/auth roots
-// opt into it through `--font-app` (see the Fernly layer in globals.css).
+// App + auth font (geometric grotesk). Every page is an app or auth page, so
+// it is preloaded; the roots opt into it through `--font-app` (see the Fernly
+// layer in globals.css).
 const appFont = Plus_Jakarta_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-app",
   display: "swap",
-  preload: false,
 });
 
 const SUPABASE_ORIGIN = (() => {

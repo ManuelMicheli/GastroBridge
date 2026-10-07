@@ -7,7 +7,6 @@
    ========================================= */
 @theme {
   /* DO NOT REMOVE — consumed by [data-area="restaurant"] and [data-area="supplier"].
-     The marketing area uses its own --color-marketing-* tokens (see bottom of file). */
   /* Legacy GastroBridge Brand (forest green — still used by the supplier area) */
   --color-forest: #1B6B4A;
   --color-forest-dark: #145238;
@@ -909,174 +908,11 @@ body {
   --tone-rose-ring:    rgba(244, 114, 128, 0.30);
 }
 
-/* =========================================================
-   Area: Marketing — public landing (scoped).
-   Cream + bordeaux editorial palette. Amber for supplier
-   surfaces (nested [data-side="supplier"]). Does NOT touch
-   legacy forest/cream/terracotta tokens. Dark mode is
-   intentionally undefined: the public landing is cream-only.
-   ========================================================= */
-[data-area="marketing"] {
-  --color-marketing-bg: #FAFAF7;
-  --color-marketing-bg-soft: #F3F2EC;
-  --color-marketing-ink: #0F0F10;
-  --color-marketing-ink-muted: #4A4A4F;
-  --color-marketing-ink-subtle: #8A8A8F;
-  --color-marketing-rule: rgba(15, 15, 16, 0.10);
-  --color-marketing-rule-strong: rgba(15, 15, 16, 0.18);
-  --color-marketing-primary: #6B1F2E;
-  --color-marketing-primary-hover: #7C2536;
-  --color-marketing-primary-deep: #4E1520;
-  --color-marketing-primary-subtle: #F5E8EB;
-  --color-marketing-on-primary: #FAFAF7;
-  --color-marketing-accent-warm: #B8791F;
-  --color-marketing-accent-warm-deep: #8E5A14;
-  --color-marketing-accent-warm-subtle: #F4EAD7;
-  --color-marketing-on-warm: #0F0F10;
-
-  --type-marketing-mega: clamp(64px, 12vw, 200px);
-  --type-marketing-mega-lh: 0.88;
-  --type-marketing-mega-ls: -0.035em;
-  --type-marketing-display: clamp(44px, 7.5vw, 104px);
-  --type-marketing-display-lh: 0.96;
-  --type-marketing-display-ls: -0.025em;
-  --type-marketing-h2: clamp(32px, 4.5vw, 64px);
-  --type-marketing-h2-lh: 1.02;
-  --type-marketing-h2-ls: -0.018em;
-  --type-marketing-pull: clamp(24px, 2.4vw, 34px);
-  --type-marketing-pull-lh: 1.34;
-  --type-marketing-body: 17px;
-  --type-marketing-body-lh: 1.55;
-  --type-marketing-eyebrow: 11px;
-  --type-marketing-eyebrow-ls: 0.22em;
-
-  --gutter-marketing: clamp(20px, 5vw, 96px);
-  --rhythm-section: clamp(96px, 14vw, 192px);
-  --rhythm-block: clamp(48px, 6vw, 96px);
-
-  background: var(--color-marketing-bg);
-  color: var(--color-marketing-ink);
-}
-
-/* Supplier palette flip within marketing. Amber replaces bordeaux.
-   Two paths: legacy per-section [data-side], AND new root-level
-   [data-persona] on <html> (set by PersonaProvider for reactive switch). */
-[data-area="marketing"] [data-side="supplier"],
-:root[data-persona="supplier"] [data-area="marketing"] {
-  --color-marketing-primary: var(--color-marketing-accent-warm);
-  --color-marketing-primary-hover: var(--color-marketing-accent-warm-deep);
-  --color-marketing-primary-deep: var(--color-marketing-accent-warm-deep);
-  --color-marketing-primary-subtle: var(--color-marketing-accent-warm-subtle);
-  --color-marketing-on-primary: var(--color-marketing-on-warm);
-  --color-marketing-bg: #FBF8F1;
-  --color-marketing-bg-soft: #F1ECDF;
-}
-
-/* Dark theme tokens for the public landing (next-themes adds .dark on <html>). */
-.dark [data-area="marketing"] {
-  --color-marketing-bg: #09090F;
-  --color-marketing-bg-soft: #11111A;
-  --color-marketing-ink: #F5F4EE;
-  --color-marketing-ink-muted: #B4B3AE;
-  --color-marketing-ink-subtle: #6E6D69;
-  --color-marketing-rule: rgba(245, 244, 238, 0.10);
-  --color-marketing-rule-strong: rgba(245, 244, 238, 0.20);
-  --color-marketing-primary: #E84560;
-  --color-marketing-primary-hover: #F25A73;
-  --color-marketing-primary-deep: #B91C3C;
-  --color-marketing-primary-subtle: rgba(232, 69, 96, 0.14);
-  --color-marketing-on-primary: #09090F;
-  --color-marketing-accent-warm: #E8A355;
-  --color-marketing-accent-warm-deep: #B8791F;
-  --color-marketing-accent-warm-subtle: rgba(232, 163, 85, 0.14);
-}
-
-.dark :root[data-persona="supplier"] [data-area="marketing"],
-.dark [data-area="marketing"] [data-side="supplier"] {
-  --color-marketing-primary: var(--color-marketing-accent-warm);
-  --color-marketing-primary-hover: var(--color-marketing-accent-warm-deep);
-  --color-marketing-primary-deep: var(--color-marketing-accent-warm-deep);
-  --color-marketing-primary-subtle: var(--color-marketing-accent-warm-subtle);
-}
-
-/* Force-dark island within a light marketing area (e.g. cinematic closer). */
-[data-area="marketing"] [data-force-dark="true"] {
-  --color-marketing-bg: #09090F;
-  --color-marketing-bg-soft: #11111A;
-  --color-marketing-ink: #F5F4EE;
-  --color-marketing-ink-muted: #B4B3AE;
-  --color-marketing-ink-subtle: #6E6D69;
-  --color-marketing-rule: rgba(245, 244, 238, 0.10);
-  --color-marketing-rule-strong: rgba(245, 244, 238, 0.20);
-  --color-marketing-primary: #E84560;
-  --color-marketing-primary-hover: #F25A73;
-  --color-marketing-primary-deep: #B91C3C;
-  --color-marketing-primary-subtle: rgba(232, 69, 96, 0.14);
-  --color-marketing-on-primary: #09090F;
-  background: var(--color-marketing-bg);
-  color: var(--color-marketing-ink);
-}
-
-[data-area="marketing"] [data-force-dark="true"][data-side="supplier"],
-:root[data-persona="supplier"] [data-area="marketing"] [data-force-dark="true"] {
-  --color-marketing-primary: #E8A355;
-  --color-marketing-primary-hover: #F0B772;
-  --color-marketing-primary-deep: #B8791F;
-  --color-marketing-primary-subtle: rgba(232, 163, 85, 0.14);
-}
-
-/* Smooth palette swap on persona change (view-transition fallback). */
-@media (prefers-reduced-motion: no-preference) {
-  [data-area="marketing"],
-  [data-area="marketing"] * {
-    transition-property: background-color, color, border-color, fill, stroke;
-    transition-duration: 320ms;
-    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-  }
-}
-
-/* View-Transitions root cross-fade for persona swap. */
+/* View-Transitions root cross-fade (theme swap). */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation-duration: 360ms;
   animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-[data-area="marketing"] ::selection {
-  background: var(--color-marketing-primary);
-  color: var(--color-marketing-on-primary);
-}
-
-[data-area="marketing"] hr.rule {
-  border: 0;
-  border-top: 1px solid var(--color-marketing-rule);
-  margin: 0;
-}
-
-[data-area="marketing"] a.link-editorial {
-  position: relative;
-  display: inline-block;
-}
-[data-area="marketing"] a.link-editorial::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  bottom: -2px;
-  height: 1px;
-  width: 100%;
-  background: currentColor;
-  transform: scaleX(0);
-  transform-origin: left center;
-  transition: transform 360ms cubic-bezier(0.16, 1, 0.3, 1);
-}
-[data-area="marketing"] a.link-editorial:hover::after {
-  transform: scaleX(1);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  [data-area="marketing"] a.link-editorial::after {
-    transition: none;
-  }
 }
 
 /* =========================================
@@ -1283,75 +1119,6 @@ body {
    No additional rule needed; kept here as documentation. */
 
 /* =========================================
-   Marketing Landing Page — Animations & States
-   ========================================= */
-
-/* @property declarations for smooth mesh gradient interpolation */
-@property --mesh-x1 { syntax: "<percentage>"; inherits: false; initial-value: 20%; }
-@property --mesh-y1 { syntax: "<percentage>"; inherits: false; initial-value: 30%; }
-@property --mesh-x2 { syntax: "<percentage>"; inherits: false; initial-value: 80%; }
-@property --mesh-y2 { syntax: "<percentage>"; inherits: false; initial-value: 60%; }
-@property --mesh-x3 { syntax: "<percentage>"; inherits: false; initial-value: 50%; }
-@property --mesh-y3 { syntax: "<percentage>"; inherits: false; initial-value: 80%; }
-
-/* Initial state for scroll-triggered elements — prevents FOUC */
-.gsap-reveal {
-  opacity: 0;
-  transform: translateY(20px);
-}
-
-/* Mesh gradient animation */
-@keyframes mesh-shift {
-  0%, 100% {
-    --mesh-x1: 20%;
-    --mesh-y1: 30%;
-    --mesh-x2: 80%;
-    --mesh-y2: 60%;
-    --mesh-x3: 50%;
-    --mesh-y3: 80%;
-  }
-  33% {
-    --mesh-x1: 40%;
-    --mesh-y1: 50%;
-    --mesh-x2: 60%;
-    --mesh-y2: 30%;
-    --mesh-x3: 30%;
-    --mesh-y3: 60%;
-  }
-  66% {
-    --mesh-x1: 60%;
-    --mesh-y1: 20%;
-    --mesh-x2: 30%;
-    --mesh-y2: 70%;
-    --mesh-x3: 70%;
-    --mesh-y3: 40%;
-  }
-}
-
-.mesh-gradient {
-  background:
-    radial-gradient(ellipse at var(--mesh-x1, 20%) var(--mesh-y1, 30%), rgba(27, 107, 74, 0.4) 0%, transparent 60%),
-    radial-gradient(ellipse at var(--mesh-x2, 80%) var(--mesh-y2, 60%), rgba(20, 82, 56, 0.5) 0%, transparent 60%),
-    radial-gradient(ellipse at var(--mesh-x3, 50%) var(--mesh-y3, 80%), rgba(45, 212, 122, 0.15) 0%, transparent 60%),
-    var(--color-forest-dark);
-  animation: mesh-shift 20s ease-in-out infinite;
-}
-
-/* Marquee animation */
-@keyframes marquee {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-50%); }
-}
-
-.marquee-track {
-  animation: marquee 30s linear infinite;
-}
-
-.marquee-track:hover {
-  animation-play-state: paused;
-}
-
-/* =========================================
    Theme toggle — icon swap animation
    Used by components/ui/theme-toggle.tsx
    ========================================= */
@@ -1483,7 +1250,7 @@ body {
    FERNLY LAYER — logged-in app redesign (restaurant + supplier + auth).
    Spec: docs/superpowers/specs/2026-10-07-fernly-style-redesign.md
    Declared last so it wins over the legacy area blocks above at equal
-   specificity. Marketing ([data-area="marketing"]) is never targeted.
+   specificity.
    ===================================================================== */
 
 /* Accent steps are registered so a change of preset interpolates
