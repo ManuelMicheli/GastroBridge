@@ -15,12 +15,17 @@ import { contextCan, getRestaurantContext } from "@/lib/restaurants/context";
 const NAV_ITEMS: NavItem[] = [
   { href: "/dashboard",    label: "Dashboard",       iconName: "LayoutDashboard" },
   { href: "/cerca",        label: "Cerca Prodotti",  iconName: "Search" },
+  { href: "/riordina",     label: "Riordino rapido", iconName: "RotateCcw" },
+  { href: "/lista-cucina", label: "Lista cucina",    iconName: "ChefHat" },
   { href: "/fornitori",    label: "Fornitori",       iconName: "Store" },
   { href: "/cataloghi",    label: "Cataloghi",       iconName: "BookMarked" },
   { href: "/ordini",       label: "Ordini",          iconName: "ClipboardList" },
+  { href: "/consegne",     label: "Consegne",        iconName: "CalendarClock" },
   { href: "/carrello",     label: "Carrello",        iconName: "ShoppingCart" },
   { href: "/messaggi",     label: "Messaggi",        iconName: "MessageCircle" },
   { href: "/analytics",    label: "Analytics",       iconName: "BarChart3",     section: "Generale" },
+  { href: "/prezzi",       label: "Prezzi",          iconName: "Tag",           section: "Generale" },
+  { href: "/tracciabilita", label: "Tracciabilità",  iconName: "ShieldCheck",   section: "Generale" },
   { href: "/finanze",      label: "Finanze",         iconName: "Receipt",       section: "Generale" },
   { href: "/finanze/ordini-consigliati", label: "Ordini consigliati", iconName: "Bell", section: "Generale" },
   { href: "/impostazioni", label: "Impostazioni",    iconName: "Settings",      section: "Generale" },
@@ -29,9 +34,9 @@ const NAV_ITEMS: NavItem[] = [
 const MOBILE_NAV: MobileNavItem[] = [
   { href: "/dashboard",    label: "Home",     iconName: "LayoutDashboard" },
   { href: "/cerca",        label: "Cerca",    iconName: "Search" },
+  { href: "/riordina",     label: "Riordina", iconName: "RotateCcw" },
   { href: "/carrello",     label: "Carrello", iconName: "ShoppingCart" },
   { href: "/ordini",       label: "Ordini",   iconName: "ClipboardList" },
-  { href: "/impostazioni", label: "Account",  iconName: "Settings" },
 ];
 
 export default async function AppLayout({ children }: { children: ReactNode }) {

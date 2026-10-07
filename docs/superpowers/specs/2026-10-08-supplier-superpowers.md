@@ -245,7 +245,7 @@ in-app.
 
 ## 6. Migrations (additive, not applied)
 
-`supabase/migrations/20261009000000_supplier_superpowers.sql`:
+`supabase/migrations/20261009000500_supplier_superpowers.sql`:
 `deliveries.route_position`, `supplier_customer_terms`,
 `scheduled_price_changes`, new `notification_event` values; RLS via
 `is_supplier_member` / `has_supplier_permission`, policies created only when

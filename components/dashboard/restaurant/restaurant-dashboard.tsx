@@ -41,6 +41,7 @@ import {
   riseStyle,
 } from "@/components/fernly/primitives";
 import type { SpendTrendPoint } from "./spend-trend-chart/types";
+import { TodayCard, type DashboardToday } from "./today-card";
 import { SpendTrendChart } from "./spend-trend-chart/SpendTrendChart";
 import {
   readInitialVatMode,
@@ -106,8 +107,6 @@ type Props = {
     spendingGross: number;
     prevSpending: number;
     prevSpendingGross: number;
-    savings: number;
-    savingsGross: number;
     activeSuppliers: number;
   };
   fiscal: FiscalSummary;
@@ -120,6 +119,8 @@ type Props = {
   nextDelivery: DashboardDelivery | null;
   upcomingCount: number;
   suppliers: DashboardSupplier[];
+  /** "Oggi in cucina": cut-offs, deliveries to check in, kitchen list. */
+  today?: DashboardToday | null;
 };
 
 const IT_WEEKDAY_INITIAL = ["D", "L", "M", "M", "G", "V", "S"]; // JS getDay() order
@@ -167,6 +168,7 @@ export function RestaurantDashboard({
   nextDelivery,
   upcomingCount,
   suppliers,
+  today = null,
 }: Props) {
   // IVA toggle — "net" on first render (matches SSR), then the saved choice.
   const [vatMode, setVatMode] = useState<VatMode>("net");
@@ -223,6 +225,8 @@ export function RestaurantDashboard({
             </>
           }
         />
+
+        {today ? <TodayCard today={today} index={0} /> : null}
 
         {/* KPI row */}
         <div className="grid grid-cols-2 gap-3 lg:gap-4 xl:grid-cols-4">

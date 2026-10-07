@@ -24,6 +24,8 @@ export interface SendEmailInput {
   text?: string;
   from?: string;
   replyTo?: string;
+  /** Optional files (e.g. the order PDF sent to an off-platform supplier). */
+  attachments?: { filename: string; content: Buffer }[];
 }
 
 export async function sendEmail(input: SendEmailInput): Promise<{ ok: true; id?: string } | { ok: false; error: string }> {
@@ -41,6 +43,7 @@ export async function sendEmail(input: SendEmailInput): Promise<{ ok: true; id?:
       html: input.html,
       text: input.text,
       replyTo: input.replyTo,
+      ...(input.attachments && input.attachments.length > 0 ? { attachments: input.attachments } : {}),
     });
 
     if (error) {
