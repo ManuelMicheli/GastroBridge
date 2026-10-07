@@ -11,6 +11,7 @@ import { LocationFormDialog } from "@/components/settings/location-form-dialog";
 import { deleteLocation, setPrimaryLocation } from "@/lib/restaurants/actions";
 import type { RestaurantRow } from "@/lib/restaurants/types";
 import { LargeTitle } from "@/components/ui/large-title";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const CUISINE_LABELS: Record<string, string> = {
   italiana: "Italiana",
@@ -30,6 +31,7 @@ export function SediClient({ initialLocations }: { initialLocations: RestaurantR
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<RestaurantRow | null>(null);
   const [pending, startTransition] = useTransition();
+  const { confirm, dialog } = useConfirm();
 
   const openNew = () => {
     setEditing(null);
@@ -41,8 +43,16 @@ export function SediClient({ initialLocations }: { initialLocations: RestaurantR
     setDialogOpen(true);
   };
 
-  const onDelete = (loc: RestaurantRow) => {
-    if (!confirm(`Eliminare la sede "${loc.name}"? Questa azione è irreversibile.`)) return;
+  const onDelete = async (loc: RestaurantRow) => {
+    if (
+      !(await confirm({
+        title: `Eliminare la sede “${loc.name}”?`,
+        description: "Questa azione è irreversibile.",
+        confirmLabel: "Elimina sede",
+        tone: "danger",
+      }))
+    )
+      return;
     startTransition(async () => {
       const res = await deleteLocation(loc.id);
       if (!res.ok) {
@@ -136,7 +146,7 @@ export function SediClient({ initialLocations }: { initialLocations: RestaurantR
                     <Pencil className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={() => onDelete(loc)}
+                    onClick={() => void onDelete(loc)}
                     className="p-1.5 rounded-lg hover:bg-red-50 text-sage hover:text-red-600"
                     aria-label="Elimina"
                     disabled={pending}
@@ -189,6 +199,7 @@ export function SediClient({ initialLocations }: { initialLocations: RestaurantR
         location={editing}
         onSaved={() => router.refresh()}
       />
+      {dialog}
     </div>
   );
 }
