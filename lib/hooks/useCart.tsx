@@ -93,6 +93,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/** Cart context or null when rendered outside a CartProvider (e.g. supplier shell). */
+export function useCartOptional() {
+  return useContext(CartContext);
+}
+
 export function useCart() {
   const ctx = useContext(CartContext);
   if (!ctx) throw new Error("useCart must be used within CartProvider");

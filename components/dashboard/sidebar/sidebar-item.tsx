@@ -9,6 +9,7 @@ import { resolveIcon } from "../icons";
 import type { BadgeVariant } from "@/components/ui/badge";
 import { useSupplierRealtime } from "@/lib/realtime/supplier-provider";
 import type { Badges } from "@/lib/realtime/supplier-provider";
+import { useCartOptional } from "@/lib/hooks/useCart";
 
 export type NavItem = {
   href: string;
@@ -59,7 +60,10 @@ function SidebarItemBase({ href, label, iconName, badge, role, allHrefs }: Sideb
   const badgeKey = isSupplier ? pickBadgeKey(href) : null;
   const liveBadge =
     realtime && badgeKey ? realtime.badges[badgeKey] : undefined;
-  const effectiveBadge = liveBadge !== undefined ? liveBadge : badge;
+  // Restaurant cart: live item count from the cart context.
+  const cart = useCartOptional();
+  const cartBadge = !isSupplier && href === "/carrello" && cart ? cart.totalItems : undefined;
+  const effectiveBadge = liveBadge !== undefined ? liveBadge : cartBadge !== undefined ? cartBadge : badge;
 
   const prevBadge = useRef(effectiveBadge ?? 0);
   const [pulseKey, setPulseKey] = useState(0);
