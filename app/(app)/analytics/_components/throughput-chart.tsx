@@ -28,7 +28,7 @@ const eur0 = new Intl.NumberFormat("it-IT", {
   useGrouping: "always",
 } as Intl.NumberFormatOptions);
 
-const dayFmt = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short" });
+const dayFmt = new Intl.DateTimeFormat("it-IT", { timeZone: "Europe/Rome", day: "numeric", month: "short" });
 
 function ChartTooltip({
   active,

@@ -87,9 +87,9 @@ export function ContextPanel({
                   <div className="min-w-0">
                     <p className="text-xs font-mono text-charcoal truncate">#{o.splitId.slice(0, 8).toUpperCase()}</p>
                     <p className="mt-0.5 text-[10px] text-sage">
-                      {new Date(o.createdAt).toLocaleDateString("it-IT", { day: "2-digit", month: "short" })}
+                      {new Date(o.createdAt).toLocaleDateString("it-IT", { timeZone: "Europe/Rome", day: "2-digit", month: "short" })}
                       {o.expectedDeliveryDate && (
-                        <> · Consegna {new Date(o.expectedDeliveryDate).toLocaleDateString("it-IT", { day: "2-digit", month: "short" })}</>
+                        <> · Consegna {new Date(o.expectedDeliveryDate).toLocaleDateString("it-IT", { timeZone: "Europe/Rome", day: "2-digit", month: "short" })}</>
                       )}
                     </p>
                     <div className="mt-1">

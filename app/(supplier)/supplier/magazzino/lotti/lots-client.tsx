@@ -26,6 +26,7 @@ const MONEY_FMT = new Intl.NumberFormat("it-IT", {
   minimumFractionDigits: 2,
 });
 const DATE_FMT = new Intl.DateTimeFormat("it-IT", {
+  timeZone: "Europe/Rome",
   day: "2-digit",
   month: "2-digit",
   year: "numeric",

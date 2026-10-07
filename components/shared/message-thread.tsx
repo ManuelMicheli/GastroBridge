@@ -66,7 +66,7 @@ export function MessageThread({
 
   function formatTime(iso: string): string {
     const d = new Date(iso);
-    return d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+    return d.toLocaleTimeString("it-IT", { timeZone: "Europe/Rome", hour: "2-digit", minute: "2-digit" });
   }
 
   return (

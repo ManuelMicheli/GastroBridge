@@ -296,7 +296,7 @@ export async function getRevenueChart30Days(
     const d = new Date(today);
     d.setDate(today.getDate() - i);
     const key = isoDate(d);
-    const label = d.toLocaleDateString("it-IT", { day: "2-digit", month: "short" });
+    const label = d.toLocaleDateString("it-IT", { timeZone: "Europe/Rome", day: "2-digit", month: "short" });
     days.push({ day: key, label, value: 0 });
   }
 

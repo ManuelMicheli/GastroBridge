@@ -40,6 +40,7 @@ export function formatDateShort(iso: string): string {
 export function formatDateFull(iso: string): string {
   const date = new Date(`${iso}T00:00:00`);
   return date.toLocaleDateString("it-IT", {
+    timeZone: "Europe/Rome",
     day: "2-digit",
     month: "short",
     year: "numeric",

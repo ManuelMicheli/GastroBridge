@@ -153,7 +153,7 @@ export default async function SupplierDashboardPage() {
       .filter((s) => ordersMap.get(s.order_id)?.created_at?.slice(0, 10) === key)
       .reduce((sum, s) => sum + (s.subtotal || 0), 0);
     chartData.push({
-      label: d.toLocaleDateString("it-IT", { day: "2-digit", month: "short" }),
+      label: d.toLocaleDateString("it-IT", { timeZone: "Europe/Rome", day: "2-digit", month: "short" }),
       value: dayTotal,
     });
   }

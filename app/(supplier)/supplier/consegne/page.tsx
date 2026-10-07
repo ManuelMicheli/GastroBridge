@@ -37,6 +37,7 @@ function formatItalianDate(isoDate: string): string {
   try {
     const d = new Date(`${isoDate}T00:00:00`);
     return d.toLocaleDateString("it-IT", {
+      timeZone: "Europe/Rome",
       weekday: "long",
       day: "2-digit",
       month: "long",

@@ -6,6 +6,7 @@ import { ArrowUpRight, MapPin, MessageCircle, Search, Shield, Star, X } from "lu
 import { RelationshipStatusBadge } from "@/components/ui/relationship-status-badge";
 import { Button } from "@/components/ui/button";
 import { ratingColorClass, type RelationshipRow } from "../_lib/types";
+import { APP_TIME_ZONE } from "@/lib/utils/formatters";
 
 export function SupplierDetailPane({
   relationship,
@@ -188,6 +189,7 @@ function formatDate(iso: string): string {
   try {
     const d = new Date(iso);
     return d.toLocaleDateString("it-IT", {
+      timeZone: APP_TIME_ZONE,
       day: "2-digit",
       month: "short",
       year: "numeric",

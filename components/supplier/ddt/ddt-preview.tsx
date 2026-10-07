@@ -174,7 +174,7 @@ export function DdtPreview({
                     </td>
                     <td className="px-4 py-2 text-sage">
                       {r.expiry_date
-                        ? new Date(r.expiry_date).toLocaleDateString("it-IT")
+                        ? new Date(r.expiry_date).toLocaleDateString("it-IT", { timeZone: "Europe/Rome" })
                         : "—"}
                     </td>
                   </tr>

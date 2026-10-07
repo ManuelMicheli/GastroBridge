@@ -336,7 +336,7 @@ function SpendBarsCard({ points, index }: { points: SpendTrendPoint[]; index: nu
       (best, x) => (best === null || x.value > (days.find((y) => y.key === best)?.value ?? 0) ? x.key : best),
       null,
     );
-    const longDay = (d: Date) => new Intl.DateTimeFormat("it-IT", { weekday: "long", day: "numeric", month: "short" }).format(d);
+    const longDay = (d: Date) => new Intl.DateTimeFormat("it-IT", { timeZone: "Europe/Rome", weekday: "long", day: "numeric", month: "short" }).format(d);
 
     return days.map((x) => {
       if (x.future) {
@@ -399,7 +399,7 @@ function NextDeliveryCard({
   index: number;
 }) {
   const when = delivery
-    ? new Intl.DateTimeFormat("it-IT", { weekday: "long", day: "numeric", month: "long" }).format(
+    ? new Intl.DateTimeFormat("it-IT", { timeZone: "Europe/Rome", weekday: "long", day: "numeric", month: "long" }).format(
         new Date(`${delivery.date}T12:00:00`),
       )
     : null;
@@ -508,7 +508,7 @@ function RecentOrdersCard({ rows, gross, index }: { rows: OrderRow[]; gross: boo
         <ul className="space-y-1">
           {shown.map((o) => {
             const name = o.supplier_name !== "—" ? o.supplier_name : `Ordine ${o.order_number}`;
-            const date = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short" }).format(new Date(o.created_at));
+            const date = new Intl.DateTimeFormat("it-IT", { timeZone: "Europe/Rome", day: "numeric", month: "short" }).format(new Date(o.created_at));
             return (
               <li key={o.id}>
                 <Link

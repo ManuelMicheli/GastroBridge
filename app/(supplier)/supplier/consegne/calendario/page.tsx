@@ -220,13 +220,16 @@ export default async function DeliveryCalendarPage({ searchParams }: PageProps) 
       : new Date(rangeStart.getFullYear(), rangeStart.getMonth() + 1, 1);
 
   const labelMonth = rangeStart.toLocaleDateString("it-IT", {
+    timeZone: "Europe/Rome",
     month: "long",
     year: "numeric",
   });
   const labelWeek = `${rangeStart.toLocaleDateString("it-IT", {
+    timeZone: "Europe/Rome",
     day: "2-digit",
     month: "short",
   })} – ${addDays(rangeStart, 6).toLocaleDateString("it-IT", {
+    timeZone: "Europe/Rome",
     day: "2-digit",
     month: "short",
     year: "numeric",

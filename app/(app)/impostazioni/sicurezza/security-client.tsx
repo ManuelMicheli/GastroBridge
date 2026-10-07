@@ -21,6 +21,7 @@ import {
   Lock,
   ChevronLeft,
 } from "lucide-react";
+import { APP_TIME_ZONE } from "@/lib/utils/formatters";
 
 type Props = {
   email: string;
@@ -38,6 +39,7 @@ function formatRelative(iso: string | null): string {
   if (!Number.isFinite(t)) return "—";
   const d = new Date(t);
   return d.toLocaleString("it-IT", {
+    timeZone: APP_TIME_ZONE,
     day: "2-digit",
     month: "short",
     year: "numeric",

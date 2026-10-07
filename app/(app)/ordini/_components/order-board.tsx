@@ -7,6 +7,7 @@ import { formatCurrency } from "@/lib/utils/formatters";
 import { Avatar, orderTone, riseStyle } from "@/components/fernly/primitives";
 import { cn } from "@/lib/utils/formatters";
 import type { OrderFeedRow } from "../_lib/types";
+import { APP_TIME_ZONE, romeDayDiff } from "@/lib/utils/formatters";
 
 type Column = {
   id: string;
@@ -51,15 +52,11 @@ const PROGRESS: Record<string, number> = {
 function relDay(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const day = new Date(d);
-  day.setHours(0, 0, 0, 0);
-  const diff = Math.round((today.getTime() - day.getTime()) / 86_400_000);
+  const diff = romeDayDiff(d, new Date());
   if (diff === 0) return "Oggi";
   if (diff === 1) return "Ieri";
   if (diff < 7) return `${diff}g fa`;
-  return new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "short" }).format(d);
+  return new Intl.DateTimeFormat("it-IT", { timeZone: APP_TIME_ZONE, day: "numeric", month: "short" }).format(d);
 }
 
 export function OrderBoard({

@@ -2,6 +2,39 @@ import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import type { UnitType } from "@/types/database";
 
+/**
+ * All dates are shown in Italian time. Formatting without an explicit zone
+ * used the runtime's zone: UTC on the server, the browser's zone on the
+ * client — wrong hours on server-rendered pages and hydration mismatches.
+ */
+export const APP_TIME_ZONE = "Europe/Rome";
+
+/** YYYY-MM-DD of `d` in Italian time. */
+export function romeDateKey(d: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: APP_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(d);
+}
+
+/** Hour (0-23) of `d` in Italian time. */
+export function romeHour(d: Date = new Date()): number {
+  return Number(
+    new Intl.DateTimeFormat("en-GB", { timeZone: APP_TIME_ZONE, hour: "2-digit", hourCycle: "h23" }).format(d),
+  );
+}
+
+/** Whole calendar days from `a` to `b` in Italian time (b - a). */
+export function romeDayDiff(a: Date, b: Date): number {
+  const toUtc = (k: string) => {
+    const [y, m, d] = k.split("-").map(Number);
+    return Date.UTC(y!, (m ?? 1) - 1, d ?? 1);
+  };
+  return Math.round((toUtc(romeDateKey(b)) - toUtc(romeDateKey(a))) / 86_400_000);
+}
+
 /** Merge Tailwind classes with conflict resolution */
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -30,6 +63,7 @@ export function formatDate(date: string | Date | null | undefined): string {
   const d = date instanceof Date ? date : new Date(date);
   if (Number.isNaN(d.getTime())) return "—";
   return new Intl.DateTimeFormat("it-IT", {
+    timeZone: APP_TIME_ZONE,
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -42,6 +76,7 @@ export function formatDateTime(date: string | Date | null | undefined): string {
   const d = date instanceof Date ? date : new Date(date);
   if (Number.isNaN(d.getTime())) return "—";
   return new Intl.DateTimeFormat("it-IT", {
+    timeZone: APP_TIME_ZONE,
     day: "numeric",
     month: "short",
     year: "numeric",

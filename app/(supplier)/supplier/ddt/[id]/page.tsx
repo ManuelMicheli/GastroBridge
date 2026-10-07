@@ -227,7 +227,7 @@ export default async function SupplierDdtDetailPage({
             {ddt.canceled_at ? (
               <Badge variant="warning">
                 Annullato il{" "}
-                {new Date(ddt.canceled_at).toLocaleDateString("it-IT")}
+                {new Date(ddt.canceled_at).toLocaleDateString("it-IT", { timeZone: "Europe/Rome" })}
               </Badge>
             ) : (
               <Badge variant="outline">Valido</Badge>
@@ -258,6 +258,7 @@ export default async function SupplierDdtDetailPage({
           </p>
           <p className="mt-1 text-lg font-bold text-charcoal">
             {new Date(ddt.issued_at).toLocaleDateString("it-IT", {
+              timeZone: "Europe/Rome",
               day: "2-digit",
               month: "long",
               year: "numeric",

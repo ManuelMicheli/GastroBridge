@@ -108,6 +108,7 @@ export function DeliveryCalendar({
                           className={`mt-0.5 text-[13px] font-semibold normal-case tracking-normal ${isToday ? "text-[var(--acc-700)]" : "text-[var(--f-ink)]"}`}
                         >
                           {date.toLocaleDateString("it-IT", {
+                            timeZone: "Europe/Rome",
                             day: "2-digit",
                             month: "2-digit",
                           })}

@@ -160,11 +160,11 @@ export function StaffClient({ supplierId: _supplierId, initialMembers }: Props) 
               </div>
               <p className="text-xs text-sage mt-1">
                 Invitato:{" "}
-                {new Date(m.invited_at).toLocaleDateString("it-IT")}
+                {new Date(m.invited_at).toLocaleDateString("it-IT", { timeZone: "Europe/Rome" })}
                 {m.accepted_at
                   ? ` · Accettato: ${new Date(
                       m.accepted_at,
-                    ).toLocaleDateString("it-IT")}`
+                    ).toLocaleDateString("it-IT", { timeZone: "Europe/Rome" })}`
                   : ""}
               </p>
             </div>
