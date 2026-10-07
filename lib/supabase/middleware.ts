@@ -44,6 +44,14 @@ function isProtectedPath(pathname: string): boolean {
   );
 }
 
+// Send anonymous users to /login, remembering where they were going.
+function loginRedirect(request: NextRequest): NextResponse {
+  const url = new URL("/login", request.url);
+  const { pathname, search } = request.nextUrl;
+  if (pathname !== "/") url.searchParams.set("redirect", pathname + search);
+  return NextResponse.redirect(url);
+}
+
 function isPublicTokenRoute(pathname: string): boolean {
   // Plan 1C Task 11: ordini/[id]/conferma uses HMAC in querystring as
   // credential — must be reachable without session.
@@ -60,7 +68,7 @@ export async function updateSession(request: NextRequest) {
   // The vast majority of asset requests in a session land here.
   if (!cookiePresent && !authRoute) {
     if (protectedRoute && !isPublicTokenRoute(pathname)) {
-      return NextResponse.redirect(new URL("/login", request.url));
+      return loginRedirect(request);
     }
     return NextResponse.next({ request });
   }
@@ -93,7 +101,7 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (!user && protectedRoute && !isPublicTokenRoute(pathname)) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return loginRedirect(request);
   }
 
   if (user && isMfaRequired(pathname)) {

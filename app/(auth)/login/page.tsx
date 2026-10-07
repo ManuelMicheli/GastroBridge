@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signIn, signInWithGoogle, signInWithMagicLink } from "../actions";
@@ -32,8 +32,16 @@ function GoogleIcon() {
   );
 }
 
-export default function LoginPage() {
+export default function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const router = useRouter();
+  // Page the user was sent away from (set by middleware / invite links).
+  // Validated server-side (lib/auth/redirect.ts).
+  const { redirect: redirectParam } = use(searchParams);
+  const redirectTo = Array.isArray(redirectParam) ? redirectParam[0] : redirectParam;
   const [isLoading, setIsLoading] = useState(false);
   const [showMagicLink, setShowMagicLink] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +49,7 @@ export default function LoginPage() {
   async function handleSubmit(formData: FormData) {
     setIsLoading(true);
     setError(null);
+    if (redirectTo) formData.set("redirect", redirectTo);
     const result = await signIn(formData);
     if (result?.error) {
       setError(result.error);
@@ -54,6 +63,7 @@ export default function LoginPage() {
   async function handleMagicLink(formData: FormData) {
     setIsLoading(true);
     setError(null);
+    if (redirectTo) formData.set("redirect", redirectTo);
     const result = await signInWithMagicLink(formData);
     if (result?.message) {
       toast(result.message);
@@ -62,7 +72,7 @@ export default function LoginPage() {
   }
 
   async function handleGoogleSignIn() {
-    const result = await signInWithGoogle();
+    const result = await signInWithGoogle(redirectTo ?? null);
     if (result?.error) {
       toast(result.error);
     }
