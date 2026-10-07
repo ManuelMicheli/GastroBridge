@@ -158,3 +158,22 @@ export function renderTemplate(
     }
   }
 }
+
+/**
+ * Team invite for a user who already has a GastroBridge account (new users
+ * get Supabase's own invite email). The link goes through /login with a
+ * redirect, so it works with the normal sign-in flow.
+ */
+export function renderTeamInviteEmail(input: {
+  companyName: string;
+  roleLabel: string;
+  url: string;
+}): { subject: string; html: string; text: string } {
+  const title = `Sei stato invitato nel team di ${input.companyName}`;
+  const body = `Ti hanno aggiunto al team di ${input.companyName} su GastroBridge con il ruolo ${input.roleLabel}. Accedi con il tuo account per accettare l'invito.`;
+  return {
+    subject: title,
+    html: layout(title, `<p>${escapeHtml(body)}</p>`, { label: "Accetta invito", url: input.url }),
+    text: `${body}\n\n${input.url}`,
+  };
+}

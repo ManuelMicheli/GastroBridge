@@ -10,12 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Send } from "lucide-react";
 import { inviteMember } from "@/lib/supplier/staff/actions";
 import type { SupplierRole } from "@/types/database";
+import { ROLE_LABELS } from "@/lib/supplier/permissions";
 
 const ROLE_OPTIONS: { value: SupplierRole; label: string }[] = [
-  { value: "sales", label: "Sales — gestisce clienti e listini" },
-  { value: "warehouse", label: "Magazzino — gestisce catalogo e stock" },
-  { value: "driver", label: "Driver — consegne e logistica" },
-  { value: "admin", label: "Admin — accesso completo" },
+  { value: "sales", label: `${ROLE_LABELS.sales} — gestisce clienti e listini` },
+  { value: "warehouse", label: `${ROLE_LABELS.warehouse} — gestisce catalogo e stock` },
+  { value: "driver", label: `${ROLE_LABELS.driver} — consegne e logistica` },
+  { value: "admin", label: `${ROLE_LABELS.admin} — accesso completo` },
 ];
 
 export function InviteForm({ supplierId }: { supplierId: string }) {

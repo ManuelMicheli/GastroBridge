@@ -21,6 +21,7 @@ import {
   revokeInvite,
 } from "@/lib/supplier/staff/actions";
 import type { Database, SupplierRole } from "@/types/database";
+import { ROLE_LABELS } from "@/lib/supplier/permissions";
 
 type MemberRow = Database["public"]["Tables"]["supplier_members"]["Row"];
 
@@ -36,19 +37,11 @@ type Props = {
   initialMembers: MemberWithProfile[];
 };
 
-const ROLE_OPTIONS: { value: SupplierRole; label: string }[] = [
-  { value: "admin", label: "Admin" },
-  { value: "sales", label: "Sales" },
-  { value: "warehouse", label: "Magazzino" },
-  { value: "driver", label: "Driver" },
-];
+const ROLE_LABEL: Record<SupplierRole, string> = ROLE_LABELS;
 
-const ROLE_LABEL: Record<SupplierRole, string> = {
-  admin: "Admin",
-  sales: "Sales",
-  warehouse: "Magazzino",
-  driver: "Driver",
-};
+const ROLE_OPTIONS: { value: SupplierRole; label: string }[] = (
+  ["admin", "sales", "warehouse", "driver"] as const
+).map((value) => ({ value, label: ROLE_LABELS[value] }));
 
 function memberStatus(m: MemberWithProfile): {
   label: string;
