@@ -33,30 +33,27 @@ function isoToday(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+// Load tints (Fernly calendar chips): semantic, not accent-driven.
+const TINT = {
+  idle: "bg-[var(--f-fill)] border-transparent text-[var(--f-muted)]",
+  ok: "bg-[#E3F4EA] border-transparent text-[#1D6B42]",
+  busy: "bg-[#FDF1DC] border-transparent text-[#9A5B0C]",
+  full: "bg-[#FCE7E7] border-transparent text-[#A42525]",
+} as const;
+
 function cellColor(used: number, capacity: number): string {
-  if (capacity === 0) {
-    return used > 0
-      ? "bg-accent-amber/10 border-accent-amber/30 text-text-primary"
-      : "bg-surface-base border-border-subtle text-text-secondary";
-  }
+  if (capacity === 0) return used > 0 ? TINT.busy : TINT.idle;
   const ratio = used / capacity;
-  if (ratio >= 1) {
-    return "bg-accent-red/15 border-accent-red/40 text-text-primary";
-  }
-  if (ratio >= 0.8) {
-    return "bg-accent-amber/15 border-accent-amber/40 text-text-primary";
-  }
-  if (used > 0) {
-    return "bg-accent-green/15 border-accent-green/40 text-text-primary";
-  }
-  return "bg-surface-base border-border-subtle text-text-secondary";
+  if (ratio >= 1) return TINT.full;
+  if (ratio >= 0.8) return TINT.busy;
+  if (used > 0) return TINT.ok;
+  return TINT.idle;
 }
 
-function monthCellColor(count: number): string {
-  if (count === 0) return "bg-surface-card border-border-subtle text-text-secondary";
-  if (count >= 10) return "bg-accent-red/25 border-accent-red/50 text-text-primary";
-  if (count >= 5) return "bg-accent-amber/25 border-accent-amber/50 text-text-primary";
-  return "bg-accent-green/20 border-accent-green/50 text-text-primary";
+function monthChip(count: number): string {
+  if (count >= 10) return TINT.full;
+  if (count >= 5) return TINT.busy;
+  return TINT.ok;
 }
 
 function drillHref(dateIso: string): string {
@@ -76,7 +73,7 @@ export function DeliveryCalendar({
   if (view === "week") {
     const weekDays = days.slice(0, 7);
     return (
-      <div className="rounded-xl border border-border-subtle bg-surface-card overflow-hidden">
+      <div className="f-card f-rise overflow-hidden">
         {slots.length === 0 ? (
           <div className="p-8 text-center text-sm text-text-secondary">
             Nessuno slot orario configurato. Aggiungi gli slot dalle{" "}
@@ -93,7 +90,7 @@ export function DeliveryCalendar({
             <table className="w-full border-collapse">
               <thead>
                 <tr>
-                  <th className="sticky left-0 z-10 bg-surface-card border-b border-r border-border-subtle px-3 py-2 text-left text-xs font-medium text-text-secondary w-32">
+                  <th className="sticky left-0 z-10 w-32 bg-[var(--f-card)] px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--f-muted)]">
                     Slot
                   </th>
                   {weekDays.map((d, i) => {
@@ -102,13 +99,13 @@ export function DeliveryCalendar({
                     return (
                       <th
                         key={d}
-                        className={`border-b border-border-subtle px-2 py-2 text-center text-xs font-medium min-w-[110px] ${
-                          isToday ? "text-accent-green" : "text-text-secondary"
+                        className={`min-w-[110px] px-2 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.08em] ${
+                          isToday ? "text-[var(--acc-700)]" : "text-[var(--f-muted)]"
                         }`}
                       >
                         <div>{DOW_LABEL[i]}</div>
                         <div
-                          className={`text-sm font-semibold ${isToday ? "text-accent-green" : "text-text-primary"}`}
+                          className={`mt-0.5 text-[13px] font-semibold normal-case tracking-normal ${isToday ? "text-[var(--acc-700)]" : "text-[var(--f-ink)]"}`}
                         >
                           {date.toLocaleDateString("it-IT", {
                             day: "2-digit",
@@ -125,7 +122,7 @@ export function DeliveryCalendar({
                   const slotKey = `${slot.from}-${slot.to}`;
                   return (
                     <tr key={slotKey}>
-                      <td className="sticky left-0 z-10 bg-surface-card border-b border-r border-border-subtle px-3 py-3 align-top">
+                      <td className="sticky left-0 z-10 bg-[var(--f-card)] px-4 py-2 align-top">
                         <div className="text-sm font-medium text-text-primary">
                           {slot.label}
                         </div>
@@ -145,11 +142,11 @@ export function DeliveryCalendar({
                         return (
                           <td
                             key={d}
-                            className="border-b border-r border-border-subtle p-1 align-top"
+                            className="p-1 align-top"
                           >
                             <Link
                               href={drillHref(d)}
-                              className={`block rounded-md border px-2 py-2 text-center transition-all hover:brightness-125 ${color}`}
+                              className={`block rounded-[12px] border px-2 py-2.5 text-center transition-[transform,opacity] hover:opacity-85 ${color}`}
                             >
                               <div className="text-sm font-semibold">
                                 {used}
@@ -180,56 +177,52 @@ export function DeliveryCalendar({
   const monthNum = monthDate.getMonth();
 
   return (
-    <div className="rounded-xl border border-border-subtle bg-surface-card overflow-hidden">
-      <div className="grid grid-cols-7 border-b border-border-subtle">
+    <div className="f-card f-rise p-4 sm:p-5">
+      <div className="grid grid-cols-7 gap-1.5 pb-1.5">
         {DOW_LABEL.map((d) => (
           <div
             key={d}
-            className="px-3 py-2 text-center text-xs font-medium text-text-secondary"
+            className="text-center text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--f-muted)]"
           >
             {d}
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-7">
-        {days.map((d) => {
+      <div className="grid grid-cols-7 gap-1.5">
+        {days.map((d, i) => {
           const date = parseDate(d);
           const count = counts[d] ?? 0;
           const inMonth = date.getMonth() === monthNum;
           const isToday = d === today;
-          const color = monthCellColor(count);
           return (
             <Link
               key={d}
               href={drillHref(d)}
-              className={`min-h-[90px] border-b border-r border-border-subtle p-2 transition-all hover:brightness-125 ${color} ${
-                !inMonth ? "opacity-40" : ""
-              }`}
+              style={{ ["--i" as string]: Math.floor(i / 7) * 0.6 }}
+              className={`f-fade flex min-h-[92px] flex-col gap-1.5 rounded-[12px] p-2 transition-opacity hover:opacity-85 ${
+                inMonth ? "bg-[var(--f-fill)]" : "bg-transparent opacity-50"
+              } ${isToday ? "!bg-[var(--f-card)] ring-[1.5px] ring-[var(--acc-600)]" : ""}`}
             >
-              <div className="flex items-start justify-between">
-                <span
-                  className={`text-sm font-semibold ${
-                    isToday
-                      ? "inline-flex h-6 w-6 items-center justify-center rounded-full bg-accent-green text-surface-base"
-                      : "text-text-primary"
-                  }`}
-                >
-                  {dayNum(d)}
-                </span>
-                {count > 0 && (
-                  <span className="text-xs font-medium text-text-primary bg-surface-base/60 rounded-full px-2 py-0.5 border border-border-subtle">
-                    {count}
-                  </span>
-                )}
-              </div>
+              <span
+                className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-[12.5px] font-semibold tabular-nums ${
+                  isToday ? "bg-[var(--acc-700)] text-white" : "text-[var(--f-ink)]"
+                }`}
+              >
+                {dayNum(d)}
+              </span>
               {count > 0 && (
-                <div className="mt-1 text-[11px] text-text-secondary">
-                  {count === 1 ? "consegna" : "consegne"}
-                </div>
+                <span className={`block truncate rounded-[6px] border px-1.5 py-[3px] text-[11px] font-medium ${monthChip(count)}`}>
+                  {count} {count === 1 ? "consegna" : "consegne"}
+                </span>
               )}
             </Link>
           );
         })}
+      </div>
+      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12px] text-[var(--f-muted)]">
+        <span className="inline-flex items-center gap-1.5"><span aria-hidden className="h-2 w-2 rounded-full bg-[#2E9463]" />1–4 consegne</span>
+        <span className="inline-flex items-center gap-1.5"><span aria-hidden className="h-2 w-2 rounded-full bg-[#D99A2B]" />5–9</span>
+        <span className="inline-flex items-center gap-1.5"><span aria-hidden className="h-2 w-2 rounded-full bg-[#DC4B4B]" />10+</span>
       </div>
     </div>
   );

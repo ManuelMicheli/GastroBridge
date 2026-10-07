@@ -1,7 +1,14 @@
 // app/(app)/cataloghi/_lib/aggregates.ts
 //
 // Pure helpers to compute per-catalog aggregates for the Stack Gallery.
-// Stays dependency-free so it can run on either server or client.
+// Runs on either server or client (only depends on the pure keyword
+// classifier used by analytics).
+
+import {
+  inferCategory,
+  MACRO_CATEGORY_LABELS,
+  type MacroCategory,
+} from "@/lib/analytics/category-keywords";
 
 export type CatalogItemLite = {
   product_name: string;
@@ -17,6 +24,8 @@ export type CatalogAggregates = {
   priceMedian: number | null;
   /** Top 3 proxy "categories" derived from first word of product_name. */
   topCategories: Array<{ label: string; count: number }>;
+  /** Macro categories (same classifier as analytics), most frequent first. */
+  macroCategories: Array<{ category: MacroCategory; label: string; count: number }>;
 };
 
 const EMPTY: CatalogAggregates = {
@@ -26,6 +35,7 @@ const EMPTY: CatalogAggregates = {
   priceAvg: null,
   priceMedian: null,
   topCategories: [],
+  macroCategories: [],
 };
 
 /**
@@ -37,6 +47,7 @@ export function computeAggregates(items: CatalogItemLite[]): CatalogAggregates {
 
   const prices: number[] = [];
   const categoryMap = new Map<string, number>();
+  const macroMap = new Map<MacroCategory, number>();
 
   for (const it of items) {
     const p = Number(it.price);
@@ -44,13 +55,21 @@ export function computeAggregates(items: CatalogItemLite[]): CatalogAggregates {
 
     const cat = firstWord(it.product_name);
     if (cat) categoryMap.set(cat, (categoryMap.get(cat) ?? 0) + 1);
+
+    const macro = inferCategory(it.product_name ?? "");
+    macroMap.set(macro, (macroMap.get(macro) ?? 0) + 1);
   }
+
+  const macroCategories = [...macroMap.entries()]
+    .map(([category, count]) => ({ category, label: MACRO_CATEGORY_LABELS[category], count }))
+    .sort((a, b) => (a.category === "altro" ? 1 : 0) - (b.category === "altro" ? 1 : 0) || b.count - a.count);
 
   if (prices.length === 0) {
     return {
       ...EMPTY,
       itemCount: items.length,
       topCategories: rankCategories(categoryMap),
+      macroCategories,
     };
   }
 
@@ -68,6 +87,7 @@ export function computeAggregates(items: CatalogItemLite[]): CatalogAggregates {
     priceAvg: avg,
     priceMedian: median,
     topCategories: rankCategories(categoryMap),
+    macroCategories,
   };
 }
 

@@ -20,16 +20,16 @@ export function CommandItem({ item, isSelected, onSelect }: Props) {
       onClick={onSelect}
       onMouseEnter={(e) => e.currentTarget.focus()}
       className={cn(
-        "flex items-center gap-3 w-full px-4 py-2.5 text-left text-sm transition-colors",
+        "mx-2 flex w-[calc(100%-16px)] items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[14px] transition-colors",
         isSelected
-          ? "bg-surface-hover text-text-primary"
-          : "text-text-secondary hover:bg-surface-hover hover:text-text-primary"
+          ? "bg-[var(--acc-50)] text-[var(--f-ink)]"
+          : "text-[var(--f-ink-2)] hover:bg-[var(--f-fill)] hover:text-[var(--f-ink)]"
       )}
     >
-      <SectionIcon className="h-4 w-4 shrink-0 text-text-tertiary" />
+      <SectionIcon className={cn("h-4 w-4 shrink-0", isSelected ? "text-[var(--acc-600)]" : "text-[var(--f-faint)]")} />
       <span className="flex-1 truncate">{item.label}</span>
       {isSelected && (
-        <ArrowRight className="h-3.5 w-3.5 text-text-tertiary" />
+        <ArrowRight className="h-3.5 w-3.5 text-[var(--acc-600)]" />
       )}
     </button>
   );

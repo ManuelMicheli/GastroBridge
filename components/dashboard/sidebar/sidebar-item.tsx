@@ -6,9 +6,10 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils/formatters";
 import { useSidebar } from "./sidebar-provider";
 import { resolveIcon } from "../icons";
-import { Badge, type BadgeVariant } from "@/components/ui/badge";
+import type { BadgeVariant } from "@/components/ui/badge";
 import { useSupplierRealtime } from "@/lib/realtime/supplier-provider";
 import type { Badges } from "@/lib/realtime/supplier-provider";
+import { useCartOptional } from "@/lib/hooks/useCart";
 
 export type NavItem = {
   href: string;
@@ -59,7 +60,10 @@ function SidebarItemBase({ href, label, iconName, badge, role, allHrefs }: Sideb
   const badgeKey = isSupplier ? pickBadgeKey(href) : null;
   const liveBadge =
     realtime && badgeKey ? realtime.badges[badgeKey] : undefined;
-  const effectiveBadge = liveBadge !== undefined ? liveBadge : badge;
+  // Restaurant cart: live item count from the cart context.
+  const cart = useCartOptional();
+  const cartBadge = !isSupplier && href === "/carrello" && cart ? cart.totalItems : undefined;
+  const effectiveBadge = liveBadge !== undefined ? liveBadge : cartBadge !== undefined ? cartBadge : badge;
 
   const prevBadge = useRef(effectiveBadge ?? 0);
   const [pulseKey, setPulseKey] = useState(0);
@@ -84,41 +88,30 @@ function SidebarItemBase({ href, label, iconName, badge, role, allHrefs }: Sideb
       onMouseEnter={primeRoute}
       onTouchStart={primeRoute}
       onFocus={primeRoute}
+      data-active={isActive}
+      aria-current={isActive ? "page" : undefined}
       className={cn(
-        "group relative flex items-center gap-3 rounded-xl text-sm font-medium transition-colors duration-150",
-        isCollapsed ? "justify-center px-3 py-2.5" : "px-3 py-2.5",
+        "group relative flex h-10 items-center gap-3 rounded-xl text-[14.5px] transition-colors duration-150",
+        isCollapsed ? "justify-center px-3" : "px-3",
         isActive
-          ? isSupplier
-            ? "bg-brand-primary-subtle text-brand-primary"
-            : "bg-accent-green-muted text-accent-green"
-          : "text-text-secondary hover:text-text-primary hover:bg-surface-hover",
+          ? "font-semibold text-[var(--f-ink)]"
+          : "font-medium text-[var(--f-muted)] hover:text-[var(--f-ink)]",
       )}
       title={isCollapsed ? label : undefined}
     >
-      {isActive && (
-        <span
-          aria-hidden
-          className={cn(
-            "absolute left-0 top-1/2 -translate-y-1/2 h-5 rounded-r-full",
-            isSupplier
-              ? "w-0.5 bg-brand-primary dark:[box-shadow:var(--glow-brand)]"
-              : "w-[3px] bg-accent-green [box-shadow:var(--glow-forest-strong)]",
-          )}
-        />
-      )}
-
       <div className="relative shrink-0">
         <Icon
           className={cn(
-            "h-5 w-5 transition-colors duration-150",
-            isSupplier && !isActive && "group-hover:text-brand-primary",
+            "h-[19px] w-[19px] transition-colors duration-150",
+            isActive ? "text-[var(--acc-600)]" : "group-hover:text-[var(--f-ink)]",
           )}
+          strokeWidth={isActive ? 2 : 1.75}
         />
         {badgeVisible && isCollapsed && (
           <span
             key={`dot-${pulseKey}`}
             aria-label={`${effectiveBadge} avvisi`}
-            className="rt-badge-pulse absolute -top-1 -right-1 h-2 w-2 rounded-full bg-accent-red shadow-[0_0_0_2px_var(--surface-base,#0b0b0b)]"
+            className="rt-badge-pulse absolute -top-1 -right-1 h-2 w-2 rounded-full bg-[var(--acc-800)] ring-2 ring-[var(--f-panel)]"
           />
         )}
       </div>
@@ -133,29 +126,18 @@ function SidebarItemBase({ href, label, iconName, badge, role, allHrefs }: Sideb
       </span>
 
       {badgeVisible && !isCollapsed && (
-        isSupplier ? (
-          <span
-            key={`b-${pulseKey}`}
-            className="rt-badge-pulse ml-auto"
-            aria-label={`${effectiveBadge} avvisi`}
-          >
-            <Badge variant={pickSupplierBadgeVariant(href)} size="xs" mono>
-              {(effectiveBadge ?? 0) > 99 ? "99+" : effectiveBadge}
-            </Badge>
-          </span>
-        ) : (
-          <span
-            key={`b-${pulseKey}`}
-            aria-label={`${effectiveBadge} avvisi`}
-            className="rt-badge-pulse ml-auto inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-accent-red px-1.5 py-0.5 text-[0.625rem] font-semibold leading-none text-white"
-          >
-            {(effectiveBadge ?? 0) > 99 ? "99+" : effectiveBadge}
-          </span>
-        )
+        <span
+          key={`b-${pulseKey}`}
+          aria-label={`${effectiveBadge} avvisi`}
+          data-variant={isSupplier ? pickSupplierBadgeVariant(href) : "brand"}
+          className="rt-badge-pulse ml-auto inline-flex h-5 min-w-[22px] items-center justify-center rounded-[6px] bg-[var(--acc-900)] px-1.5 text-[11px] font-semibold leading-none text-white tabular-nums"
+        >
+          {(effectiveBadge ?? 0) > 99 ? "99+" : effectiveBadge}
+        </span>
       )}
 
       {isCollapsed && (
-        <div className="absolute left-full ml-2 px-2.5 py-1.5 rounded-lg bg-surface-elevated border border-border-default text-xs text-text-primary opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity whitespace-nowrap z-50 shadow-elevated-dark">
+        <div className="pointer-events-none absolute left-full z-50 ml-3 whitespace-nowrap rounded-full bg-[var(--f-ink)] px-3 py-1.5 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
           {label}
         </div>
       )}

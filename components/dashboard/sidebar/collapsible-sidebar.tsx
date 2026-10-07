@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
-import { motion } from "motion/react";
-import { PanelLeftClose, PanelLeft } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { LogOut, PanelLeftClose, PanelLeft } from "lucide-react";
 import { useSidebar } from "./sidebar-provider";
 import { SidebarItem, type NavItem } from "./sidebar-item";
-import { SidebarUserCard } from "./sidebar-user-card";
 import { IdlePrefetch } from "@/components/shared/idle-prefetch";
+import { signOut } from "@/app/(auth)/actions";
+import { BrandMark, BrandWordmark } from "@/components/fernly/brand-mark";
+import { InstallPromo } from "@/components/fernly/install-promo";
+import { cn } from "@/lib/utils/formatters";
 
 type Props = {
   navItems: NavItem[];
@@ -16,111 +19,148 @@ type Props = {
   userEmail: string;
 };
 
-export function CollapsibleSidebar({ navItems, role, companyName, userEmail }: Props) {
-  const { isCollapsed, toggle } = useSidebar();
+/** Uppercase group label: the unnamed first group is "MENU". */
+function groupLabel(section: string): string {
+  return section === "main" ? "Menu" : section;
+}
 
+/**
+ * Fernly sidebar — floating panel with logo, uppercase group labels, line
+ * icons, an accent bar that slides to the active item, and the install promo
+ * at the bottom. Ctrl/⌘+B still collapses it to an icon rail.
+ */
+export function CollapsibleSidebar({ navItems, role }: Props) {
+  const { isCollapsed, toggle } = useSidebar();
+  const pathname = usePathname();
   const homeHref = role === "supplier" ? "/supplier/dashboard" : "/dashboard";
 
-  // Group items by section
-  const sections: Record<string, NavItem[]> = {};
-  for (const item of navItems) {
-    const section = item.section || "main";
-    if (!sections[section]) sections[section] = [];
-    sections[section]!.push(item);
-  }
+  const sections = useMemo(() => {
+    const out: Record<string, NavItem[]> = {};
+    for (const item of navItems) {
+      const section = item.section || "main";
+      (out[section] ??= []).push(item);
+    }
+    return out;
+  }, [navItems]);
 
   const prefetchHrefs = useMemo(() => navItems.map((n) => n.href), [navItems]);
 
-  return (
-    <motion.aside
-      animate={{ width: isCollapsed ? 72 : 256 }}
-      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-      className="hidden lg:flex flex-col bg-surface-sidebar border-r border-border-subtle h-screen sticky top-0 overflow-hidden z-30"
-    >
-      {/* Logo */}
-      <div className="flex items-center justify-between p-4 h-16 border-b border-border-subtle">
-        <Link href={homeHref} className="flex items-center gap-1 overflow-hidden">
-          {isCollapsed ? (
-            <>
-              <span className="text-lg font-bold text-accent-green tracking-tight">GB</span>
-              {role === "supplier" && (
-                <span className="font-display text-lg text-brand-primary">.</span>
-              )}
-            </>
-          ) : (
-            <>
-              <span className="text-lg font-display text-text-primary">Gastro</span>
-              <span className="text-lg font-bold text-accent-green">Bridge</span>
-              {role === "supplier" && (
-                <span className="font-display text-lg text-brand-primary">.</span>
-              )}
-            </>
-          )}
-        </Link>
+  // Sliding active indicator — measured from the item SidebarItem marks with
+  // data-active (the active-route logic lives in SidebarItem).
+  const asideRef = useRef<HTMLElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const [bar, setBar] = useState<{ y: number; visible: boolean }>({ y: 0, visible: false });
 
+  const measure = useCallback(() => {
+    const aside = asideRef.current;
+    const nav = navRef.current;
+    if (!aside || !nav) return;
+    const active = nav.querySelector<HTMLElement>('[data-active="true"]');
+    if (!active) return setBar((b) => ({ ...b, visible: false }));
+    const a = aside.getBoundingClientRect();
+    const r = active.getBoundingClientRect();
+    setBar({ y: r.top - a.top + r.height / 2 - 12, visible: true });
+  }, []);
+
+  useLayoutEffect(() => {
+    measure();
+    const id = window.setTimeout(measure, 280); // after the width animation
+    const nav = navRef.current;
+    nav?.addEventListener("scroll", measure, { passive: true });
+    window.addEventListener("resize", measure);
+    return () => {
+      window.clearTimeout(id);
+      nav?.removeEventListener("scroll", measure);
+      window.removeEventListener("resize", measure);
+    };
+  }, [pathname, isCollapsed, measure, navItems]);
+
+  return (
+    <aside
+      ref={asideRef}
+      className={cn(
+        "relative z-30 hidden shrink-0 flex-col lg:flex",
+        "sticky top-2.5 h-[calc(100vh-20px)] rounded-[24px] bg-[var(--f-panel)]",
+        "transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+        isCollapsed ? "w-[84px]" : "w-[248px]",
+      )}
+    >
+      {/* Active indicator glued to the panel's left edge */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute left-0 top-0 h-6 w-[3px] rounded-r-full bg-[var(--acc-600)] transition-[transform,opacity] duration-[380ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+        style={{ transform: `translateY(${bar.y}px)`, opacity: bar.visible ? 1 : 0 }}
+      />
+
+      {/* Logo */}
+      <div className={cn("group/logo flex h-[72px] items-center px-5", isCollapsed ? "justify-center px-0" : "justify-between")}>
+        <Link href={homeHref} className="flex items-center gap-2.5 overflow-hidden" aria-label="GastroBridge — Dashboard">
+          <BrandMark />
+          {!isCollapsed && <BrandWordmark />}
+        </Link>
         {!isCollapsed && (
           <button
             onClick={toggle}
-            className="p-1.5 rounded-lg text-text-tertiary hover:text-text-secondary hover:bg-surface-hover transition-colors"
+            className="rounded-full p-1.5 text-[var(--f-faint)] opacity-0 transition-opacity hover:bg-[var(--f-fill-2)] hover:text-[var(--f-ink)] focus-visible:opacity-100 group-hover/logo:opacity-100"
             title="Comprimi sidebar (Ctrl+B)"
+            aria-label="Comprimi sidebar"
           >
             <PanelLeftClose className="h-4 w-4" />
           </button>
         )}
       </div>
-
-      {/* Collapsed toggle */}
       {isCollapsed && (
-        <div className="flex justify-center py-2">
+        <div className="flex justify-center pb-1">
           <button
             onClick={toggle}
-            className="p-1.5 rounded-lg text-text-tertiary hover:text-text-secondary hover:bg-surface-hover transition-colors"
+            className="rounded-full p-1.5 text-[var(--f-faint)] hover:bg-[var(--f-fill-2)] hover:text-[var(--f-ink)]"
             title="Espandi sidebar (Ctrl+B)"
+            aria-label="Espandi sidebar"
           >
             <PanelLeft className="h-4 w-4" />
           </button>
         </div>
       )}
 
-      {/* Role badge */}
-      {!isCollapsed && (
-        <div className="px-4 py-2">
-          {role === "supplier" ? (
-            <span className="inline-flex items-center rounded-full border border-brand-primary-border bg-brand-primary-subtle px-2 py-0.5 text-[10px] uppercase tracking-[0.18em] font-semibold text-brand-depth">
-              Area Fornitore
-            </span>
-          ) : (
-            <span className="text-[10px] uppercase tracking-widest font-bold text-text-tertiary">
-              Area Ristorante
-            </span>
-          )}
-        </div>
-      )}
-
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
+      <nav ref={navRef} className="f-scroll flex-1 overflow-y-auto overflow-x-hidden px-3 pb-3" aria-label="Navigazione">
         {Object.entries(sections).map(([section, items], sIdx) => (
-          <div key={section}>
-            {sIdx > 0 && (
-              <div className="my-3 border-t border-border-subtle" />
+          <div key={section} className={cn(sIdx > 0 && "mt-5")}>
+            {isCollapsed ? (
+              sIdx > 0 ? <div className="mx-3 mb-3 border-t border-[var(--f-line)]" /> : null
+            ) : (
+              <p className="f-eyebrow mb-1.5 px-3 !font-medium !tracking-[0.1em] !text-[var(--f-faint)]">{groupLabel(section)}</p>
             )}
-            {section !== "main" && !isCollapsed && (
-              <p className="px-3 mb-1.5 text-[10px] uppercase tracking-widest font-bold text-text-tertiary">
-                {section}
-              </p>
-            )}
-            {items.map((item) => (
-              <SidebarItem key={item.href} {...item} role={role} allHrefs={prefetchHrefs} />
-            ))}
+            <div className="space-y-0.5">
+              {items.map((item) => (
+                <SidebarItem key={item.href} {...item} role={role} allHrefs={prefetchHrefs} />
+              ))}
+              {/* Logout lives at the end of the last group, like the reference */}
+              {sIdx === Object.keys(sections).length - 1 && (
+                <form action={signOut}>
+                  <button
+                    type="submit"
+                    title={isCollapsed ? "Esci" : undefined}
+                    className={cn(
+                      "group flex h-10 w-full items-center gap-3 rounded-xl px-3 text-[14.5px] font-medium text-[var(--f-muted)] transition-colors hover:text-[var(--f-ink)]",
+                      isCollapsed && "justify-center",
+                    )}
+                  >
+                    <LogOut className="h-[19px] w-[19px] shrink-0" strokeWidth={1.75} />
+                    {!isCollapsed && <span>Esci</span>}
+                  </button>
+                </form>
+              )}
+            </div>
           </div>
         ))}
       </nav>
 
-      {/* User card */}
-      <SidebarUserCard companyName={companyName} userEmail={userEmail} role={role} />
+      <div className={cn("p-3", isCollapsed && "pb-4")}>
+        <InstallPromo collapsed={isCollapsed} />
+      </div>
 
-      {/* Warm RSC router cache for every top-level section in the background. */}
       <IdlePrefetch hrefs={prefetchHrefs} />
-    </motion.aside>
+    </aside>
   );
 }

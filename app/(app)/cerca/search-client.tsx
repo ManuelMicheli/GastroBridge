@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { BookMarked, Filter, Keyboard, ShoppingCart } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { Chips } from "@/components/fernly/chips";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
   rankOffers,
@@ -332,10 +333,7 @@ export function SearchPageClient({
           icon={BookMarked}
           context="page"
           action={
-            <Link
-              href="/cataloghi"
-              className="inline-flex rounded-lg bg-brand-primary px-4 py-2 font-medium text-brand-on-primary transition-colors hover:bg-brand-primary-hover"
-            >
+            <Link href="/cataloghi" className="f-btn f-btn-primary">
               Vai ai cataloghi
             </Link>
           }
@@ -345,7 +343,7 @@ export function SearchPageClient({
   }
 
   return (
-    <div className="flex h-[calc(100vh-var(--chrome-top,64px))] flex-col">
+    <div className="flex h-[calc(100vh-var(--chrome-top,64px)-24px)] flex-col">
       {/* Mobile compact tab strip */}
       <div className="flex items-center justify-between gap-2 px-3 pt-2 pb-1 lg:hidden">
         <TabSwitch tab={tab} onChange={setTab} />
@@ -366,32 +364,39 @@ export function SearchPageClient({
       </div>
 
       {/* Desktop header */}
-      <div className="hidden lg:flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle px-4 py-3">
-        <PageHeader title="Cerca prodotti" subtitle={`${suppliers.length} cataloghi`} />
-        <div className="flex items-center gap-2">
-          <TabSwitch tab={tab} onChange={setTab} />
-          <CartChip count={totalItems} total={totalAmount} />
-          <button
-            onClick={() => setHelpOpen(true)}
-            className="hidden items-center gap-1 rounded-lg border border-border-subtle px-2 py-1.5 font-mono text-[10px] uppercase tracking-wide text-text-tertiary hover:bg-surface-hover md:inline-flex"
-            title="Scorciatoie"
-          >
-            <Keyboard className="h-3.5 w-3.5" /> ?
-          </button>
-        </div>
+      <div className="hidden lg:block">
+        <PageHeader
+          title="Cerca prodotti"
+          subtitle={`Confronta prezzi e offerte tra ${suppliers.length} cataloghi fornitore.`}
+          meta={<TabSwitch tab={tab} onChange={setTab} />}
+          actions={
+            <>
+              <button
+                onClick={() => setHelpOpen(true)}
+                className="f-icon-btn"
+                title="Scorciatoie"
+                aria-label="Scorciatoie da tastiera"
+              >
+                <Keyboard className="h-4 w-4" />
+              </button>
+              <CartChip count={totalItems} total={totalAmount} />
+            </>
+          }
+          className="!mb-4"
+        />
       </div>
 
-      <div className="hidden lg:block">
+      <div className="hidden lg:block lg:mb-4 [&>*]:rounded-[16px]">
         <ActiveFiltersBar prefs={prefs} />
       </div>
 
       {tab === "ricerca" && (
-        <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_420px]">
-          <div className="hidden lg:block">
+        <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_400px] lg:gap-4">
+          <div className="f-card f-rise f-scroll hidden min-h-0 overflow-y-auto lg:block" style={{ ["--i" as string]: 0 }}>
             <FacetPanel facets={facets} counts={counts} onChange={setFacets} />
           </div>
 
-          <div className="flex min-h-0 flex-col">
+          <div className="f-rise flex min-h-0 flex-col lg:overflow-hidden lg:rounded-[20px] lg:border lg:border-[var(--f-line)] lg:bg-[var(--f-card)] lg:shadow-[var(--f-shadow-card)]" style={{ ["--i" as string]: 1 }}>
             <SearchBar
               ref={searchInputRef}
               value={query}
@@ -422,7 +427,7 @@ export function SearchPageClient({
             )}
           </div>
 
-          <div className="hidden lg:block">
+          <div className="f-card f-rise f-scroll hidden min-h-0 overflow-y-auto lg:block" style={{ ["--i" as string]: 2 }}>
             <DetailPane
               group={selectedGroup}
               onClose={() => setSelectedKey(null)}
@@ -493,56 +498,37 @@ function CartChip({
       href="/carrello"
       prefetch={false}
       aria-label={`Vai al carrello${hasItems ? `, ${count} articoli, totale € ${total.toFixed(2)}` : ""}`}
-      className={`group relative inline-flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[12px] transition-colors ${
-        hasItems
-          ? "border-accent-green/50 bg-accent-green/10 text-accent-green hover:bg-accent-green/15"
-          : "border-border-subtle text-text-secondary hover:bg-surface-hover"
-      }`}
+      className={`f-btn ${compact ? "f-btn-sm" : ""} ${hasItems ? "f-btn-primary" : "f-btn-outline"}`}
     >
       <span className="relative">
-        <ShoppingCart className="h-3.5 w-3.5" />
+        <ShoppingCart className="h-4 w-4" />
         {hasItems && (
           <span
-            className="absolute -right-1.5 -top-1.5 inline-flex h-3.5 min-w-[14px] items-center justify-center rounded-full bg-accent-green px-1 font-mono text-[9px] font-semibold leading-none text-brand-on-primary"
+            className="absolute -right-2 -top-2 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-white px-1 text-[9.5px] font-bold leading-none text-[var(--acc-900)]"
             aria-hidden
           >
             {count > 99 ? "99+" : count}
           </span>
         )}
       </span>
-      {!compact && hasItems && (
-        <span className="font-mono tabular-nums">€ {total.toFixed(2)}</span>
-      )}
-      {!compact && !hasItems && (
-        <span className="font-mono text-[11px] uppercase tracking-wide text-text-tertiary">
-          carrello
-        </span>
-      )}
+      {!compact && hasItems && <span className="tabular-nums">€ {total.toFixed(2)}</span>}
+      {!compact && !hasItems && <span>Carrello</span>}
     </Link>
   );
 }
 
 function TabSwitch({ tab, onChange }: { tab: Tab; onChange: (t: Tab) => void }) {
-  const labels: Record<Tab, string> = {
-    ricerca: "Ricerca",
-    ordine: "Ordine tipico",
-    solito: "Solito",
-  };
   return (
-    <div className="inline-flex rounded-lg border border-border-subtle bg-surface-card p-0.5">
-      {(["ricerca", "ordine", "solito"] as const).map((t) => (
-        <button
-          key={t}
-          onClick={() => onChange(t)}
-          className={`rounded-md px-3 py-1.5 font-mono text-[11px] uppercase tracking-[0.08em] transition-colors ${
-            tab === t
-              ? "bg-accent-green/15 text-accent-green"
-              : "text-text-tertiary hover:text-text-primary"
-          }`}
-        >
-          {labels[t]}
-        </button>
-      ))}
-    </div>
+    <Chips
+      size="sm"
+      ariaLabel="Modalità"
+      value={tab}
+      onChange={onChange}
+      options={[
+        { value: "ricerca", label: "Ricerca" },
+        { value: "ordine", label: "Ordine tipico" },
+        { value: "solito", label: "Solito" },
+      ]}
+    />
   );
 }

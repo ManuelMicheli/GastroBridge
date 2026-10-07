@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   DndContext,
+  DragOverlay,
+  KeyboardSensor,
   PointerSensor,
   useDraggable,
   useDroppable,
@@ -14,11 +16,13 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
+import { LayoutGroup, motion, useReducedMotion } from "motion/react";
+import { ArrowUpRight, Clock, Package } from "lucide-react";
+import { Chips } from "@/components/fernly/chips";
+import { Avatar, StatusPill, type FTone } from "@/components/fernly/primitives";
 import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
 import { useFlashOnSplitUpdate } from "@/components/supplier/realtime/flash-highlight";
-import { formatCurrency, formatDate } from "@/lib/utils/formatters";
+import { cn, formatCurrency, formatDate } from "@/lib/utils/formatters";
 import {
   transitionSplitStatus,
   type KanbanTargetStatus,
@@ -51,7 +55,7 @@ type Column = {
   states: string[];
   // target status passed to transitionSplitStatus when dropping HERE
   dropTarget: KanbanTargetStatus | null;
-  // accent (dark-token friendly)
+  // status dot colour in the column header
   accent: string;
 };
 
@@ -61,42 +65,42 @@ const COLUMNS: Column[] = [
     label: "Nuovi",
     states: ["submitted", "pending", "pending_customer_confirmation", "stock_conflict"],
     dropTarget: null,
-    accent: "bg-terracotta-light/40 border-terracotta/40",
+    accent: "#9AA19E",
   },
   {
     id: "confirmed",
     label: "Confermati",
     states: ["confirmed"],
     dropTarget: null,
-    accent: "bg-forest-light/40 border-forest/30",
+    accent: "#D99A2B",
   },
   {
     id: "preparing",
     label: "In preparazione",
     states: ["preparing"],
     dropTarget: "preparing",
-    accent: "bg-sage-muted/40 border-sage/30",
+    accent: "#8A63C9",
   },
   {
     id: "packed",
     label: "Imballati",
     states: ["packed"],
     dropTarget: "packed",
-    accent: "bg-sage-muted/30 border-sage/40",
+    accent: "#4C6FD8",
   },
   {
     id: "shipped",
     label: "Spediti",
     states: ["shipping", "shipped"],
     dropTarget: "shipped",
-    accent: "bg-forest-light/30 border-forest/30",
+    accent: "var(--acc-600)",
   },
   {
     id: "delivered",
     label: "Consegnati",
     states: ["delivered"],
     dropTarget: "delivered",
-    accent: "bg-forest-light/60 border-forest/40",
+    accent: "#2E9463",
   },
 ];
 
@@ -117,7 +121,7 @@ function daysUntil(dateIso: string | null): number | null {
   return Math.round((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-function WORKFLOW_BADGE(workflow: string): { label: string; variant: "default" | "success" | "warning" | "info" | "outline" } {
+function WORKFLOW_BADGE(workflow: string): { label: string; variant: FTone } {
   switch (workflow) {
     case "submitted":
     case "pending":
@@ -138,83 +142,117 @@ function WORKFLOW_BADGE(workflow: string): { label: string; variant: "default" |
     case "delivered":
       return { label: "Consegnato", variant: "success" };
     default:
-      return { label: workflow, variant: "outline" };
+      return { label: workflow, variant: "neutral" };
   }
 }
 
 // ---------------------------------------------------------------------------
+
+const PROGRESS: Record<string, number> = {
+  submitted: 0.12,
+  pending: 0.12,
+  pending_customer_confirmation: 0.12,
+  stock_conflict: 0.12,
+  confirmed: 0.3,
+  preparing: 0.5,
+  packed: 0.7,
+  shipping: 0.85,
+  shipped: 0.85,
+  delivered: 1,
+};
+
+const EASE = [0.22, 1, 0.36, 1] as const;
+
+function dueLabel(dLeft: number | null): { text: string; late: boolean } | null {
+  if (dLeft === null) return null;
+  if (dLeft < 0) return { text: `${Math.abs(dLeft)}g in ritardo`, late: true };
+  if (dLeft === 0) return { text: "oggi", late: false };
+  return { text: `tra ${dLeft}g`, late: false };
+}
+
+/** Fernly task card body (shared by the in-column card and the drag overlay). */
+function CardBody({ card, lifted = false }: { card: KanbanCard; lifted?: boolean }) {
+  const badge = WORKFLOW_BADGE(card.workflow);
+  const due = dueLabel(daysUntil(card.expectedDeliveryDate));
+  const progress = PROGRESS[card.workflow] ?? 0.1;
+  return (
+    <div
+      className={cn(
+        "f-card select-none !rounded-[16px] p-4",
+        lifted && "shadow-[0_2px_6px_rgba(16,24,20,0.08),0_22px_44px_rgba(16,24,20,0.20)]",
+      )}
+    >
+      <div className="flex items-center gap-1.5">
+        <StatusPill tone={badge.variant} className="!h-[21px] !rounded-[7px] !text-[11px]">
+          {badge.label}
+        </StatusPill>
+        <span className="f-tag !h-[21px] bg-[var(--f-fill-2)] !text-[11px] text-[var(--f-ink-2)]">
+          <Package className="h-3 w-3" /> {card.lineCount} righe
+        </span>
+        <Link
+          href={`/supplier/ordini/${card.id}`}
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          className="ml-auto inline-flex h-6 w-6 items-center justify-center rounded-full text-[var(--f-muted)] transition-colors hover:bg-[var(--f-fill)] hover:text-[var(--f-ink)]"
+          aria-label={`Dettaglio ordine ${card.id.slice(0, 8)}`}
+          title="Dettaglio"
+        >
+          <ArrowUpRight className="h-3.5 w-3.5" />
+        </Link>
+      </div>
+      <p className="mt-2.5 truncate text-[14.5px] font-semibold text-[var(--f-ink)]">{card.restaurantName}</p>
+      <p className="text-[11.5px] text-[var(--f-faint)] tabular-nums">#{card.id.slice(0, 8)}</p>
+      <div className="mt-3 h-[5px] w-full overflow-hidden rounded-full bg-[var(--f-fill-2)]">
+        <div
+          className="h-full rounded-full transition-[width] duration-500"
+          style={{
+            width: `${Math.round(progress * 100)}%`,
+            background: card.workflow === "delivered" ? "var(--f-success)" : "var(--acc-600)",
+          }}
+        />
+      </div>
+      <div className="mt-3 flex items-center gap-2.5 whitespace-nowrap text-[12px] text-[var(--f-muted)]">
+        {due ? (
+          <span className={cn("inline-flex items-center gap-1", due.late && "font-semibold text-[var(--f-danger)]")}>
+            <Clock className="h-3.5 w-3.5" /> {due.text}
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1">
+            <Clock className="h-3.5 w-3.5" /> {card.createdAt ? formatDate(card.createdAt) : "—"}
+          </span>
+        )}
+        <span className="tabular-nums">{card.qtyTotal} pz</span>
+        <span className="ml-auto flex items-center gap-2">
+          <b className="font-semibold text-[var(--f-ink)] tabular-nums">{formatCurrency(card.subtotal)}</b>
+          <Avatar name={card.restaurantName} size={26} />
+        </span>
+      </div>
+    </div>
+  );
+}
 
 function DraggableCard({ card }: { card: KanbanCard }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: card.id,
     data: { workflow: card.workflow },
   });
-
-  const dLeft = daysUntil(card.expectedDeliveryDate);
-  const badge = WORKFLOW_BADGE(card.workflow);
   const flash = useFlashOnSplitUpdate(card.id);
-
-  const style: React.CSSProperties = {
-    opacity: isDragging ? 0.4 : 1,
-    cursor: "grab",
-  };
+  const reduce = useReducedMotion();
 
   return (
-    <div ref={setNodeRef} style={style} data-split-id={card.id} {...listeners} {...attributes}>
-      <Card className={`p-4 border border-sage-muted/60 bg-white hover:shadow-elevated transition-shadow select-none ${flash}`}>
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <div className="min-w-0">
-            <p className="font-semibold text-charcoal truncate">
-              {card.restaurantName}
-            </p>
-            <p className="text-xs text-sage font-mono">
-              #{card.id.slice(0, 8)}
-            </p>
-          </div>
-          <Badge variant={badge.variant}>{badge.label}</Badge>
-        </div>
-
-        <div className="flex items-center justify-between text-xs text-sage mb-2">
-          <span>
-            {card.lineCount} righe · {card.qtyTotal} pz
-          </span>
-          <span className="font-mono font-semibold text-charcoal">
-            {formatCurrency(card.subtotal)}
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-sage">
-            {card.createdAt ? formatDate(card.createdAt) : ""}
-          </span>
-          {dLeft !== null && (
-            <span
-              className={
-                dLeft < 0
-                  ? "text-terracotta font-semibold"
-                  : dLeft === 0
-                    ? "text-terracotta"
-                    : "text-forest-dark"
-              }
-            >
-              {dLeft < 0
-                ? `${Math.abs(dLeft)}g in ritardo`
-                : dLeft === 0
-                  ? "oggi"
-                  : `tra ${dLeft}g`}
-            </span>
-          )}
-          <Link
-            href={`/supplier/ordini/${card.id}`}
-            onClick={(e) => e.stopPropagation()}
-            onPointerDown={(e) => e.stopPropagation()}
-            className="text-forest underline hover:text-forest-dark"
-          >
-            Dettaglio
-          </Link>
-        </div>
-      </Card>
-    </div>
+    <motion.div
+      ref={setNodeRef}
+      layout={!reduce}
+      layoutId={reduce ? undefined : `kb-${card.id}`}
+      transition={{ layout: { duration: 0.28, ease: EASE } }}
+      data-split-id={card.id}
+      className={cn("touch-none cursor-grab rounded-[16px] outline-none active:cursor-grabbing", flash)}
+      style={{ opacity: isDragging ? 0.35 : 1 }}
+      {...listeners}
+      {...attributes}
+    >
+      <CardBody card={card} />
+    </motion.div>
   );
 }
 
@@ -222,37 +260,45 @@ function DroppableColumn({
   column,
   cards,
   isActiveTarget,
+  dragging,
+  index,
 }: {
   column: Column;
   cards: KanbanCard[];
   isActiveTarget: boolean;
+  dragging: boolean;
+  index: number;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
+  const highlight = isOver && dragging;
 
   return (
-    <div className="flex flex-col w-72 shrink-0">
-      <div className="flex items-center justify-between px-2 py-1.5">
-        <h3 className="font-semibold text-charcoal text-sm uppercase tracking-wider">
-          {column.label}
-        </h3>
-        <span className="text-xs text-sage font-mono">{cards.length}</span>
-      </div>
+    <section className="f-rise flex w-[286px] shrink-0 flex-col" style={{ ["--i" as string]: index }} aria-label={column.label}>
+      <header className="mb-2.5 flex items-center gap-2 px-1.5">
+        <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: column.accent }} />
+        <h3 className="text-[14px] font-semibold text-[var(--f-ink)]">{column.label}</h3>
+        <span className="ml-auto text-[12.5px] font-medium text-[var(--f-muted)] tabular-nums">{cards.length}</span>
+      </header>
       <div
         ref={setNodeRef}
-        className={[
-          "flex-1 rounded-xl border-2 border-dashed p-3 space-y-3 min-h-[60vh] transition-colors",
-          column.accent,
-          isOver ? "ring-2 ring-forest" : "",
-          isActiveTarget ? "border-forest/70" : "",
-        ].join(" ")}
+        className={cn(
+          "flex min-h-[60vh] flex-1 flex-col gap-2.5 rounded-[18px] border-[1.5px] p-1.5 transition-[background-color,border-color] duration-200",
+          highlight
+            ? "border-[var(--acc-600)] bg-[var(--acc-50)]"
+            : isActiveTarget
+              ? "border-dashed border-[color:color-mix(in_oklab,var(--acc-600)_45%,transparent)] bg-transparent"
+              : "border-transparent bg-transparent",
+        )}
       >
         {cards.length === 0 ? (
-          <p className="text-center text-xs text-sage py-8">Nessun ordine</p>
+          <p className="rounded-[14px] border border-dashed border-[var(--f-line-strong)] py-8 text-center text-[12.5px] text-[var(--f-faint)]">
+            Nessun ordine
+          </p>
         ) : (
           cards.map((c) => <DraggableCard key={c.id} card={c} />)
         )}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -272,7 +318,11 @@ export function KanbanClient({
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor),
   );
+  const reduce = useReducedMotion();
+  type DueFilter = "all" | "late" | "today" | "week";
+  const [dueFilter, setDueFilter] = useState<DueFilter>("all");
 
   // Sync initial prop changes (realtime refresh).
   useMemo(() => {
@@ -280,16 +330,27 @@ export function KanbanClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialCards]);
 
+  const visibleCards = useMemo(() => {
+    if (dueFilter === "all") return cards;
+    return cards.filter((c) => {
+      const d = daysUntil(c.expectedDeliveryDate);
+      if (d === null) return false;
+      if (dueFilter === "late") return d < 0 && c.workflow !== "delivered";
+      if (dueFilter === "today") return d === 0;
+      return d >= 0 && d <= 6;
+    });
+  }, [cards, dueFilter]);
+
   const cardsByColumn = useMemo(() => {
     const map = new Map<ColumnId, KanbanCard[]>();
     for (const col of COLUMNS) map.set(col.id, []);
-    for (const card of cards) {
+    for (const card of visibleCards) {
       const colId = stateToColumn(card.workflow);
       if (!colId) continue;
       map.get(colId)!.push(card);
     }
     return map;
-  }, [cards]);
+  }, [visibleCards]);
 
   const activeCard = activeCardId
     ? cards.find((c) => c.id === activeCardId) ?? null
@@ -365,16 +426,13 @@ export function KanbanClient({
 
       {/* Mobile: kanban drag-drop unusable with touch → fallback to list CTA */}
       <div className="lg:hidden mx-3 mt-4 mb-3">
-        <div className="rounded-xl bg-[color:var(--color-brand-primary-subtle)] ring-[0.5px] ring-[color:var(--color-brand-primary-border)] px-4 py-4">
+        <div className="f-card px-4 py-4">
           <div
             className="text-[11px] font-medium uppercase tracking-[0.14em] text-[color:var(--caption-color)]"
           >
             Kanban · vista desktop
           </div>
-          <p
-            className="mt-2 font-serif text-[17px] font-medium leading-snug text-[color:var(--color-text-primary)]"
-            style={{ fontFamily: "Georgia, serif" }}
-          >
+          <p className="mt-2 text-[17px] font-semibold leading-snug text-[var(--f-ink)]">
             Il trascinamento kanban funziona solo su schermo grande.
           </p>
           <p className="mt-1 text-[12px] text-[color:var(--text-muted-light)]">
@@ -382,7 +440,7 @@ export function KanbanClient({
           </p>
           <Link
             href="/supplier/ordini"
-            className="mt-3 inline-flex h-10 items-center justify-center rounded-lg bg-[color:var(--color-brand-primary)] px-4 text-[14px] font-semibold text-[color:var(--color-brand-on-primary)] active:opacity-90"
+            className="f-btn f-btn-primary mt-3"
           >
             Apri lista ordini →
           </Link>
@@ -395,16 +453,13 @@ export function KanbanClient({
             return (
               <div
                 key={col.id}
-                className="flex items-center justify-between rounded-xl bg-[color:var(--ios-surface)] px-4 py-3 shadow-[0_0.5px_0_rgba(0,0,0,0.04),0_1px_2px_rgba(0,0,0,0.03)]"
+                className="f-card flex items-center justify-between px-4 py-3"
               >
                 <div>
                   <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-[color:var(--caption-color)]">
                     {col.label}
                   </div>
-                  <div
-                    className="mt-0.5 font-serif text-[18px] font-medium text-[color:var(--color-brand-primary)]"
-                    style={{ fontFamily: "Georgia, serif" }}
-                  >
+                  <div className="mt-0.5 text-[20px] font-semibold text-[var(--f-ink)] tabular-nums">
                     {n}
                   </div>
                 </div>
@@ -420,29 +475,64 @@ export function KanbanClient({
         </div>
       </div>
 
-      {/* Desktop kanban with dnd */}
+      {/* Desktop kanban with dnd (Fernly: lift + tilt overlay, tinted target
+          column, smooth reflow of the remaining cards). */}
+      <div className="mb-4 hidden items-center justify-between gap-3 lg:flex">
+        <Chips
+          ariaLabel="Filtra per consegna"
+          value={dueFilter}
+          onChange={setDueFilter}
+          options={[
+            { value: "all", label: "Tutti" },
+            { value: "late", label: "In ritardo" },
+            { value: "today", label: "Consegna oggi" },
+            { value: "week", label: "Entro 7 giorni" },
+          ]}
+        />
+        <span className="text-[12.5px] text-[var(--f-muted)] tabular-nums">
+          {visibleCards.length} ordini mostrati
+        </span>
+      </div>
       <DndContext
         sensors={sensors}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveCardId(null)}
       >
-        <div className="hidden lg:flex gap-4 overflow-x-auto pb-4">
-          {COLUMNS.map((col) => {
-            const isActiveTarget =
-              activeCard !== null &&
-              col.dropTarget !== null &&
-              col.states.every((s) => s !== activeCard.workflow) &&
-              isLegalDrop(activeCard.workflow, col.dropTarget);
-            return (
-              <DroppableColumn
-                key={col.id}
-                column={col}
-                cards={cardsByColumn.get(col.id) ?? []}
-                isActiveTarget={isActiveTarget}
-              />
-            );
-          })}
-        </div>
+        <LayoutGroup>
+          <div className="f-scroll hidden gap-4 overflow-x-auto pb-4 lg:flex">
+            {COLUMNS.map((col, i) => {
+              const isActiveTarget =
+                activeCard !== null &&
+                col.dropTarget !== null &&
+                col.states.every((s) => s !== activeCard.workflow) &&
+                isLegalDrop(activeCard.workflow, col.dropTarget);
+              return (
+                <DroppableColumn
+                  key={col.id}
+                  index={i}
+                  column={col}
+                  cards={cardsByColumn.get(col.id) ?? []}
+                  isActiveTarget={isActiveTarget}
+                  dragging={activeCard !== null}
+                />
+              );
+            })}
+          </div>
+        </LayoutGroup>
+        <DragOverlay dropAnimation={null}>
+          {activeCard ? (
+            <div
+              className="w-[274px] cursor-grabbing"
+              style={{
+                transform: reduce ? undefined : "rotate(2.5deg) scale(1.03)",
+                transition: "transform 160ms cubic-bezier(0.22, 1, 0.36, 1)",
+              }}
+            >
+              <CardBody card={activeCard} lifted />
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
     </>
   );

@@ -13,6 +13,7 @@ import { getSectionSeenAt } from "@/lib/nav/section-seen";
 import { getRecentInAppNotifications } from "@/lib/notifications/queries";
 import { SupplierRealtimeProvider } from "@/lib/realtime/supplier-provider";
 import type { SupplierRole } from "@/types/database";
+import { accentBootScript } from "@/lib/appearance";
 
 type GatedNavItem = NavItem & {
   roles?: SupplierRole[];
@@ -123,6 +124,7 @@ export default async function SupplierLayout({ children }: { children: ReactNode
     const navItems = buildNavItems(null, false);
     return (
       <SidebarProvider>
+        <script dangerouslySetInnerHTML={{ __html: accentBootScript("supplier") }} />
         <DashboardShell
           navItems={navItems}
           mobileNavItems={MOBILE_NAV}
@@ -206,6 +208,8 @@ export default async function SupplierLayout({ children }: { children: ReactNode
 
   const shell = (
     <SidebarProvider>
+      {/* Applies the saved workspace accent before first paint (no flash). */}
+      <script dangerouslySetInnerHTML={{ __html: accentBootScript("supplier") }} />
       <DashboardShell
         navItems={navItems}
         mobileNavItems={MOBILE_NAV}

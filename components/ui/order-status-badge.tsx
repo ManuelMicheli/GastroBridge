@@ -48,7 +48,7 @@ export function OrderStatusBadge({
       aria-label={`Stato: ${meta.label}`}
       data-tone={meta.tone}
       className={cn(
-        "inline-flex items-center rounded-full font-medium tabular-nums tracking-tight whitespace-nowrap",
+        "inline-flex items-center rounded-[6px] font-medium tabular-nums tracking-tight whitespace-nowrap",
         SIZE_CLASSES[size],
         className,
       )}

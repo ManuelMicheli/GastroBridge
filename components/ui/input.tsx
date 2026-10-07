@@ -23,23 +23,23 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           {label && (
             <label
               htmlFor={inputId}
-              className="text-sm font-semibold text-charcoal"
+              className="f-label"
             >
               {label}
             </label>
           )}
           <div
             className={cn(
-              "flex items-center gap-2 w-full border-2 border-sage-muted rounded-xl px-4 font-body transition-colors duration-200 focus-within:border-forest disabled:opacity-50",
-              error && "border-red-500 focus-within:border-red-500"
+              "f-input flex items-center gap-2 !h-auto min-h-11 disabled:opacity-50",
+              error && "!border-[var(--f-danger)]"
             )}
           >
-            {prefix && <span className="text-sage shrink-0">{prefix}</span>}
+            {prefix && <span className="text-[var(--f-muted)] shrink-0">{prefix}</span>}
             <input
               ref={ref}
               id={inputId}
               className={cn(
-                "flex-1 py-3.5 bg-transparent text-charcoal placeholder:text-sage focus:outline-none disabled:opacity-50",
+                "flex-1 py-2.5 bg-transparent text-[var(--f-ink)] placeholder:text-[var(--f-faint)] focus:outline-none disabled:opacity-50",
                 className
               )}
               aria-invalid={error ? "true" : undefined}
@@ -52,19 +52,19 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
               }
               {...props}
             />
-            {suffix && <span className="text-sage shrink-0">{suffix}</span>}
+            {suffix && <span className="text-[var(--f-muted)] shrink-0">{suffix}</span>}
           </div>
           {error && (
             <p
               id={`${inputId}-error`}
-              className="text-sm text-red-600"
+              className="text-[13px] text-[var(--f-danger)]"
               role="alert"
             >
               {error}
             </p>
           )}
           {helperText && !error && (
-            <p id={`${inputId}-helper`} className="text-sm text-sage">
+            <p id={`${inputId}-helper`} className="text-[13px] text-[var(--f-muted)]">
               {helperText}
             </p>
           )}
@@ -77,7 +77,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="text-sm font-semibold text-charcoal"
+            className="f-label"
           >
             {label}
           </label>
@@ -86,8 +86,8 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           id={inputId}
           className={cn(
-            "w-full border-2 border-sage-muted rounded-xl py-3.5 px-4 font-body text-charcoal placeholder:text-sage transition-colors duration-200 focus:border-forest focus:outline-none focus:ring-0 disabled:opacity-50 disabled:bg-gray-50",
-            error && "border-red-500 focus:border-red-500",
+            "f-input disabled:opacity-50",
+            error && "!border-[var(--f-danger)]",
             className
           )}
           aria-invalid={error ? "true" : undefined}
@@ -103,14 +103,14 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         {error && (
           <p
             id={`${inputId}-error`}
-            className="text-sm text-red-600"
+            className="text-[13px] text-[var(--f-danger)]"
             role="alert"
           >
             {error}
           </p>
         )}
         {helperText && !error && (
-          <p id={`${inputId}-helper`} className="text-sm text-sage">
+          <p id={`${inputId}-helper`} className="text-[13px] text-[var(--f-muted)]">
             {helperText}
           </p>
         )}

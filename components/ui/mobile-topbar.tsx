@@ -40,14 +40,11 @@ export function MobileTopbar({
         className
       )}
     >
-      <div className="flex h-11 items-center gap-2 px-3">
+      <div className="flex h-14 items-center gap-2 px-3">
         <div className="flex min-w-0 flex-1 items-center gap-2">
           {leading}
           {title && (
-            <h1
-              className="truncate font-serif text-[16px] font-medium tracking-[-0.012em] text-[color:var(--color-text-primary)]"
-              style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-            >
+            <h1 className="truncate text-[17px] font-semibold tracking-[-0.02em] text-[var(--f-ink)]">
               {title}
             </h1>
           )}
@@ -82,9 +79,7 @@ export function TopbarIconButton({
       onClick={onClick}
       aria-label={ariaLabel}
       className={cn(
-        "relative flex h-10 w-10 items-center justify-center rounded-lg",
-        "text-[color:var(--color-brand-primary)]",
-        "transition active:bg-[color:var(--color-brand-primary-subtle)]",
+        "f-icon-btn",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-brand-primary)] focus-visible:ring-offset-1",
         className
       )}
@@ -93,7 +88,7 @@ export function TopbarIconButton({
       {badge && (
         <span
           aria-hidden="true"
-          className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[color:var(--color-brand-primary)] ring-2 ring-[color:var(--ios-chrome-bg)]"
+          className="absolute right-[9px] top-[9px] h-2 w-2 rounded-full bg-[#E5484D] ring-2 ring-[var(--f-card)]"
         />
       )}
     </Tag>
@@ -112,7 +107,7 @@ export function TopbarHamburger({
       type="button"
       onClick={onClick}
       aria-label={ariaLabel}
-      className="flex h-10 w-10 items-center justify-center rounded-lg text-[color:var(--color-text-primary)] transition active:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--color-brand-primary)]"
+      className="f-icon-btn"
     >
       <span className="flex w-5 flex-col gap-[3px]">
         <span className="h-[1.5px] rounded-full bg-current" />
@@ -137,7 +132,7 @@ export function TopbarBack({
     <Tag
       {...(href ? { href } : { type: "button" })}
       onClick={onClick}
-      className="flex h-10 items-center gap-1 rounded-lg pr-2 text-[color:var(--color-brand-primary)] transition active:bg-[color:var(--color-brand-primary-subtle)]"
+      className="flex h-10 items-center gap-1 rounded-full pl-1 pr-3 text-[var(--acc-700)] transition active:bg-[var(--acc-50)]"
       aria-label={`Torna a ${label}`}
     >
       <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden="true">
@@ -150,7 +145,7 @@ export function TopbarBack({
           strokeLinejoin="round"
         />
       </svg>
-      <span className="text-[15px] font-normal">{label}</span>
+      <span className="text-[15px] font-medium">{label}</span>
     </Tag>
   );
 }

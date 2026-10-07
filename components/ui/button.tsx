@@ -21,37 +21,32 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   isLoading?: boolean;
 }
 
-// NOTE: variants read from CSS variables so the same component renders the
-// correct brand color in each area (restaurant = carmine, supplier = forest).
-// Hardcoded hex is NEVER used here — each area's `data-area` scope swaps the
-// underlying --color-brand-* tokens.
+// Fernly pill buttons. Variants read the workspace accent through CSS
+// variables (`--acc-*`, see the Fernly layer in globals.css) so the same
+// component re-tints with the area/preset. Hardcoded hex is never used here.
 const variantStyles: Record<ButtonVariant, string> = {
-  primary:
-    "bg-brand-primary text-brand-on-primary hover:bg-brand-primary-hover active:bg-brand-primary-active shadow-sm",
-  secondary:
-    "border-2 border-brand-primary text-brand-primary hover:bg-brand-primary hover:text-brand-on-primary",
-  destructive:
-    "bg-error text-white hover:bg-error/90 active:bg-error/80 shadow-sm",
-  ghost: "text-charcoal hover:bg-sage-muted/50",
-  link: "text-brand-primary underline-offset-4 hover:underline p-0 h-auto",
-  celebration:
-    "bg-brand-highlight text-brand-highlight-on hover:bg-brand-highlight-strong active:bg-brand-highlight-strong shadow-sm",
+  primary: "f-btn-primary",
+  secondary: "f-btn-outline",
+  destructive: "f-btn-danger",
+  ghost: "f-btn-ghost",
+  link: "!h-auto !px-0 !border-0 bg-transparent text-[var(--acc-700)] underline-offset-4 hover:underline",
+  celebration: "f-btn-primary",
 };
 
-// Comfortable = legacy sizes (used by supplier + existing restaurant code).
-// Compact    = Linear-grade density (28/32/40 px height) — opt-in via density="compact".
+// Comfortable = legacy sizes (40/46 px pills). Compact = denser pills
+// (28/32/40 px) — opt-in via density="compact".
 const sizeStyles: Record<ButtonSize, string> = {
-  sm: "py-2 px-4 text-sm",
-  md: "py-3.5 px-6 text-base",
-  lg: "py-4 px-8 text-lg",
-  icon: "h-10 w-10 p-0",
+  sm: "f-btn-sm",
+  md: "",
+  lg: "f-btn-lg",
+  icon: "!w-10 !px-0",
 };
 
 const compactSizeStyles: Record<ButtonSize, string> = {
-  sm: "h-7 px-2.5 text-xs",
-  md: "h-8 px-3 text-sm",
-  lg: "h-10 px-4 text-sm",
-  icon: "h-8 w-8 p-0",
+  sm: "f-btn-xs",
+  md: "f-btn-sm",
+  lg: "",
+  icon: "!h-8 !w-8 !px-0",
 };
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -69,13 +64,11 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     ref
   ) => {
     const sizes = density === "compact" ? compactSizeStyles : sizeStyles;
-    const radius = density === "compact" ? "rounded-md" : "rounded-xl";
     return (
       <button
         ref={ref}
         className={cn(
-          "inline-flex items-center justify-center gap-2 font-body font-semibold transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none",
-          radius,
+          "f-btn",
           variantStyles[variant],
           sizes[size],
           className

@@ -32,6 +32,14 @@ export type OrderFeedRow = {
   supplierCount: number; // number of distinct suppliers on the order (≥1 when splits exist, 0 when none)
 };
 
+/** One supplier split with an expected delivery date (calendar view). */
+export type OrderDelivery = {
+  orderId: string;
+  supplierName: string | null;
+  date: string; // YYYY-MM-DD
+  status: string; // split status
+};
+
 export type OrderStats = {
   totalCount: number;
   monthTotal: number; // sum of `total` for orders in the current month

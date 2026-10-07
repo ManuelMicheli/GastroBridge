@@ -9,10 +9,14 @@ export function cn(...inputs: ClassValue[]) {
 
 /** Format number as EUR currency */
 export function formatCurrency(amount: number): string {
+  // `useGrouping: "always"` keeps server (Node ICU) and browser output
+  // identical ("4.820,00 €") — CLDR's minimum-grouping-digits otherwise
+  // renders "4820,00 €" on the server only and breaks hydration.
   return new Intl.NumberFormat("it-IT", {
     style: "currency",
     currency: "EUR",
-  }).format(amount);
+    useGrouping: "always",
+  } as Intl.NumberFormatOptions).format(amount);
 }
 
 /** Format price per unit (e.g., "€12,50/kg") */
