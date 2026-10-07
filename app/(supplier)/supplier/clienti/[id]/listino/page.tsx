@@ -44,6 +44,24 @@ export default async function ListinoPage({ params }: { params: Params }) {
 
   const entries = await getPriceListByRelationship(id);
 
+  // Named price list that applies to this client (Listini): the assigned one,
+  // otherwise the supplier's default list.
+  const { data: assignment } = await supabase
+    .from("customer_price_assignments")
+    .select("price_list_id, price_lists(id, name)")
+    .eq("supplier_id", member.supplier_id)
+    .eq("restaurant_id", rel.restaurant_id)
+    .maybeSingle<{ price_list_id: string; price_lists: { id: string; name: string } | null }>();
+  const { data: defaultList } = assignment?.price_lists
+    ? { data: null }
+    : await supabase
+        .from("price_lists")
+        .select("id, name")
+        .eq("supplier_id", member.supplier_id)
+        .eq("is_default", true)
+        .maybeSingle<{ id: string; name: string }>();
+  const appliedList = assignment?.price_lists ?? defaultList ?? null;
+
   return (
     <div>
       <Link
@@ -56,8 +74,23 @@ export default async function ListinoPage({ params }: { params: Params }) {
       <h1 className="text-2xl font-bold text-charcoal mb-2">
         Listino per {restaurant?.name ?? "cliente"}
       </h1>
-      <p className="text-sage mb-6">
+      <p className="text-sage mb-2">
         I prezzi personalizzati sostituiscono il prezzo di catalogo quando il ristoratore consulta i tuoi prodotti.
+      </p>
+      <p className="text-sm text-sage mb-6">
+        Listino applicato:{" "}
+        {appliedList ? (
+          <Link href={`/supplier/listini/${appliedList.id}`} className="font-medium text-accent-green hover:underline">
+            {appliedList.name}
+            {assignment?.price_lists ? "" : " (predefinito)"}
+          </Link>
+        ) : (
+          <span className="font-medium">nessuno</span>
+        )}
+        {" · "}
+        <Link href="/supplier/listini" className="hover:underline">
+          gestisci i listini
+        </Link>
       </p>
 
       {(products ?? []).length === 0 ? (

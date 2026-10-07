@@ -3,6 +3,11 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PriceListEditorClient } from "./price-list-editor-client";
+import {
+  ListinoCustomers,
+  type AssignableCustomer,
+  type ListinoCustomer,
+} from "./listino-customers";
 import type { Database } from "@/types/database";
 import type { EditorRow } from "@/components/supplier/pricing/types";
 import { getCurrentSupplierMember, memberCan } from "@/lib/supplier/current-member";
@@ -119,6 +124,45 @@ export default async function PriceListEditorPage({
     (totalProducts ?? 0) - productIds.length,
   );
 
+  // Clients assigned to this list + active clients that can be assigned.
+  const [{ data: assignmentRows }, { data: relRows }] = await Promise.all([
+    supabase
+      .from("customer_price_assignments")
+      .select("restaurant_id, price_list_id, price_lists(name)")
+      .eq("supplier_id", supplier.id)
+      .returns<{ restaurant_id: string; price_list_id: string; price_lists: { name: string } | null }[]>(),
+    supabase
+      .from("restaurant_suppliers")
+      .select("id, restaurant_id, status, restaurants(name)")
+      .eq("supplier_id", supplier.id)
+      .in("status", ["active", "paused"])
+      .returns<{ id: string; restaurant_id: string; status: string; restaurants: { name: string } | null }[]>(),
+  ]);
+  const listByRestaurant = new Map(
+    (assignmentRows ?? []).map((a) => [a.restaurant_id, a]),
+  );
+  const relByRestaurant = new Map((relRows ?? []).map((r) => [r.restaurant_id, r]));
+  const assigned: ListinoCustomer[] = (assignmentRows ?? [])
+    .filter((a) => a.price_list_id === list.id)
+    .map((a) => {
+      const rel = relByRestaurant.get(a.restaurant_id);
+      return {
+        restaurantId: a.restaurant_id,
+        name: rel?.restaurants?.name ?? "Cliente",
+        relationshipId: rel?.id ?? null,
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, "it"));
+  const assignable: AssignableCustomer[] = (relRows ?? [])
+    .filter((r) => listByRestaurant.get(r.restaurant_id)?.price_list_id !== list.id)
+    .map((r) => ({
+      restaurantId: r.restaurant_id,
+      name: r.restaurants?.name ?? "Cliente",
+      relationshipId: r.id,
+      currentListName: listByRestaurant.get(r.restaurant_id)?.price_lists?.name ?? null,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, "it"));
+
   return (
     <div>
       <div className="mb-4">
@@ -133,6 +177,13 @@ export default async function PriceListEditorPage({
         list={list}
         initialRows={rows}
         missingProductsCount={missingCount}
+      />
+      <ListinoCustomers
+        supplierId={supplier.id}
+        priceListId={list.id}
+        canEdit={memberCan(member, "pricing.edit")}
+        assigned={assigned}
+        assignable={assignable}
       />
     </div>
   );
