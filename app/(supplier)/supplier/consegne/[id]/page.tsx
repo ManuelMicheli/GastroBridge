@@ -5,11 +5,13 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { hasPermission } from "@/lib/supplier/permissions";
+import { hasPermission, ROLE_LABELS } from "@/lib/supplier/permissions";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
 import type { DeliveryStatus, SupplierRole } from "@/types/database";
 import type { DeliveryItemRow, DeliveryDetail } from "@/components/supplier/delivery/delivery-detail-mobile";
 import { DeliveryDetailPageClient } from "./delivery-detail-client";
+import { DriverAssignSelect } from "./driver-assign-select";
 import { ArrowLeft, Truck } from "lucide-react";
 
 export const metadata: Metadata = { title: "Dettaglio consegna" };
@@ -234,6 +236,29 @@ export default async function DeliveryDetailPage({
 
   const slot = raw.scheduled_slot ?? null;
 
+  // Planner (delivery.plan) can (re)assign the driver while the delivery is
+  // still open. Team names live in `profiles`, readable only by their owner,
+  // so the list is read with the admin client after the permission check.
+  const canAssign = canPlan && raw.status !== "delivered" && raw.status !== "failed";
+  let driverOptions: { value: string; label: string }[] = [];
+  if (canAssign) {
+    const admin = createAdminClient() as any;
+    const { data: team } = (await admin
+      .from("supplier_members")
+      .select("id, role, profile:profiles!supplier_members_profile_id_fkey(company_name)")
+      .eq("supplier_id", supplierId)
+      .eq("is_active", true)
+      .not("accepted_at", "is", null)) as {
+      data: { id: string; role: SupplierRole; profile: { company_name: string | null } | null }[] | null;
+    };
+    driverOptions = (team ?? [])
+      .filter((m) => hasPermission(m.role, "delivery.execute"))
+      .map((m) => ({
+        value: m.id,
+        label: `${m.profile?.company_name || `Membro ${m.id.slice(0, 6)}`} · ${ROLE_LABELS[m.role]}`,
+      }));
+  }
+
   const detail: DeliveryDetail = {
     id: raw.id,
     status: raw.status,
@@ -284,6 +309,13 @@ export default async function DeliveryDetailPage({
           </Button>
         </Link>
       </div>
+      {canAssign && (
+        <DriverAssignSelect
+          deliveryId={raw.id}
+          currentDriverId={raw.driver_member_id}
+          options={driverOptions}
+        />
+      )}
       <DeliveryDetailPageClient delivery={detail} />
     </div>
   );
