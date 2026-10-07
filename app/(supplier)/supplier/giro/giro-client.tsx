@@ -142,7 +142,7 @@ export function GiroClient({
                 <Sparkles className="h-4 w-4" aria-hidden /> Ottimizza ordine
               </button>
             )}
-            {canReorder && dirty && giro.canSaveOrder && (
+            {canReorder && (dirty || !giro.savedOrder) && giro.canSaveOrder && (
               <button type="button" className="f-btn f-btn-primary f-btn-sm" onClick={save} disabled={saving}>
                 <Save className="h-4 w-4" aria-hidden /> {saving ? "Salvo…" : "Salva ordine"}
               </button>

@@ -156,10 +156,14 @@ requested qty, unit price within ±30 % (ranked by price distance, then stock).
 response is sent, posts a message in the order chat listing the proposals so
 the client can answer; sales can then add the substitute with a phone order
 (4.8, prefilled). *Deferred:* a one-tap approval button on the restaurant side
-(restaurant area owned by another agent) — the proposal is also stored in the
-`partially_accepted` event metadata (`substitutions: [...]`) as the hook.
+(restaurant area owned by another agent) — the chat message (per-order thread,
+`partnership_messages.order_split_id`) is the record and the hook; the shared
+`lib/orders/supplier-actions.ts` is left untouched.
 
 ### 4.4 Giro consegne — `/supplier/giro` (admin, warehouse, driver)
+
+(Routes `/supplier/giro` and `/supplier/insight` live outside `/consegne` and
+`/clienti` so the sidebar never highlights two entries at once.)
 
 *UX.* For a date: stops grouped by delivery slot, each with client, address,
 zone, value, status. "Ottimizza ordine" = nearest-neighbour from the
@@ -248,3 +252,20 @@ in-app.
 missing (pg_policies check). All features degrade gracefully if the migration
 is not yet applied (route order falls back to computed order, credit and
 scheduled prices show a "migrazione mancante" notice).
+
+## 7. Implementation status (2026-10-08)
+
+| # | Feature | Where | Status |
+|---|---|---|---|
+| 1 | Oggi | `/supplier/oggi`, first nav item and first mobile tab; dashboard redirects warehouse/driver | done |
+| 2 | Smart intake + bulk accept | Oggi "Da confermare", order detail per-line stock | done |
+| 3 | Substitutions + partial fill | order detail ("Alternative disponibili", "Evadi parziale") | done (restaurant one-tap deferred) |
+| 4 | Giro consegne | `/supplier/giro` (+ link from Consegne, Oggi) | done |
+| 5 | Customer insight | `/supplier/insight`, client detail "Ritmo d'ordine" / "Da riproporre" | done |
+| 6 | Credit control | client detail "Fido e pagamenti", Oggi, order detail, phone order | done (needs migration) |
+| 7 | Scheduled prices + margins | listino detail; `POST /api/cron/price-changes` | done (scheduling needs migration) |
+| 8 | Phone / WhatsApp order | `/supplier/ordini/nuovo` (+ Oggi, Ordini, client detail, order detail) | done |
+| 9 | Reorder suggestions | Oggi "Magazzino" (warehouse/admin) | done |
+
+Unit tests: `npm run test:supplier` (cadence, similar-client suggestions, route
+planning, order-text parser).
