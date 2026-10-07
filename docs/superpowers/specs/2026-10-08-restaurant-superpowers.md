@@ -65,6 +65,8 @@ Impact 1–5 (daily usefulness for a chef/owner), effort S/M/L. ✅ = built in t
 | 7 | Scorte minime (par levels) integrated in Riordino | 4 | S | New table | ✅ |
 | 8 | Dashboard "Oggi in cucina" (cut-offs, deliveries to check in, kitchen list, price alerts) | 4 | S | Yes | ✅ |
 | 9 | Reminders + weekly digest via in-app + web push (cron route) | 4 | S | Yes | ✅ |
+| A | HACCP traceability at reception (lot, expiry, temperature, DDT) + Registro di tracciabilità + richiamo prodotto, PDF/CSV export | 5 | M | New columns on the check-in tables + settings | ✅ (user priority) |
+| B | Order any supplier on any channel (WhatsApp deep link, email + PDF via Resend, PDF, phone) with dispatch log + confirmation | 5 | M | New contacts + dispatch tables | ✅ (user priority) |
 | 10 | Supplier reliability score (on-time, completeness from check-ins) | 3 | S | After #3 collects data | Deferred (needs weeks of check-ins) |
 | 11 | AI parsing of messy lists / voice memos / photos of handwritten lists | 4 | M | — | Deferred: TODO hook in `lib/restaurants/quick-order/parse.ts` (owned by the `lib/ai/import` agent) |
 | 12 | POS-driven quantities per product (recipes / BOM) | 4 | L | POS is category-level only | Deferred: needs recipe mapping |
@@ -157,8 +159,10 @@ unit). Daily in-app notification of increases on items you buy (reminders cron).
 
 *Problem*: "2 kg datterini, 1 cassa limoni, 3 mozzarelle" typed or dictated at 1am.
 
-*UX*: textarea (one line or comma-separated), dictation button (Web Speech API,
-it-IT, when available), live parsed preview: each line → best match (supplier you
+*UX*: textarea (one line or comma-separated), dictation through the phone
+keyboard's microphone (an in-page Web Speech button was not added: the app's
+`Permissions-Policy: microphone=()` blocks it and relaxing it is a security
+decision), live parsed preview: each line → best match (supplier you
 last bought it from, else best price) with alternatives dropdown, qty stepper,
 unmatched lines highlighted. "Aggiungi al carrello". From the command palette, typing
 a line that starts with a quantity offers "Ordine veloce: …".
@@ -190,6 +194,42 @@ week, items due for reorder. All links into 4.1–4.6.
 previous one, month-to-date vs budget, price increases, delivery issues → in-app +
 push to owners/managers (`analytics.financial`).
 
+### 4.9 HACCP traceability at reception (user priority A)
+
+Extends 4.3. For lines whose category is traced (default carne, pesce, latticini,
+surgelati + name keywords "uova/uovo"; configurable in Tracciabilità → Impostazioni
+HACCP, `settings.manage`) the check-in asks **lotto**, **scadenza/TMC** and, when a
+range exists for the category, the **temperature** (defaults carne 0…4 °C, pesce
+0…2, latticini 0…4, surgelati ≤ −18; configurable). Out-of-range temperatures are
+flagged live and saved as a non-conformity (`temperature_ok = false`, recomputed
+server-side), counted as an issue and included in the supplier message. Per supplier
+block: DDT number and DDT photo (optionally mandatory). Category = the product's
+`macro_category` for marketplace lines, keyword inference
+(`lib/analytics/category-keywords.ts`) for catalog lines.
+
+**Registro di tracciabilità** — `/tracciabilita`: every received line, searchable by
+product / lot / supplier / date range, filters "solo con lotto" and "solo non
+conformità", export **PDF** (landscape A4, `@react-pdf/renderer`) and **CSV**
+(semicolon + BOM for Italian Excel, formula-injection safe) via
+`/api/tracciabilita/export`. **Richiamo prodotto** view: given a product or lot, the
+receipts grouped by lot with first/last reception, total quantity, expiries and the
+orders, exportable as a recall report. Order lines show their latest check outcome
+(Ricevuto / Mancante / … / T° / lotto).
+
+### 4.10 Order any supplier, any channel (user priority B)
+
+Private-catalog suppliers (not on the platform) get a **preferred channel + contact**
+(`restaurant_catalog_contacts`: WhatsApp number in international digits, email,
+contact name, notes; edited from Consegne or from the order page). On a catalog
+order, the **Invia ai fornitori** panel per supplier block offers:
+WhatsApp (`wa.me/<number>?text=` with a clean Italian order text, no paid API),
+**Email + PDF** (existing Resend wrapper, now with attachments; reply-to = the
+restaurant's email), **PDF** download, "Ordinato al telefono", copy text, and
+**Segna confermato**. Each send/confirmation is logged in `order_dispatches`
+(status `sent` → `confirmed`); when all blocks are confirmed the header order turns
+`confirmed`, and Ricevi merce closes it as `delivered` — so receiving (4.3/4.9) and
+price tracking (4.4) work exactly as for connected suppliers.
+
 ## 5. Data model (additive migrations)
 
 * `20261009000000_restaurant_superpowers_enums.sql` — `notification_event` +=
@@ -199,11 +239,59 @@ push to owners/managers (`analytics.financial`).
   `restaurant_supplier_schedules`, `restaurant_par_levels`,
   `restaurant_catalog_price_memory`, `restaurant_catalog_price_changes` (+ trigger +
   backfill), `kitchen_requests`, `delivery_checks`, `delivery_check_lines`,
-  `restaurant_notification_log`; private bucket `delivery-checks`; RLS for owners and
-  team members via `private.is_restaurant_member` / `private.has_restaurant_permission`
-  (policies created in `DO` blocks guarded by `pg_policies`, no `DROP`).
+  `restaurant_haccp_settings`, `restaurant_notification_log`, view
+  `restaurant_received_lines`; private bucket `delivery-checks`; RLS for owners and
+  team members via `private.is_restaurant_owner` / `private.is_restaurant_member` /
+  `private.has_restaurant_permission` (wrapped in `private.restaurant_can_read` and
+  `private.restaurant_can`; policies created in `DO` blocks guarded by `pg_policies`,
+  no `DROP`).
+* `20261009000200_restaurant_order_channels.sql` — `restaurant_catalog_contacts`,
+  `order_dispatches` (+ RLS).
 
-## 6. Sources
+### 5.1 Receiving data contract (for invoice reconciliation / food cost)
+
+Other modules should read **`public.restaurant_received_lines`** (security_invoker
+view, the caller's RLS applies) instead of the raw tables:
+
+| column | meaning |
+|---|---|
+| `line_id`, `check_id` | delivery_check_lines.id / delivery_checks.id |
+| `restaurant_id`, `order_id`, `order_split_id`, `supplier_id` | context (`supplier_id` null for private catalogs) |
+| `supplier_label` | supplier name as shown at reception (catalog supplier name for catalog orders) |
+| `order_item_id` | `order_items.id` for marketplace lines, NULL for catalog lines (`line_ref` = `catalog:<block>:<line>`) |
+| `product_name`, `unit`, `category` | as received (`category` = MacroCategory) |
+| `ordered_qty`, `received_qty` | ordered vs actually received (0 when missing) |
+| `issue` | `ok`, `missing`, `short`, `damaged`, `wrong_item`, `quality` |
+| `lot_number`, `expiry_date`, `temperature_c`, `temperature_ok` | HACCP traceability |
+| `ddt_number`, `ddt_photo_path` | transport document (photo in the private `delivery-checks` bucket) |
+| `received_at`, `checked_by` | when / who |
+
+Several checks can exist for the same order (re-checks keep history): use the most
+recent `received_at` per `line_ref` for "what was received".
+
+### 5.2 Operations
+
+* Cron: call `GET|POST /api/restaurant/reminders` with
+  `Authorization: Bearer $RESTAURANT_CRON_SECRET` (or Vercel's `$CRON_SECRET`):
+  every 15–30 min (cut-offs + daily price alerts) and `?job=digest` on Monday
+  morning. Without a schedule nothing breaks; reminders simply are not sent.
+* Email channel needs `RESEND_API_KEY` and a verified `gastrobridge.it` sender.
+
+## 6. Deferred / known limits
+
+* Cut-off reminders fire only for schedules saved on /consegne (restaurant-defined);
+  suppliers whose days come only from their delivery zone show countdowns but are
+  not reminded until the restaurant saves them.
+* Catalog price history starts when the migration is applied (backfill = today's
+  prices); marketplace products have full `price_history`.
+* Supplier reliability score, recurring auto-orders, POS/recipe-driven quantities and
+  invoice matching (owned by the e-invoice / food-cost agent) are out of scope.
+* AI parsing of messy lists: TODO hook in `lib/restaurants/ordering/quick-parse.ts`,
+  to be wired to the shared `lib/ai/import` client (no second Claude client).
+* Marketplace split statuses are never changed by the restaurant's check-in
+  (delivered requires the supplier's POD/DDT flow); catalog orders are.
+
+## 7. Sources
 
 * [Toast — restaurant order guide](https://pos.toasttab.com/vi-us/blog/on-the-line/restaurant-order-guide-template)
 * [WISK — par inventory sheet](https://www.wisk.ai/blms/par-inventory-sheet)
