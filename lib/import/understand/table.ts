@@ -122,7 +122,7 @@ export function columnStats(rows: string[][], col: number): ColumnStats {
     }
     if (/[a-zà-ú]{3,}/i.test(v) && v.length >= 4 && !unitFromWord(v)) textLike++;
     if (/^[A-Z0-9][A-Z0-9\-./]{2,18}$/i.test(v) && /\d/.test(v) && n === null) codeLike++;
-    if (/^\d{4,13}$/.test(v)) codeLike += 0.5;
+    if (/^\d{4,13}$/.test(v)) codeLike += 1;
   }
   return {
     filled,
@@ -223,4 +223,23 @@ export function choosePriceColumn(headerCells: string[], priceCols: number[]): {
   };
   const sorted = [...priceCols].sort((a, b) => score(b) - score(a) || a - b);
   return { main: sorted[0]!, others: sorted.slice(1) };
+}
+
+/**
+ * Drop header-assigned roles that the column content contradicts
+ * ("Articolo" holding codes is not the name column).
+ */
+export function validateRoles(rows: string[][], roles: Record<number, ColumnRole>): Record<number, ColumnRole> {
+  const out: Record<number, ColumnRole> = {};
+  for (const [k, role] of Object.entries(roles)) {
+    const i = Number(k);
+    const st = columnStats(rows, i);
+    if (st.filled === 0) continue;
+    if (role === "name" && st.textLike < 0.5) continue;
+    if (role === "price" && st.priceLike + st.intLike < 0.5) continue;
+    if (role === "unit" && st.unitLike < 0.4 && st.packLike < 0.3) continue;
+    if (role === "vat" && st.vatLike < 0.5) continue;
+    out[i] = role;
+  }
+  return out;
 }

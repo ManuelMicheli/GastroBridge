@@ -103,18 +103,25 @@ export function normalizePhone(raw: string): string | null {
   const national = d.replace(/^\+39/, "");
   if (!/^[03]\d{5,10}$/.test(national)) return null;
   if (national.length < 6 || national.length > 11) return null;
-  // Format: mobile 3xx xxx xxxx, landline 0x… grouped by 3/4
+  // Format: mobile 3xx xxx xxxx
   if (national.startsWith("3")) {
     return `${national.slice(0, 3)} ${national.slice(3, 6)} ${national.slice(6)}`.trim();
   }
-  return national.replace(/^(0\d{1,3})(\d+)$/, "$1 $2");
+  // Landline: keep the writer's grouping (area codes are 2–4 digits long).
+  const groups = raw.replace(/^(?:\+|00)\s?39[\s./-]?/, "").split(/[\s./-]+/).filter(Boolean);
+  if (groups.length >= 2 && groups.join("") === national) return groups.join(" ");
+  const area = /^0[26]/.test(national) ? 2 : 3;
+  return `${national.slice(0, area)} ${national.slice(area)}`;
 }
+
+const DATE_LIKE = /^\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}$/;
 
 export function findPhones(text: string, exclude: string[] = []): string[] {
   const out = new Set<string>();
   const ex = new Set(exclude.map((e) => e.replace(/\D/g, "")));
   for (const m of text.matchAll(PHONE_RE)) {
     const raw = m[0];
+    if (DATE_LIKE.test(raw.trim())) continue;
     const digits = raw.replace(/\D/g, "").replace(/^(0039|39)(?=[03]\d{5})/, "");
     if (ex.has(digits)) continue;
     // 11 digits with valid VAT checksum and no separators → P.IVA, not a phone
@@ -136,9 +143,11 @@ const STREET_RE =
   /\b(via|viale|v\.le|v\.|piazza|p\.zza|p\.za|piazzale|corso|c\.so|largo|strada|str\.|localit[aà]|loc\.|contrada|c\.da|vicolo|frazione|fraz\.|borgo|lungomare|zona industriale|z\.i\.)\s+[A-Za-zÀ-ú0-9'".\s-]{2,60}?(?:,?\s*(?:n\.?|nr\.?|n°)?\s*\d{1,4}\s?[a-zA-Z]?(?:\/\d+)?)?(?=$|,|\s-\s|\s{2}|\s\d{5}\b|\s*\()/i;
 const CAP_CITY_RE = /\b(\d{5})\s*[-,]?\s*([A-Za-zÀ-ú'][A-Za-zÀ-ú' .-]{1,40}?)\s*(?:\(\s*([A-Za-z]{2})\s*\)|[-,]\s*([A-Z]{2})\b|\s([A-Z]{2})\b)?(?=$|[,;.\s]|\s-)/;
 
+const CAP_CITY_PROV_RE = /\b(\d{5})\s*[-,]?\s*([A-Za-zÀ-ú'][A-Za-zÀ-ú' .-]{1,40}?)\s*(?:\(\s*([A-Za-z]{2})\s*\)|[-,]\s*([A-Z]{2})\b|\s([A-Z]{2})\b)(?=$|[,;.\s]|\s-)/;
+
 export function findAddress(text: string): { address: string | null; zip: string | null; city: string | null; province: string | null } {
   const street = STREET_RE.exec(text);
-  const cap = CAP_CITY_RE.exec(text);
+  const cap = CAP_CITY_PROV_RE.exec(text) ?? CAP_CITY_RE.exec(text);
   return {
     address: street ? street[0].replace(/[\s,]+$/, "").trim() : null,
     zip: cap ? cap[1]! : null,
@@ -189,11 +198,22 @@ export function findDeliveryDays(text: string, requireContext = true): { days: n
   }
 
   const days = new Set<number>();
+  let consumed = f;
+  // chains of 3+ days joined by "-" are lists, not ranges: "lun-mer-ven"
+  const DAY = "(?:lun|mar|mer|gio|ven|sab|dom)[a-z]*\\.?";
+  const chainRe = new RegExp(`\\b${DAY}(?:\\s*-\\s*${DAY}){2,}`, "g");
+  for (const c of f.match(chainRe) ?? []) {
+    for (const tok of c.split("-")) {
+      const d = dayOf(tok.trim());
+      if (d) days.add(d);
+    }
+    consumed = consumed.replace(c, " ");
+  }
   // ranges: "lun-gio", "dal lunedi al venerdi", "lun → ven"
   const rangeRe = /\b(?:dal\s+)?(lun\w*|mar\w*|mer\w*|gio\w*|ven\w*|sab\w*|dom\w*)\.?\s*(?:-|–|al|a|→|>)\s*(lun\w*|mar\w*|mer\w*|gio\w*|ven\w*|sab\w*|dom\w*)\b/g;
   let m: RegExpExecArray | null;
-  let consumed = f;
-  while ((m = rangeRe.exec(f))) {
+  const scan = consumed;
+  while ((m = rangeRe.exec(scan))) {
     const a = dayOf(m[1]!);
     const b = dayOf(m[2]!);
     if (a && b) {
@@ -333,6 +353,7 @@ export type SupplierSignals = {
   legalForm: boolean;
   delivery: boolean;
   minOrder: boolean;
+  freeDelivery: boolean;
   cutoff: boolean;
   keywords: boolean;
   count: number;
@@ -345,14 +366,14 @@ export function supplierSignals(line: string): SupplierSignals {
   const vat = PIVA_LABELED.test(line) || /\bp\.?\s?iva\b/i.test(line);
   const email = EMAIL_RE.test(line);
   EMAIL_RE.lastIndex = 0;
-  const phone = /\b(tel|telefono|cell|fax|whatsapp)\b/i.test(line) || (PHONE_RE.test(line) && !/\d+[.,]\d{2}\b/.test(line));
-  PHONE_RE.lastIndex = 0;
+  const phone = /\b(tel|telefono|cell|fax|whatsapp)\b/i.test(line) || (findPhones(line).length > 0 && !/\d+[.,]\d{2}\b/.test(line));
   const address = STREET_RE.test(line) && (CAP_CITY_RE.test(line) || /\d/.test(line));
   const legalForm = LEGAL_FORM_RE.test(line);
   const delivery = DELIVERY_CONTEXT.test(fold(line)) && /\b(lun|mar|mer|gio|ven|sab|dom|giorn|24\s*h|48\s*h|settiman)/i.test(fold(line));
   const minOrder = findMinOrder(line) !== null;
+  const freeDelivery = findFreeDelivery(line) !== null;
   const cutoff = findCutoff(line) !== null;
   const keywords = SUPPLIER_KEYWORDS.test(line);
-  const count = [vat, email, phone, address, legalForm, delivery, minOrder, cutoff, keywords].filter(Boolean).length;
-  return { vat, email, phone, address, legalForm, delivery, minOrder, cutoff, keywords, count };
+  const count = [vat, email, phone, address, legalForm, delivery, minOrder || freeDelivery, cutoff, keywords].filter(Boolean).length;
+  return { vat, email, phone, address, legalForm, delivery, minOrder, freeDelivery, cutoff, keywords, count };
 }

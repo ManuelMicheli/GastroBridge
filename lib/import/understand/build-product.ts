@@ -5,8 +5,8 @@ import type { ParsedText } from "./product-line.ts";
 import { defaultPriceUnit } from "./product-line.ts";
 import { expandAbbreviations } from "../lexicon/abbreviations.ts";
 import { CATEGORY_LABELS, classifyCategory, type ImportCategory } from "../lexicon/categories.ts";
-import { computeUnitPrice, isContainer, SALE_UNIT_LABELS } from "../parse/units.ts";
-import { nameKey, sentenceCase } from "../text.ts";
+import { computeUnitPrice, isContainer, measureBase, SALE_UNIT_LABELS } from "../parse/units.ts";
+import { fold, isMostlyUpper, nameKey, normalizeCase, sentenceCase } from "../text.ts";
 import type { NameIndex } from "../match/similarity.ts";
 
 export type BuildContext = {
@@ -38,6 +38,16 @@ export type BuildExtra = {
 
 const fc = (score: number, reason: string): FieldConfidence => ({ score: Math.round(score * 100) / 100, reason });
 
+/** "Spaghetti de cecco" → "Spaghetti De Cecco" when the brand is known. */
+function restoreBrandCase(name: string, brand: string | null): string {
+  if (!brand) return name;
+  const fb = fold(brand);
+  const fn = fold(name);
+  const i = fn.indexOf(fb);
+  if (i < 0 || fn.length !== name.length) return name;
+  return name.slice(0, i) + brand + name.slice(i + brand.length);
+}
+
 const OCR_GARBAGE = /[|~^{}<>\\]|[a-z][0-9][a-z]|[0-9][a-z]{1}[0-9]/i;
 
 /** Returns null when the memory says this line must be skipped. */
@@ -49,8 +59,9 @@ export function buildProduct(parsed: ParsedText, extra: BuildExtra, ctx: BuildCo
   const fromMemory = Boolean(hint && (hint.name || hint.category || hint.priceUnit));
 
   // ---- name ---------------------------------------------------------------
-  const exp = expandAbbreviations(parsed.nameRaw, ctx.hints.abbreviations);
-  let name = sentenceCase(exp.text);
+  const allCaps = isMostlyUpper(parsed.nameRaw);
+  const exp = expandAbbreviations(normalizeCase(parsed.nameRaw), ctx.hints.abbreviations, { allCaps });
+  let name = restoreBrandCase(sentenceCase(exp.text), extra.brand ?? parsed.brand);
   let nameConf: FieldConfidence;
   if (hint?.name) {
     name = hint.name;
@@ -124,8 +135,20 @@ export function buildProduct(parsed: ParsedText, extra: BuildExtra, ctx: BuildCo
     priceUnit = parsed.priceBasis;
     unitConf = fc(0.95, `Prezzo indicato “al ${SALE_UNIT_LABELS[priceUnit]}”`);
   } else if (extra.tableUnit) {
-    priceUnit = extra.tableUnit;
-    unitConf = fc(0.9, `Colonna unità: ${SALE_UNIT_LABELS[priceUnit]}`);
+    const tu = extra.tableUnit;
+    const mb = measureBase(tu);
+    const soldByWeight = ["carne", "pesce", "latticini", "verdura", "frutta"].includes(category);
+    // "1,5/2 kg", "7 kg ca." describe the piece weight, not a pack
+    const approximate = /\d\s*\/\s*\d|\bca\.?(?:\s|$)|circa|±|~|\bmedi[oa]\b/i.test(extra.original);
+    if ((mb === "kg" || mb === "l") && pack.total?.base === mb && pack.total.value >= 2 && !soldByWeight && !approximate) {
+      // "UM: LT · Conf.: 5 lt · 47,50" — dry goods are priced per pack.
+      priceUnit = pack.container ?? "confezione";
+      unitConf = fc(0.6, `Colonna unità “${SALE_UNIT_LABELS[tu]}” ma confezione da ${parsed.format}: prezzo per confezione`);
+      issues.push(`Verifica: prezzo al ${SALE_UNIT_LABELS[tu]} o per la confezione da ${parsed.format}?`);
+    } else {
+      priceUnit = tu;
+      unitConf = fc(0.9, `Colonna unità: ${SALE_UNIT_LABELS[priceUnit]}`);
+    }
   } else if (extra.headerBasis) {
     priceUnit = extra.headerBasis;
     unitConf = fc(0.88, `Intestazione prezzo: al ${SALE_UNIT_LABELS[priceUnit]}`);
@@ -151,7 +174,7 @@ export function buildProduct(parsed: ParsedText, extra: BuildExtra, ctx: BuildCo
 
   const unitPrice = price !== null ? computeUnitPrice(price, priceUnit, pack) : null;
   // A per-kg price under a container with no weight cannot be compared: say so.
-  if (price !== null && isContainer(priceUnit) && !pack.total) {
+  if (price !== null && isContainer(priceUnit) && !pack.total && priceUnit !== "mazzo" && priceUnit !== "rotolo") {
     issues.push(`Contenuto del ${SALE_UNIT_LABELS[priceUnit]} non indicato`);
     unitConf = fc(Math.min(unitConf.score, 0.7), unitConf.reason);
   }

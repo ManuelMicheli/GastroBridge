@@ -1,0 +1,7 @@
+Prodotto	Confezione	Prezzo
+Patatine fritte surgelate	cartone 4x2,5 kg	18,40 €
+Spinaci in foglia surg.	busta 2,5 kg	6,90 €
+Piselli fini surgelati	busta 1 kg	2,80 €
+Gelato fiordilatte	vaschetta 3 l	14,50 €
+Croissant vuoti surgelati	cartone 60 pz	21,00 €
+Gamberoni argentini IQF	scatola 2 kg	29,80 €

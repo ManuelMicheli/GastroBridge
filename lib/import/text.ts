@@ -23,7 +23,7 @@ const EMOJI_RE =
   /[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{1F1E6}-\u{1F1FF}\u{FE0F}\u{200D}\u{20E3}]/gu;
 
 export function stripEmoji(s: string): string {
-  return s.replace(EMOJI_RE, " ");
+  return s.replace(EMOJI_RE, "");
 }
 
 /** Unify unicode spaces, dashes, multiplication signs and euro spellings. */
@@ -93,20 +93,26 @@ export function cleanLine(line: string): string {
     .trim();
 }
 
+/** True when most letters are uppercase ("POMODORI PELATI MUTTI"). */
+export function isMostlyUpper(s: string): boolean {
+  const letters = s.replace(/[^a-zA-ZÀ-ú]/g, "");
+  const upper = letters.replace(/[^A-ZÀ-Þ]/g, "").length;
+  return letters.length >= 4 && upper / letters.length > 0.7;
+}
+
+/** ALL CAPS → lowercase, keeping known acronyms (DOP, IGP, PET…) uppercase. */
+export function normalizeCase(s: string): string {
+  if (!isMostlyUpper(s)) return s;
+  return s
+    .split(/(\s+)/)
+    .map((w) => (KEEP_UPPER.has(w.replace(/[^A-Z0-9]/gi, "").toUpperCase()) && w.replace(/[^A-Z0-9]/gi, "").length >= 2 ? w.toUpperCase() : w.toLowerCase()))
+    .join("");
+}
+
 /** Capitalize the first letter, keep the rest (acronyms stay uppercase). */
 export function sentenceCase(s: string): string {
-  const t = s.trim();
-  if (!t) return t;
-  // ALL CAPS input → lowercase first, preserving known acronyms.
-  const letters = t.replace(/[^a-zA-ZÀ-ú]/g, "");
-  const upper = letters.replace(/[^A-ZÀ-Þ]/g, "").length;
-  let base = t;
-  if (letters.length >= 4 && upper / letters.length > 0.7) {
-    base = t
-      .split(/(\s+)/)
-      .map((w) => (KEEP_UPPER.has(w.replace(/[^A-Z0-9]/gi, "").toUpperCase()) ? w.toUpperCase() : w.toLowerCase()))
-      .join("");
-  }
+  const base = normalizeCase(s.trim());
+  if (!base) return base;
   return base.charAt(0).toUpperCase() + base.slice(1);
 }
 
@@ -114,6 +120,17 @@ const KEEP_UPPER = new Set([
   "DOP", "IGP", "IGT", "DOC", "DOCG", "STG", "BIO", "UHT", "EVO", "IQF", "XL", "XXL", "L", "M", "S",
   "AOP", "PAT", "GDO", "PET", "UE", "USA", "IT", "BBQ", "MSC", "ASC",
 ]);
+
+/**
+ * Fix the usual OCR confusions inside price-like tokens only:
+ * "l,90" → "1,90", "O,70" → "0,70", "2,8O" → "2,80". Words are untouched.
+ */
+export function fixOcrDigits(s: string): string {
+  return s.replace(/(?<![A-Za-zÀ-ú])([0-9OoIl|]{1,4}[,.][0-9OoIl|]{1,2})(?![A-Za-zÀ-ú0-9])/g, (tok) => {
+    if (!/\d/.test(tok)) return tok;
+    return tok.replace(/[Oo]/g, "0").replace(/[Il|]/g, "1");
+  });
+}
 
 /** Split on runs of 3+ spaces (column gaps in PDF/OCR text) — keeps single spaces. */
 export function splitColumns(line: string): string[] {

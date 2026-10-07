@@ -1,0 +1,66 @@
+{
+  "_doc": "Held-out corpus: written after the heuristics were tuned on expected.json, used only to measure generalisation. Categories/units may list acceptable alternatives.",
+  "heldout-whatsapp-pesce.txt": {
+    "kind": "text",
+    "supplier": { "name": "Pescheria Il Faro", "deliveryDays": [2, 4, 6], "orderCutoff": "21:00" },
+    "products": [
+      { "name": "Orata", "price": 12, "unit": "kg", "category": "pesce" },
+      { "name": "Spigola grossa", "price": 18.5, "unit": "kg", "category": "pesce" },
+      { "name": "Gamberi rossi", "price": 55, "unit": "kg", "category": "pesce" },
+      { "name": "Calamari freschi", "price": 16, "unit": "kg", "category": "pesce" },
+      { "name": "Cozze pulite", "price": 3.5, "unit": "kg", "category": "pesce" },
+      { "name": "Polpo verace", "price": 14.9, "unit": "kg", "category": "pesce" },
+      { "name": "Tonno rosso trancio", "price": 28, "unit": "kg", "category": "pesce" },
+      { "name": "Alici", "price": 7.5, "unit": "kg", "category": "pesce" }
+    ]
+  },
+  "heldout-email-bevande.txt": {
+    "kind": "text",
+    "supplier": {
+      "name": "Beverage Service Lombardia S.r.l.",
+      "vatNumber": "05678901231",
+      "emails": ["ordini@beverageservice.it"],
+      "phones": ["02 2846611"],
+      "zip": "20127",
+      "province": "MI",
+      "minOrder": 120,
+      "freeDeliveryOver": 250,
+      "deliveryDays": [1, 2, 3, 4, 5]
+    },
+    "products": [
+      { "name": "Coca-Cola 33cl vetro", "price": 19.9, "unit": ["confezione", "cartone"], "category": "bevande" },
+      { "name": "Acqua San Pellegrino", "price": 9.6, "unit": ["confezione", "cassa", "cartone"], "category": "bevande" },
+      { "name": "Birra Ichnusa non filtrata", "price": 16.8, "unit": "cartone", "category": "bevande" },
+      { "name": "Prosecco DOC Treviso", "price": 6.4, "unit": "bottiglia", "category": "bevande", "vat": null },
+      { "name": "Aperol", "price": 13.9, "unit": ["pz", "bottiglia"], "category": "bevande" },
+      { "name": "Succo di pesca", "price": 11.5, "unit": ["confezione", "cartone"], "category": "bevande" },
+      { "name": "Caffè in grani miscela bar", "price": 17.5, "unit": ["pz", "confezione"], "category": ["bevande", "secco"] },
+      { "name": "Tonica Schweppes", "price": 14.4, "unit": ["confezione", "cartone"], "category": "bevande" }
+    ]
+  },
+  "heldout-listino-carni.csv": {
+    "kind": "csv",
+    "supplier": { "name": "Macelleria Fratelli Russo snc" },
+    "products": [
+      { "name": "Filetto di manzo 1° scelta", "price": 38, "unit": "kg", "category": "carne" },
+      { "name": "Fesa di tacchino", "price": 9.8, "unit": "kg", "category": "carne" },
+      { "name": "Salsiccia di Bra", "price": 6.2, "unit": "vaschetta", "category": "carne" },
+      { "name": "Bistecca di scottona", "price": 7.5, "unit": "pz", "category": "carne" },
+      { "name": "Ali di pollo", "price": 17.5, "unit": "cassa", "category": "carne" },
+      { "name": "Lonza di maiale", "price": 7.9, "unit": "kg", "category": "carne" }
+    ]
+  },
+  "heldout-ocr-detersivi.txt": {
+    "kind": "image",
+    "supplier": { "name": "IGIENE PROFESSIONALE NORD srl", "vatNumber": "06789012348", "zip": "10143", "province": "TO" },
+    "products": [
+      { "name": "Detergente lavastoviglie", "price": 34.5, "unit": "fusto", "category": "pulizia" },
+      { "name": "Brillantante", "price": 18.9, "unit": "fusto", "category": "pulizia" },
+      { "name": "Sgrassatore universale", "price": 27.6, "unit": ["confezione", "cartone"], "category": "pulizia" },
+      { "name": "Guanti nitrile blu taglia M", "price": 6.8, "unit": "confezione", "category": "pulizia" },
+      { "name": "Sacchi neri 70x110", "price": 2.1, "unit": "rotolo", "category": "pulizia" },
+      { "name": "Carta asciugamani bobina 800 strappi", "price": 4.4, "unit": ["pz", "rotolo"], "category": "pulizia" },
+      { "name": "Igienizzante mani", "price": 5.9, "unit": ["pz", "bottiglia"], "category": "pulizia" }
+    ]
+  }
+}

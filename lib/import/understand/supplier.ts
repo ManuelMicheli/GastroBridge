@@ -18,6 +18,7 @@ import {
   websiteIn,
 } from "../parse/supplier-info.ts";
 import { fold, sentenceCase } from "../text.ts";
+import { categoryFromHeading } from "../lexicon/categories.ts";
 
 export type SupplierEvidence = {
   /** Lines classified as supplier info, preambles, signatures. */
@@ -136,8 +137,8 @@ export function buildSupplier(ev: SupplierEvidence, hints: ImportHints | null): 
   } else if (sender && !/^\+?\d[\d\s]+$/.test(sender)) {
     s.name = sender;
     s.confidence.name = fc(0.55, "Mittente del messaggio");
-  } else if (ev.titleCandidates[0]) {
-    s.name = cleanName(ev.titleCandidates[0]);
+  } else if (ev.titleCandidates.find((t) => !categoryFromHeading(t))) {
+    s.name = cleanName(ev.titleCandidates.find((t) => !categoryFromHeading(t))!);
     s.confidence.name = fc(0.45, "Prima riga del documento");
   } else {
     const email = s.emails[0] ?? s.pec;

@@ -195,7 +195,7 @@ export type CategoryGuess = {
 /** Words that flip a fresh product to frozen/dry regardless of the noun. */
 const CONTEXT_OVERRIDES: Array<[RegExp, ImportCategory, number]> = [
   [/\b(surgelat|congelat|frozen|iqf)/, "surgelati", 6],
-  [/\b(in scatola|sott'?olio|sottolio|in salamoia|essiccat|secchi\b|disidratat|liofilizzat|in vasetto|in barattolo)/, "secco", 3],
+  [/\b(in scatola|sott'?olio|sottolio|all'olio|al naturale|in salamoia|essiccat|secchi\b|disidratat|liofilizzat|in vasetto|in barattolo|in latta|in vetro|conserv)/, "secco", 4],
   [/\b(succo|nettare|spremut)/, "bevande", 3],
 ];
 

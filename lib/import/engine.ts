@@ -20,7 +20,7 @@ import type {
   SourceDoc,
 } from "./types.ts";
 import { emptyHints, REVIEW_THRESHOLD } from "./types.ts";
-import { cleanLine, parseEmailHeader, stripChatPrefix } from "./text.ts";
+import { cleanLine, fixOcrDigits, normalizeCase, parseEmailHeader, stripChatPrefix } from "./text.ts";
 import { classifyLine, type LineClass } from "./understand/classify.ts";
 import { parseProductText, type ParsedText } from "./understand/product-line.ts";
 import { buildProduct, type BuildContext, type BuildExtra } from "./understand/build-product.ts";
@@ -31,6 +31,7 @@ import {
   detectHeader,
   headerSignature,
   inferRolesFromContent,
+  validateRoles,
 } from "./understand/table.ts";
 import { findMoney, findVat, parseNumber } from "./parse/numbers.ts";
 import { parsePack, unitFromWord } from "./parse/units.ts";
@@ -49,7 +50,7 @@ const tick = () => new Promise<void>((r) => setTimeout(r, 0));
 // Line preparation (text & grid sheets)
 // ---------------------------------------------------------------------------
 
-type PreparedLine = { text: string; raw: string; row: number };
+type PreparedLine = { text: string; raw: string; row: number; sender: string | null };
 
 type TextPrep = {
   lines: PreparedLine[];
@@ -84,6 +85,7 @@ function prepareTextSheet(sheet: RawSheet): TextPrep {
       out.chatSenders.push(chat.sender);
       raw = chat.text;
     }
+    const sender = chat.sender;
     const header = parseEmailHeader(raw);
     if (header) {
       if (header.key === "da" || header.key === "from") {
@@ -109,7 +111,7 @@ function prepareTextSheet(sheet: RawSheet): TextPrep {
       out.signature.push(text);
       return;
     }
-    for (const seg of splitCompound(text)) out.lines.push({ text: seg, raw, row });
+    for (const seg of splitCompound(text)) out.lines.push({ text: seg, raw, row, sender });
   });
   return out;
 }
@@ -136,7 +138,10 @@ async function extract(doc: SourceDoc, ctx: ExtractionContext): Promise<Extracti
   const sheets: RawSheet[] = [];
   for (const sh of doc.sheets) {
     const rows = sh.rows
-      .map((r) => Array.from(r, (c) => String(c ?? "").trim()))
+      .map((r) => Array.from(r, (c) => {
+        const v = String(c ?? "").trim();
+        return ocr ? fixOcrDigits(v) : v;
+      }))
       .filter((r) => r.some(Boolean));
     if (totalRows + rows.length > MAX_ROWS) {
       const keep = Math.max(0, MAX_ROWS - totalRows);
@@ -151,6 +156,9 @@ async function extract(doc: SourceDoc, ctx: ExtractionContext): Promise<Extracti
   stats.rowsRead = totalRows;
   if (doc.meta?.droppedRows) {
     warnings.push(`${doc.meta.droppedRows} righe del file non sono state lette (formato non leggibile).`);
+  }
+  if (doc.meta?.skippedPages) {
+    warnings.push(`Il PDF ha ${doc.meta.pages} pagine: lette le prime ${(doc.meta.pages ?? 0) - doc.meta.skippedPages}. Dividi il file per importare il resto.`);
   }
   if (doc.meta?.ocrConfidence !== undefined && doc.meta.ocrConfidence < 0.6) {
     warnings.push("La foto è poco leggibile: controlla con attenzione nomi e prezzi (meglio una foto dritta, a fuoco e ben illuminata).");
@@ -213,7 +221,7 @@ async function extract(doc: SourceDoc, ctx: ExtractionContext): Promise<Extracti
         if (c.cls === "supplier") ev.lines.push(l.text);
         else if (c.cls !== "product") {
           ev.otherLines.push(l.text);
-          if (!seenProduct && (c.cls === "section" || c.cls === "noise") && !isNoiseText(l.text) && l.text.length <= 60 && c.features.words <= 6 && !categoryFromHeading(l.text)) {
+          if (!seenProduct && (c.cls === "section" || c.cls === "noise") && !isNoiseText(l.text) && l.text.length <= 60 && c.features.words <= 6) {
             ev.titleCandidates.push(l.text);
           }
         } else {
@@ -237,7 +245,7 @@ async function extract(doc: SourceDoc, ctx: ExtractionContext): Promise<Extracti
         const sig = supplierSignals(t);
         if (sig.count > 0) ev.lines.push(t);
         else ev.otherLines.push(t);
-        if (head.includes(r) && !isNoiseText(t) && t.length <= 60 && findMoney(t).length === 0 && !categoryFromHeading(t)) {
+        if (head.includes(r) && !isNoiseText(t) && t.length <= 60 && findMoney(t).length === 0) {
           ev.titleCandidates.push(t);
         }
         if (/prezzi\s+(?:si\s+intendono\s+)?(?:iva\s+)?esclus|\+\s*iva\b/i.test(t)) pricesIncludeVat = false;
@@ -294,9 +302,16 @@ async function extract(doc: SourceDoc, ctx: ExtractionContext): Promise<Extracti
       let section: string | null = null;
       let sectionCategory: ImportCategory | null = sheetCategory;
       const lines = plan.prep.lines;
+      // In a chat, only senders who posted at least one priced line are suppliers
+      // (the restaurant's own replies — "mi metti 3 kg di cozze" — are ignored).
+      const pricedSenders = new Set(lines.filter((l, i) => l.sender && classes[i] === "product").map((l) => l.sender));
       for (let i = 0; i < lines.length; i++) {
         const l = lines[i]!;
         let cls = classes[i] ?? "noise";
+        if (l.sender && pricedSenders.size > 0 && !pricedSenders.has(l.sender)) {
+          stats.noiseLines++;
+          continue;
+        }
         processed++;
         if (processed % 300 === 0) {
           progress({ stage: "products", progress: 0.25 + 0.65 * (processed / Math.max(1, totalRows)), message: `Analizzate ${processed} righe` });
@@ -323,7 +338,8 @@ async function extract(doc: SourceDoc, ctx: ExtractionContext): Promise<Extracti
         if (cls === "noise") { stats.noiseLines++; continue; }
 
         const parsed = parseProductText(text, { ocr });
-        if (parsed.price === null && parsed.nameRaw.length < 3) { stats.noiseLines++; continue; }
+        // a catalog line without any price is not importable
+        if (parsed.price === null) { stats.noiseLines++; continue; }
         stats.productLines++;
         push(buildProduct(parsed, {
           id: `${plan.sheet.name}:${l.row}:${i}`,
@@ -390,8 +406,10 @@ async function extractTable(
 ): Promise<{ products: Array<ExtractedProduct | null>; roles: Record<number, ColumnRole>; strategy: "table" | "lines"; columnNames: Partial<Record<string, ColumnRole>> }> {
   const rows = sheet.rows;
   const headerCells = headerIndex >= 0 ? rows[headerIndex]! : [];
+  const headerSig = headerIndex >= 0 ? headerSignature(headerCells) : "";
   const data = rows.slice(headerIndex + 1);
-  const { roles } = inferRolesFromContent(data.slice(0, 300), headerRoles);
+  const sample = data.slice(0, 300);
+  const { roles } = inferRolesFromContent(sample, validateRoles(sample, headerRoles));
 
   const colsOf = (role: ColumnRole) => Object.entries(roles).filter(([, r]) => r === role).map(([i]) => Number(i));
   const nameCols = colsOf("name");
@@ -464,6 +482,16 @@ async function extractTable(
       continue;
     }
     if (/^(totale|subtotale|imponibile|tot\.)/i.test(nameCell)) { stats.noiseLines++; continue; }
+    // header repeated on every PDF page
+    if (headerIndex >= 0 && headerSignature(row) === headerSig) { stats.headerLines++; continue; }
+    // supplier details written inside the table area ("Ordine minimo € 200")
+    {
+      const sig = supplierSignals(nonEmpty.join(" "));
+      if (sig.minOrder || sig.vat || sig.email || sig.address || (sig.phone && !priceCell) || (sig.delivery && !priceCell)) {
+        stats.supplierLines++;
+        continue;
+      }
+    }
 
     // price from its cell, else from anywhere in the row
     let cellPrice: BuildExtra["cellPrice"] = null;
@@ -474,12 +502,26 @@ async function extractTable(
         cellPrice = { value: Math.round(n * 10000) / 10000, score: 0.95, reason: `Colonna prezzo “${headerCells[priceCol] || "prezzo"}”` };
       }
     }
-    // name + pack (+ unit) text through the line parser
+    // name through the line parser; the pack column, when present, wins for the format
     const packCell = cell(row, packCol);
     const unitCell = cell(row, unitCol);
-    const text = [nameCell, packCell].filter(Boolean).join("  ");
-    const parsed: ParsedText = parseProductText(text, { ocr, noPrice: true });
+    const parsed: ParsedText = parseProductText(nameCell, { ocr, noPrice: true });
+    if (packCell) {
+      const pp = parsePack(packCell);
+      if (pp.pack.total || pp.pack.container || pp.pack.pieces) {
+        parsed.pack = { ...parsed.pack, ...pp.pack };
+        parsed.format = /\d/.test(packCell) ? normalizeCase(packCell).replace(/\s+/g, " ") : pp.format;
+      } else if (/\d/.test(packCell)) {
+        parsed.format = normalizeCase(packCell);
+      }
+      parsed.priceBasis ??= pp.basis;
+    }
 
+    // "€ 38,00 /kg" — the price cell can carry the unit too
+    if (priceCell && !parsed.priceBasis) {
+      const pb = parsePack(priceCell);
+      parsed.priceBasis = pb.basis ?? pb.loneUnit ?? null;
+    }
     if (!cellPrice) {
       // price column empty: maybe the price sits in another cell
       const joined = row.filter((_, i) => i !== nameCol).join("   ");

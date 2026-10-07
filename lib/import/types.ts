@@ -41,6 +41,8 @@ export type SourceDoc = {
     ocrPages?: number;
     /** Rows dropped by the format layer (never silent: surfaced as warning). */
     droppedRows?: number;
+    /** Pages beyond the page limit that were not read (surfaced as warning). */
+    skippedPages?: number;
   };
 };
 

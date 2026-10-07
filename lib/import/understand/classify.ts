@@ -4,7 +4,7 @@
 import { fold } from "../text.ts";
 import { findMoney } from "../parse/numbers.ts";
 import { parsePack } from "../parse/units.ts";
-import { supplierSignals } from "../parse/supplier-info.ts";
+import { supplierSignals, type SupplierSignals } from "../parse/supplier-info.ts";
 import { isNoiseText } from "../lexicon/misc.ts";
 import { categoryFromHeading, classifyCategory } from "../lexicon/categories.ts";
 
@@ -20,6 +20,7 @@ export type LineFeatures = {
   digitsRatio: number;
   upperRatio: number;
   supplier: number;
+  signals: SupplierSignals;
   headerWords: number;
   noise: boolean;
   categoryWord: boolean;
@@ -56,6 +57,7 @@ export function lineFeatures(line: string): LineFeatures {
     digitsRatio: line.length ? digits / line.length : 0,
     upperRatio: letters ? uppers / letters : 0,
     supplier: sig.count,
+    signals: sig,
     headerWords,
     noise: isNoiseText(line),
     categoryWord: categoryFromHeading(line) !== null,
@@ -78,11 +80,16 @@ export function classifyLine(line: string): Classification {
   if (ft.hasPack) s.product += 1.2;
   if (ft.letters >= 3 && ft.words >= 1) s.product += 1;
   if (ft.letters < 3) s.product -= 3;
+  // a catalog line needs an amount (name-only lines are merged with the next line by the engine)
+  if (ft.moneyCount === 0) s.product -= 2;
   const cat = classifyCategory(line);
   if (cat.category !== "altro" && cat.confidence >= 0.6) s.product += 1;
 
-  // supplier evidence
+  // supplier evidence ("Ordine minimo 80 €" has a € but is not a product)
   s.supplier += ft.supplier * 2.2;
+  if (ft.signals.minOrder || ft.signals.freeDelivery) s.supplier += 3;
+  if (ft.signals.vat) s.supplier += 2;
+  if (ft.signals.cutoff || ft.signals.delivery) s.supplier += 1;
   if (ft.supplier > 0 && ft.decimalsCount === 0 && !ft.hasEuro) s.supplier += 1;
 
   // header evidence
@@ -97,6 +104,7 @@ export function classifyLine(line: string): Classification {
   }
 
   // noise
+  s.noise += 0.5;
   if (ft.noise) s.noise += 4;
   if (ft.moneyCount === 0 && !ft.hasPack && !shortText && ft.supplier === 0) s.noise += 1.5;
   if (ft.words > 14 && ft.decimalsCount === 0) s.noise += 2;

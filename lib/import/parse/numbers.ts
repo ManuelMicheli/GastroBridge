@@ -157,7 +157,7 @@ export const VAT_RATES = [4, 5, 10, 22] as const;
 export type VatMatch = { rate: number | null; included: boolean | null; start: number; end: number };
 
 const VAT_RE =
-  /\(?\s*(?:\+\s*)?(?:i\.?\s?v\.?\s?a\.?|iva|vat|aliquota)\s*(?:al\s*)?(?:(\d{1,2})\s*%?)?\s*(inclusa|incl\.?|compresa|esclusa|escl\.?|esente|non\s+inclusa)?\s*\)?|\b(\d{1,2})\s*%\s*(?:di\s+)?iva\b/i;
+  /\(?\s*(?:\+\s*)?(?<![A-Za-zÀ-ú'’])(?:i\.?\s?v\.?\s?a\.?|iva|vat|aliquota)(?![A-Za-zÀ-ú])\s*(?:al\s*)?(?:(\d{1,2})\s*%?)?\s*(inclusa|incl\.?|compresa|esclusa|escl\.?|esente|non\s+inclusa)?\s*\)?|\b(\d{1,2})\s*%\s*(?:di\s+)?iva\b/i;
 
 /** Find "iva 10%", "+IVA", "IVA esclusa", "22% iva" inside a line. */
 export function findVat(line: string): VatMatch | null {

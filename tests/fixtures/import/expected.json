@@ -1,0 +1,169 @@
+{
+  "_doc": "Gold annotations for the import corpus. `unit` may be a list of acceptable price units. `name` is the expected normalized name (matched fuzzily, ≥0.75). Supplier fields are checked when present.",
+  "whatsapp-ortofrutta.txt": {
+    "kind": "text",
+    "supplier": { "name": "Mario Ortofrutta Bianchi", "deliveryDays": [1, 3, 5], "minOrder": 80, "phones": ["333 123 4567"], "orderCutoff": "18:00" },
+    "products": [
+      { "name": "Pomodori datterini", "price": 3.2, "unit": "kg", "category": "verdura" },
+      { "name": "Pomodori cuore di bue", "price": 2.8, "unit": "kg", "category": "verdura" },
+      { "name": "Zucchine romanesche", "price": 1.9, "unit": "kg", "category": "verdura" },
+      { "name": "Melanzane tonde", "price": 1.6, "unit": "kg", "category": "verdura" },
+      { "name": "Insalata gentile", "price": 0.9, "unit": "pz", "category": "verdura" },
+      { "name": "Basilico", "price": 0.8, "unit": ["mazzo", "pz"], "category": "verdura" },
+      { "name": "Patate a pasta gialla", "price": 9.5, "unit": "sacco", "category": "verdura" },
+      { "name": "Limoni Amalfi", "price": 2.5, "unit": "kg", "category": "frutta" },
+      { "name": "Arance tarocco", "price": 18, "unit": "cassa", "category": "frutta" },
+      { "name": "Fragole", "price": 2.5, "unit": "vaschetta", "category": "frutta" },
+      { "name": "Mele golden", "price": 1.7, "unit": "kg", "category": "frutta" }
+    ]
+  },
+  "email-caseificio.txt": {
+    "kind": "text",
+    "supplier": {
+      "name": "Caseificio Valle Verde S.r.l.",
+      "vatNumber": "01234567897",
+      "emails": ["ordini@caseificiovalleverde.it"],
+      "phones": ["0828 123456", "347 987 6543"],
+      "zip": "84047",
+      "province": "SA",
+      "minOrder": 150,
+      "leadTimeDays": 1,
+      "orderCutoff": "16:00"
+    },
+    "pricesIncludeVat": false,
+    "products": [
+      { "name": "Mozzarella fior di latte", "price": 6.9, "unit": "confezione", "category": "latticini" },
+      { "name": "Mozzarella di bufala DOP", "price": 2.95, "unit": "pz", "category": "latticini" },
+      { "name": "Burrata pugliese", "price": 3.4, "unit": "pz", "category": "latticini" },
+      { "name": "Stracciatella", "price": 11.8, "unit": "vaschetta", "category": "latticini" },
+      { "name": "Ricotta vaccina fresca", "price": 6.5, "unit": "kg", "category": "latticini" },
+      { "name": "Parmigiano Reggiano 24 mesi", "price": 18.9, "unit": "kg", "category": "latticini" },
+      { "name": "Grana Padano grattugiato", "price": 13.2, "unit": "busta", "category": "latticini" },
+      { "name": "Pecorino romano DOP", "price": 16.4, "unit": "kg", "category": "latticini" },
+      { "name": "Mascarpone", "price": 3.1, "unit": "pz", "category": "latticini" },
+      { "name": "Burro centrifugato", "price": 9.8, "unit": "pz", "category": "latticini" },
+      { "name": "Panna fresca 35%", "price": 4.2, "unit": "pz", "category": "latticini" },
+      { "name": "Uova fresche categoria A", "price": 7.2, "unit": "confezione", "category": "latticini" }
+    ]
+  },
+  "nota-breve.txt": {
+    "kind": "text",
+    "supplier": { "name": "Rossi Ortofrutta", "deliveryDays": [1, 2, 3, 4], "minOrder": 100 },
+    "products": [
+      { "name": "Pomodori datterini", "price": 3.2, "unit": "kg", "category": "verdura" },
+      { "name": "Zucchine", "price": 1.8, "unit": "kg", "category": "verdura" },
+      { "name": "Carciofi romaneschi", "price": 0.9, "unit": "pz", "category": "verdura" }
+    ]
+  },
+  "listino-messy.csv": {
+    "kind": "csv",
+    "supplier": {
+      "name": "DISTRIBUZIONE ALIMENTARE FERRARI SPA",
+      "vatNumber": "02345678904",
+      "emails": ["commerciale@ferraridistribuzione.it"],
+      "phones": ["059 334455"],
+      "zip": "41123",
+      "province": "MO"
+    },
+    "pricesIncludeVat": false,
+    "products": [
+      { "name": "Spaghetti n.5 De Cecco", "price": 29.76, "unit": "cartone", "category": "secco", "vat": 4 },
+      { "name": "Penne rigate Rummo", "price": 21.6, "unit": "cartone", "category": "secco", "vat": 4 },
+      { "name": "Farina 00 Caputo pizzeria", "price": 23.5, "unit": ["sacco", "confezione"], "category": "secco", "vat": 4 },
+      { "name": "Semola rimacinata di grano duro", "price": 1.35, "unit": "confezione", "category": "secco", "vat": 4 },
+      { "name": "Pomodori pelati Mutti", "price": 19.8, "unit": "cartone", "category": "secco", "vat": 4 },
+      { "name": "Passata di pomodoro", "price": 1.12, "unit": "confezione", "category": "secco", "vat": 4 },
+      { "name": "Tonno all'olio d'oliva", "price": 21.9, "unit": "confezione", "category": "secco", "vat": 10 },
+      { "name": "Olio extravergine di oliva 100% italiano", "price": 47.5, "unit": ["confezione", "latta", "pz"], "category": "secco", "vat": 4 },
+      { "name": "Olio di semi di girasole", "price": 24.9, "unit": ["confezione", "fusto", "pz"], "category": "secco", "vat": 4 },
+      { "name": "Aceto balsamico di Modena IGP", "price": 4.8, "unit": "pz", "category": "secco", "vat": 22 },
+      { "name": "Acqua naturale 0,5L PET", "price": 5.28, "unit": "cartone", "category": "bevande", "vat": 10 },
+      { "name": "Coca Cola vetro 33cl", "price": 19.92, "unit": "cartone", "category": "bevande", "vat": 22 },
+      { "name": "Birra Moretti 66cl", "price": 18.75, "unit": "cartone", "category": "bevande", "vat": 22 }
+    ]
+  },
+  "listino-multisheet.json": {
+    "kind": "xlsx",
+    "supplier": {
+      "name": "Salumificio Monti & Figli S.n.c.",
+      "vatNumber": "03456789019",
+      "emails": ["ordini@salumificiomonti.it"],
+      "zip": "43013",
+      "province": "PR",
+      "deliveryDays": [2, 5],
+      "minOrder": 200
+    },
+    "products": [
+      { "name": "Prosciutto crudo di Parma DOP 24 mesi disossato", "price": 17.9, "unit": "kg", "category": "carne" },
+      { "name": "Prosciutto cotto alta qualità", "price": 12.4, "unit": "kg", "category": "carne" },
+      { "name": "Culatello di Zibello DOP", "price": 48, "unit": "kg", "category": "carne", "available": true },
+      { "name": "Salame Felino IGP", "price": 11.5, "unit": "pz", "category": "carne" },
+      { "name": "Guanciale stagionato", "price": 14.8, "unit": "kg", "category": "carne" },
+      { "name": "Mortadella Bologna IGP con pistacchio", "price": 9.9, "unit": "kg", "category": "carne" },
+      { "name": "Bresaola della Valtellina IGP punta d'anca", "price": 27.5, "unit": "kg", "category": "carne", "available": false },
+      { "name": "Parmigiano Reggiano 30 mesi 1/8 forma", "price": 21.5, "unit": "kg", "category": "latticini" },
+      { "name": "Gorgonzola dolce DOP", "price": 10.9, "unit": "kg", "category": "latticini" },
+      { "name": "Taleggio DOP", "price": 11.2, "unit": "kg", "category": "latticini" },
+      { "name": "Squacquerone di Romagna DOP", "price": 8.6, "unit": "pz", "category": "latticini" },
+      { "name": "Lambrusco di Sorbara DOC", "price": 39, "unit": "cartone", "category": "bevande" },
+      { "name": "Malvasia dei Colli di Parma frizzante", "price": 6.8, "unit": "bottiglia", "category": "bevande" }
+    ]
+  },
+  "listino-pdf.json": {
+    "kind": "pdf",
+    "supplier": { "name": "ITTICA DEL GOLFO SRL", "vatNumber": "04567890126", "zip": "80133", "province": "NA", "phones": ["081 5512345"], "deliveryDays": [2, 3, 4, 5, 6], "orderCutoff": "20:00" },
+    "pricesIncludeVat": false,
+    "products": [
+      { "name": "Orata di allevamento", "price": 11.5, "unit": "kg", "category": "pesce" },
+      { "name": "Branzino di mare", "price": 24.9, "unit": "kg", "category": "pesce" },
+      { "name": "Cozze di Bacoli", "price": 3.8, "unit": "kg", "category": "pesce" },
+      { "name": "Vongole veraci", "price": 14, "unit": "kg", "category": "pesce" },
+      { "name": "Gamberi rossi di Mazara", "price": 62, "unit": "kg", "category": "pesce" },
+      { "name": "Calamari puliti surgelati IQF", "price": 12.4, "unit": ["pz", "busta"], "category": "surgelati" },
+      { "name": "Filetti di merluzzo surgelati", "price": 42.5, "unit": "cartone", "category": "surgelati" },
+      { "name": "Polpo verace surgelato", "price": 16.9, "unit": "kg", "category": "surgelati" }
+    ]
+  },
+  "ocr-foglio.txt": {
+    "kind": "image",
+    "supplier": { "name": "PANIFICIO SAN GIUSEPPE", "zip": "80045", "province": "NA", "phones": ["081 8631122"], "deliveryDays": [1, 2, 3, 4, 5, 6] },
+    "products": [
+      { "name": "Pane cafone", "price": 2.8, "unit": ["pz", "kg"], "category": "panetteria" },
+      { "name": "Pagnotta integrale", "price": 1.9, "unit": "pz", "category": "panetteria" },
+      { "name": "Baguette", "price": 0.9, "unit": "pz", "category": "panetteria" },
+      { "name": "Panini al latte", "price": 3.5, "unit": "confezione", "category": "panetteria" },
+      { "name": "Focaccia genovese teglia", "price": 12, "unit": ["pz", "vassoio"], "category": "panetteria" },
+      { "name": "Pizza bianca al metro", "price": 15, "unit": "pz", "category": "panetteria" },
+      { "name": "Friselle integrali", "price": 4.2, "unit": "kg", "category": "panetteria" },
+      { "name": "Taralli al finocchio", "price": 3.6, "unit": "pz", "category": "panetteria" },
+      { "name": "Cornetti vuoti", "price": 0.7, "unit": "pz", "category": "panetteria" },
+      { "name": "Grissini stirati", "price": 2.4, "unit": "confezione", "category": "panetteria" }
+    ]
+  },
+  "listino-headerless.csv": {
+    "kind": "csv",
+    "supplier": {},
+    "products": [
+      { "name": "Petto di pollo a fette", "price": 8.9, "unit": "kg", "category": "carne" },
+      { "name": "Cosce di pollo", "price": 4.2, "unit": "kg", "category": "carne" },
+      { "name": "Hamburger di scottona", "price": 2.1, "unit": "pz", "category": "carne" },
+      { "name": "Salsiccia fresca di suino", "price": 7.5, "unit": "kg", "category": "carne" },
+      { "name": "Macinato misto", "price": 8.4, "unit": "kg", "category": "carne" },
+      { "name": "Costata di manzo frollata", "price": 32, "unit": "kg", "category": "carne" },
+      { "name": "Spezzatino di vitello", "price": 13.9, "unit": "kg", "category": "carne" },
+      { "name": "Arista di maiale", "price": 8.8, "unit": "kg", "category": "carne" }
+    ]
+  },
+  "email-tabella-surgelati.txt": {
+    "kind": "text",
+    "supplier": {},
+    "products": [
+      { "name": "Patatine fritte surgelate", "price": 18.4, "unit": "cartone", "category": "surgelati" },
+      { "name": "Spinaci in foglia surgelato", "price": 6.9, "unit": "busta", "category": "surgelati" },
+      { "name": "Piselli fini surgelati", "price": 2.8, "unit": "busta", "category": "surgelati" },
+      { "name": "Gelato fiordilatte", "price": 14.5, "unit": "vaschetta", "category": "surgelati" },
+      { "name": "Croissant vuoti surgelati", "price": 21, "unit": "cartone", "category": "surgelati" },
+      { "name": "Gamberoni argentini IQF", "price": 29.8, "unit": "confezione", "category": "surgelati" }
+    ]
+  }
+}

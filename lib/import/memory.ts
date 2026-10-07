@@ -44,6 +44,12 @@ export function mergeHints(...all: Array<ImportHints | null | undefined>): Impor
   return out;
 }
 
+function isSubsequence(short: string, long: string): boolean {
+  let i = 0;
+  for (const ch of long) if (ch === short[i]) i++;
+  return i === short.length;
+}
+
 /** Abbreviations the user expanded by hand: "pomd." + "Pomodori" → pomd → pomodori. */
 export function learnAbbreviations(original: string, corrected: string): Record<string, string> {
   const learned: Record<string, string> = {};
@@ -58,8 +64,11 @@ export function learnAbbreviations(original: string, corrected: string): Record<
     if (!hadDot && !upperShort) continue;
     if (ABBREVIATIONS[stem]) continue;
     if (correctedWords.includes(stem)) continue;
-    // first corrected word that starts with the stem, or whose initials match (fdl → fior di latte)
-    const word = correctedWords.find((w) => w.startsWith(stem) && w.length > stem.length);
+    // first corrected word that starts with the stem ("ross" → rossi), else one that
+    // contains its letters in order ("pomd" → pomodori), else initials (fdl → fior di latte)
+    const word =
+      correctedWords.find((w) => w.startsWith(stem) && w.length > stem.length) ??
+      correctedWords.find((w) => w[0] === stem[0] && w.length > stem.length + 1 && isSubsequence(stem, w));
     if (word) {
       learned[stem] = word;
       continue;

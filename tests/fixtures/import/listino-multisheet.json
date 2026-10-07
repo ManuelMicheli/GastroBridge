@@ -1,0 +1,49 @@
+{
+  "description": "Multi-sheet Excel workbook (built by the test with exceljs). Sheet names act as categories; one info sheet; header row not on the first line; numbers as real numeric cells.",
+  "sheets": [
+    {
+      "name": "Info",
+      "rows": [
+        ["Salumificio Monti & Figli S.n.c."],
+        ["Strada Provinciale 12, 43013 Langhirano (PR)"],
+        ["P.IVA 03456789019"],
+        ["Tel 0521 861234 - ordini@salumificiomonti.it"],
+        ["Consegne: martedì e venerdì"],
+        ["Ordine minimo € 200"]
+      ]
+    },
+    {
+      "name": "Salumi",
+      "rows": [
+        ["Listino salumi autunno 2026"],
+        [],
+        ["Articolo", "Descrizione", "Pezzatura", "UM", "Prezzo", "Note"],
+        ["S01", "Prosciutto crudo di Parma DOP 24 mesi disossato", "7,5 kg ca.", "KG", 17.9, ""],
+        ["S02", "Prosc. cotto alta qualità", "8 kg ca.", "KG", 12.4, ""],
+        ["S03", "Culatello di Zibello DOP", "3,5 kg", "KG", 48, "su ordinazione"],
+        ["S04", "Salame Felino IGP", "800 g", "PZ", 11.5, ""],
+        ["S05", "Guanciale stagionato", "1,2 kg ca.", "KG", 14.8, ""],
+        ["S06", "Mortadella Bologna IGP con pistacchio", "1/2 forma 8 kg", "KG", 9.9, ""],
+        ["S07", "Bresaola della Valtellina IGP punta d'anca", "1,8 kg", "KG", 27.5, "esaurito"]
+      ]
+    },
+    {
+      "name": "Formaggi",
+      "rows": [
+        ["Articolo", "Descrizione", "Pezzatura", "UM", "Prezzo", "Note"],
+        ["F01", "Parmigiano Reggiano 30 mesi 1/8 forma", "4,5 kg", "KG", 21.5, ""],
+        ["F02", "Gorgonzola dolce DOP", "1,5 kg", "KG", 10.9, ""],
+        ["F03", "Taleggio DOP", "2,2 kg", "KG", 11.2, ""],
+        ["F04", "Squacquerone di Romagna DOP", "1 kg", "PZ", 8.6, "da novembre"]
+      ]
+    },
+    {
+      "name": "Vini",
+      "rows": [
+        ["Articolo", "Descrizione", "Formato", "UM", "Prezzo", ""],
+        ["V01", "Lambrusco di Sorbara DOC", "6x0,75 l", "CT", 39, ""],
+        ["V02", "Malvasia dei Colli di Parma frizzante", "0,75 l", "BT", 6.8, ""]
+      ]
+    }
+  ]
+}

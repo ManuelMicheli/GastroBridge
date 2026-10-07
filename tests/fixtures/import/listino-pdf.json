@@ -1,0 +1,70 @@
+{
+  "description": "Columnar PDF price list (A4, points). The test writes a real PDF with these text runs and reads it back with pdfjs-dist; rows must be rebuilt from x/y positions.",
+  "page": { "width": 595, "height": 842 },
+  "runs": [
+    { "x": 40, "y": 800, "size": 14, "text": "ITTICA DEL GOLFO SRL" },
+    { "x": 40, "y": 784, "size": 9, "text": "Molo Sud 3 - 80133 Napoli (NA) - P.IVA 04567890126 - tel 081 5512345" },
+    { "x": 40, "y": 772, "size": 9, "text": "Listino pesce fresco e surgelato - settimana 41" },
+
+    { "x": 40, "y": 740, "size": 9, "text": "Codice" },
+    { "x": 95, "y": 740, "size": 9, "text": "Descrizione" },
+    { "x": 330, "y": 740, "size": 9, "text": "Pezzatura" },
+    { "x": 420, "y": 740, "size": 9, "text": "U.M." },
+    { "x": 490, "y": 740, "size": 9, "text": "Prezzo" },
+
+    { "x": 40, "y": 718, "size": 10, "text": "PESCE FRESCO" },
+
+    { "x": 40, "y": 700, "size": 9, "text": "PF01" },
+    { "x": 95, "y": 700, "size": 9, "text": "Orata di allevamento" },
+    { "x": 330, "y": 700, "size": 9, "text": "400/600 g" },
+    { "x": 420, "y": 700, "size": 9, "text": "kg" },
+    { "x": 496, "y": 700, "size": 9, "text": "11,50" },
+
+    { "x": 40, "y": 686, "size": 9, "text": "PF02" },
+    { "x": 95, "y": 686, "size": 9, "text": "Branzino di mare" },
+    { "x": 330, "y": 686, "size": 9, "text": "1 kg ca." },
+    { "x": 420, "y": 686, "size": 9, "text": "kg" },
+    { "x": 496, "y": 686, "size": 9, "text": "24,90" },
+
+    { "x": 40, "y": 672, "size": 9, "text": "PF03" },
+    { "x": 95, "y": 672, "size": 9, "text": "Cozze di Bacoli" },
+    { "x": 330, "y": 672, "size": 9, "text": "retina 5 kg" },
+    { "x": 420, "y": 672, "size": 9, "text": "kg" },
+    { "x": 501, "y": 672, "size": 9, "text": "3,80" },
+
+    { "x": 40, "y": 658, "size": 9, "text": "PF04" },
+    { "x": 95, "y": 658, "size": 9, "text": "Vongole veraci" },
+    { "x": 330, "y": 658, "size": 9, "text": "1 kg" },
+    { "x": 420, "y": 658, "size": 9, "text": "kg" },
+    { "x": 496, "y": 658, "size": 9, "text": "14,00" },
+
+    { "x": 40, "y": 644, "size": 9, "text": "PF05" },
+    { "x": 95, "y": 644, "size": 9, "text": "Gamberi rossi di Mazara" },
+    { "x": 330, "y": 644, "size": 9, "text": "cassetta 1 kg" },
+    { "x": 420, "y": 644, "size": 9, "text": "kg" },
+    { "x": 496, "y": 644, "size": 9, "text": "62,00" },
+
+    { "x": 40, "y": 622, "size": 10, "text": "SURGELATI" },
+
+    { "x": 40, "y": 604, "size": 9, "text": "SG10" },
+    { "x": 95, "y": 604, "size": 9, "text": "Calamari puliti surgelati IQF" },
+    { "x": 330, "y": 604, "size": 9, "text": "busta 1 kg" },
+    { "x": 420, "y": 604, "size": 9, "text": "pz" },
+    { "x": 496, "y": 604, "size": 9, "text": "12,40" },
+
+    { "x": 40, "y": 590, "size": 9, "text": "SG11" },
+    { "x": 95, "y": 590, "size": 9, "text": "Filetti di merluzzo surgelati" },
+    { "x": 330, "y": 590, "size": 9, "text": "cartone 5 kg" },
+    { "x": 420, "y": 590, "size": 9, "text": "ct" },
+    { "x": 496, "y": 590, "size": 9, "text": "42,50" },
+
+    { "x": 40, "y": 576, "size": 9, "text": "SG12" },
+    { "x": 95, "y": 576, "size": 9, "text": "Polpo verace surgelato" },
+    { "x": 330, "y": 576, "size": 9, "text": "1,5/2 kg" },
+    { "x": 420, "y": 576, "size": 9, "text": "kg" },
+    { "x": 496, "y": 576, "size": 9, "text": "16,90" },
+
+    { "x": 40, "y": 540, "size": 8, "text": "Prezzi IVA esclusa. Consegna dal martedì al sabato, ordini entro le 20:00." },
+    { "x": 40, "y": 528, "size": 8, "text": "Pag. 1 di 1" }
+  ]
+}

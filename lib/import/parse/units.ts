@@ -24,7 +24,7 @@ const CONTAINER_WORDS: Record<string, ContainerUnit> = {
   cartone: "cartone", cartoni: "cartone", crt: "cartone", ct: "cartone", cart: "cartone", ctn: "cartone",
   collo: "cartone", colli: "cartone", krt: "cartone",
   cassa: "cassa", casse: "cassa", cassetta: "cassa", cassette: "cassa", cs: "cassa", cass: "cassa", plateau: "cassa", plt: "cassa",
-  conf: "confezione", confezione: "confezione", confezioni: "confezione", cf: "confezione", pacco: "confezione",
+  conf: "confezione", confez: "confezione", confezione: "confezione", confezioni: "confezione", cf: "confezione", pacco: "confezione",
   pacchi: "confezione", pack: "confezione", pk: "confezione", scatola: "confezione", scatole: "confezione",
   sc: "confezione", fardello: "confezione", fardelli: "confezione", fard: "confezione", vaso: "confezione",
   vasetto: "confezione", vasetti: "confezione", barattolo: "latta", barattoli: "latta", vasi: "confezione",

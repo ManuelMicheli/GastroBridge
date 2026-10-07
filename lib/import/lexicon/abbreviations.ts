@@ -86,9 +86,15 @@ export type ExpandResult = { text: string; expanded: string[]; unknown: string[]
  * Expand abbreviations in a product name. `extra` contains learned
  * abbreviations (import memory), which win over the built-in lexicon.
  */
-export function expandAbbreviations(name: string, extra: Record<string, string> = {}): ExpandResult {
+export function expandAbbreviations(
+  name: string,
+  extra: Record<string, string> = {},
+  opts: { allCaps?: boolean } = {},
+): ExpandResult {
   const expanded: string[] = [];
   const unknown: string[] = [];
+  // In an ALL CAPS source every short word looks like an acronym: don't trust case.
+  const allCaps = opts.allCaps ?? false;
   // Collapse dotted acronyms: "e.v.o." → "evo", "f.d.l." → "fdl"
   let text = name.replace(/\b((?:[a-zA-Z]\.){2,4})(?=\s|$)/g, (m) => m.replace(/\./g, ""));
 
@@ -118,7 +124,7 @@ export function expandAbbreviations(name: string, extra: Record<string, string> 
     if (exp) {
       const needsDot = DOT_REQUIRED.has(key) && !ALWAYS.has(key);
       // Uppercase short tokens in lists ("FDL", "EVO", "SV") are abbreviations even without a dot.
-      const isUpperAbbrev = word!.length <= 4 && word === word!.toUpperCase() && word!.length >= 2;
+      const isUpperAbbrev = !allCaps && word!.length <= 4 && word === word!.toUpperCase() && word!.length >= 2;
       if (!needsDot || dot || isUpperAbbrev) {
         expanded.push(key);
         return `${pre}${exp}${post}`;
