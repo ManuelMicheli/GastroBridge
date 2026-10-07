@@ -104,6 +104,30 @@ export type SupplierPermission =
   | "analytics.financial"
   | "reviews.reply";
 
+// ------------------------------------------------------------------
+// Restaurant team (restaurant_members / role_permissions_restaurant)
+// ------------------------------------------------------------------
+export type RestaurantRole = "owner" | "manager" | "chef" | "viewer";
+
+export type RestaurantPermission =
+  | "order.draft"
+  | "order.submit"
+  | "order.approve"
+  | "order.receive"
+  | "catalog.read"
+  | "partnership.manage"
+  | "par_levels.manage"
+  | "template.manage"
+  | "recurring.manage"
+  | "issue.open"
+  | "issue.resolve"
+  | "rating.submit"
+  | "analytics.financial"
+  | "staff.manage"
+  | "settings.manage"
+  | "subscription.manage"
+  | "multi_sede.switch";
+
 export type StockMovementType =
   | "receive"
   | "order_reserve"
@@ -1048,6 +1072,67 @@ export interface Database {
           accepted_at?: string | null;
           invited_by?: string | null;
           created_at?: string;
+        };
+      };
+      restaurant_members: {
+        Row: {
+          id: string;
+          restaurant_id: string;
+          profile_id: string;
+          role: RestaurantRole;
+          is_active: boolean;
+          invited_by: string | null;
+          invited_at: string;
+          accepted_at: string | null;
+          invite_token: string | null;
+          invite_expires_at: string | null;
+          invited_email: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          restaurant_id: string;
+          profile_id: string;
+          role: RestaurantRole;
+          is_active?: boolean;
+          invited_by?: string | null;
+          invited_at?: string;
+          accepted_at?: string | null;
+          invite_token?: string | null;
+          invite_expires_at?: string | null;
+          invited_email?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          restaurant_id?: string;
+          profile_id?: string;
+          role?: RestaurantRole;
+          is_active?: boolean;
+          invited_by?: string | null;
+          invited_at?: string;
+          accepted_at?: string | null;
+          invite_token?: string | null;
+          invite_expires_at?: string | null;
+          invited_email?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      role_permissions_restaurant: {
+        Row: {
+          role: RestaurantRole;
+          permission: string;
+        };
+        Insert: {
+          role: RestaurantRole;
+          permission: string;
+        };
+        Update: {
+          role?: RestaurantRole;
+          permission?: string;
         };
       };
       role_permissions: {
