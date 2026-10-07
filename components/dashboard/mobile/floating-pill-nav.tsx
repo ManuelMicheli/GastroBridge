@@ -71,7 +71,7 @@ export function FloatingPillNav({ items }: Props) {
                     className={cn(
                       "absolute -right-2.5 -top-2 flex h-[16px] min-w-[16px] items-center justify-center rounded-full px-1 text-[9px] font-semibold ring-2",
                       isActive
-                        ? "bg-white text-[var(--acc-900)] ring-[var(--acc-800)]"
+                        ? "bg-[#fff] text-[var(--acc-900)] ring-[var(--acc-800)]"
                         : "bg-[var(--acc-900)] text-white ring-[var(--f-card)]",
                     )}
                     aria-label={`${item.badgeCount} elementi`}

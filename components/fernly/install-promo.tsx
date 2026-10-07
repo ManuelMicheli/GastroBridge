@@ -74,7 +74,7 @@ export function InstallPromo({ collapsed = false }: { collapsed?: boolean }) {
 
   return (
     <div className={cn("f-deep f-rise relative overflow-hidden rounded-[18px] p-4")} style={{ ["--i" as string]: 3 }}>
-      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-[var(--acc-900)]">
+      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#fff] text-[var(--acc-900)]">
         <Smartphone className="h-4 w-4" />
       </span>
       <p className="mt-3 text-[15px] font-medium leading-[1.25] text-white">

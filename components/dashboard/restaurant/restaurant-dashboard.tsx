@@ -633,7 +633,7 @@ function MonthEndCard({ spent, budget, index }: { spent: number; budget: number 
         <Link
           href="/analytics"
           aria-label="Apri analytics"
-          className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-[var(--acc-950)] transition-transform hover:scale-105"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-[#fff] text-[var(--acc-950)] transition-transform hover:scale-105"
         >
           <BarChart3 className="h-[18px] w-[18px]" />
         </Link>

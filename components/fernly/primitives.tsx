@@ -69,7 +69,7 @@ export function ArrowCircle({ inverted = false, className }: { inverted?: boolea
       className={cn(
         "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-transform duration-200 group-hover:rotate-45",
         inverted
-          ? "bg-white text-[var(--acc-900)]"
+          ? "bg-[#fff] text-[var(--acc-900)]"
           : "border-[1.5px] border-[var(--f-ink)] text-[var(--f-ink)]",
         className,
       )}

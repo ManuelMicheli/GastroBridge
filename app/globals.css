@@ -1731,6 +1731,7 @@ html[data-accent="ambra"] [data-area="supplier"] {
 /* Dark theme keeps working: the accent reads its light steps on dark. */
 .dark[data-area="restaurant"],
 .dark[data-area="supplier"] {
+  --acc-ink: var(--acc-300);
   --color-brand-primary: var(--acc-400);
   --color-brand-primary-hover: var(--acc-300);
   --color-brand-primary-active: var(--acc-500);

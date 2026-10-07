@@ -46,7 +46,7 @@ export function KpiCard({
       </div>
       <div
         className={cn(
-          "mt-3 text-[42px] font-medium leading-none tracking-[-0.035em] tabular-nums sm:text-[46px]",
+          "mt-3 text-[32px] font-medium leading-none tracking-[-0.035em] tabular-nums sm:text-[42px] xl:text-[46px]",
           hero ? "text-white" : "text-[var(--f-ink)]",
         )}
       >
