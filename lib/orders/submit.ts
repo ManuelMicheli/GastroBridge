@@ -42,6 +42,10 @@ export type SubmitOrderResult =
   | { ok: false; error: string };
 
 type RpcSplitOut = { supplier_id: string; split_id: string };
+
+function formatEuro(n: number): string {
+  return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(n);
+}
 type RpcOut = { order_id: string; splits: RpcSplitOut[] };
 
 export async function submitOrder(input: SubmitOrderInput): Promise<SubmitOrderResult> {
@@ -116,9 +120,34 @@ export async function submitOrder(input: SubmitOrderInput): Promise<SubmitOrderR
     });
   }
 
+  const supplierIds = [...bySupplier.keys()];
+
+  // 4b. Ordine minimo per fornitore: la UI mostra lo scostamento, qui lo
+  // facciamo rispettare (nessuno split sotto il minimo viene creato).
+  const { data: supplierRows } = await supabase
+    .from("suppliers")
+    .select("id, company_name, min_order_amount")
+    .in("id", supplierIds)
+    .returns<{ id: string; company_name: string | null; min_order_amount: number | null }[]>();
+  const shortfalls: string[] = [];
+  for (const row of supplierRows ?? []) {
+    const min = Number(row.min_order_amount ?? 0);
+    const subtotal = bySupplier.get(row.id)?.subtotal ?? 0;
+    if (min > 0 && subtotal + 1e-9 < min) {
+      shortfalls.push(
+        `${row.company_name ?? "fornitore"} (mancano ${formatEuro(min - subtotal)})`,
+      );
+    }
+  }
+  if (shortfalls.length > 0) {
+    return {
+      ok: false,
+      error: `Ordine minimo non raggiunto per ${shortfalls.join(", ")}`,
+    };
+  }
+
   // 5. Best-effort: popola warehouse_id con il primary del supplier, se disponibile.
   // Non bloccante: se la query fallisce lasciamo null e la RPC procede.
-  const supplierIds = [...bySupplier.keys()];
   try {
     const { data: warehouses } = await (supabase as any)
       .from("warehouses")

@@ -78,7 +78,14 @@ export default function CartPage() {
         restaurantId: restaurant?.id ?? null,
       });
       if (!res.ok) {
-        toast(`Errore ${res.error}`);
+        // Mixed cart: drop the lines already ordered so a retry can't
+        // duplicate that order.
+        res.submittedProductIds?.forEach((id) => removeItem(id));
+        toast(
+          res.submittedProductIds?.length
+            ? `Ordine fornitori inviato, ma ${res.error}`
+            : `Errore ${res.error}`,
+        );
         return;
       }
       toast("Ordine inviato con successo!");

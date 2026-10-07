@@ -25,7 +25,17 @@ type CheckoutDeps = {
 
 export type CheckoutOutcome =
   | { ok: true; orderIds: string[] }
-  | { ok: false; error: string };
+  | {
+      ok: false;
+      error: string;
+      /**
+       * Cart lines already turned into an order before the failure (mixed
+       * carts). The caller must drop them from the cart so a retry does not
+       * submit them twice.
+       */
+      submittedProductIds?: string[];
+      orderIds?: string[];
+    };
 
 /**
  * Run the checkout flow for the current cart. Mirrors the original inline
@@ -44,14 +54,6 @@ export async function runCheckout({
 
   const realItems    = items.filter((it) => !isCatalogItem(it.productId));
   const catalogItems = items.filter((it) =>  isCatalogItem(it.productId));
-
-  const summaryLines: string[] = [];
-  for (const g of supplierGroups) {
-    summaryLines.push(`--- ${g.supplierName} (${formatCurrency(g.subtotal)}) ---`);
-    for (const it of g.items) {
-      summaryLines.push(`  ${it.quantity}× ${it.name} @ ${formatCurrency(it.unitPrice)}`);
-    }
-  }
 
   let anyOk = false;
   const orderIds: string[] = [];
@@ -88,14 +90,35 @@ export async function runCheckout({
       0,
     );
 
+    // The catalog order notes list only catalog lines (marketplace lines are
+    // already in their own order).
+    const summaryLines: string[] = [];
+    const groups: { catalogId: string; subtotal: number }[] = [];
+    for (const g of catalogGroups) {
+      const lines = g.items.filter((it) => isCatalogItem(it.productId));
+      const subtotal = lines.reduce((s, it) => s + it.unitPrice * it.quantity, 0);
+      groups.push({ catalogId: g.supplierId, subtotal });
+      summaryLines.push(`--- ${g.supplierName} (${formatCurrency(subtotal)}) ---`);
+      for (const it of lines) {
+        summaryLines.push(`  ${it.quantity}× ${it.name} @ ${formatCurrency(it.unitPrice)}`);
+      }
+    }
+
     const res = await createCatalogOrder({
       total:         catalogTotal,
       supplierCount: catalogGroups.length,
       itemCount:     catalogItems.length,
       summary:       summaryLines.join("\n"),
+      groups,
     });
     if (!res.ok) {
-      return { ok: false, error: `ordine catalogo: ${res.error}` };
+      return {
+        ok: false,
+        error: `ordine catalogo: ${res.error}`,
+        // The marketplace order (if any) is already placed.
+        submittedProductIds: realItems.map((it) => it.productId),
+        orderIds,
+      };
     }
     anyOk = true;
     orderIds.push(res.data.id);
