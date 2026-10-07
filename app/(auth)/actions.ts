@@ -69,7 +69,7 @@ export async function signUp(formData: FormData) {
   const pwCheck = await validateNewPassword(password);
   if (!pwCheck.ok) return { error: pwCheck.error };
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -91,7 +91,9 @@ export async function signUp(formData: FormData) {
   }
 
   const redirectTo = role === "supplier" ? "/supplier/dashboard" : "/dashboard";
-  return { success: true, redirectTo };
+  // No session means email confirmation is required: the client must not
+  // navigate to the (protected) dashboard, middleware would bounce to /login.
+  return { success: true, redirectTo, hasSession: Boolean(data.session) };
 }
 
 export async function signInWithGoogle() {
