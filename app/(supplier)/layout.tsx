@@ -21,12 +21,21 @@ type GatedNavItem = NavItem & {
 };
 
 const BASE_NAV: GatedNavItem[] = [
-  { href: "/supplier/dashboard", label: "Dashboard", iconName: "LayoutDashboard" },
+  // Role-aware command center: what to do now (orders, picking, route, issues).
+  { href: "/supplier/oggi", label: "Oggi", iconName: "Sun" },
+  // Financial dashboard — warehouse/driver land on "Oggi" instead.
+  { href: "/supplier/dashboard", label: "Dashboard", iconName: "LayoutDashboard", roles: ["admin", "sales"] },
   // Role lists mirror ROLE_MATRIX in lib/supplier/permissions.ts and the
   // page-level gates (catalog.read, stock.read, pricing.read, ...).
   { href: "/supplier/catalogo", label: "Catalogo", iconName: "Package", roles: ["admin", "sales", "warehouse"] },
   { href: "/supplier/ordini", label: "Ordini", iconName: "ClipboardList" },
   { href: "/supplier/clienti", label: "Clienti", iconName: "Users" },
+  {
+    href: "/supplier/insight",
+    label: "Insight clienti",
+    iconName: "Activity",
+    roles: ["admin", "sales"],
+  },
   { href: "/supplier/messaggi", label: "Messaggi", iconName: "MessageCircle" },
   {
     href: "/supplier/analytics",
@@ -69,6 +78,14 @@ const BASE_NAV: GatedNavItem[] = [
     requiresPhase1: true,
   },
   {
+    href: "/supplier/giro",
+    label: "Giro consegne",
+    iconName: "Route",
+    section: "Gestione",
+    roles: ["admin", "warehouse", "driver"],
+    requiresPhase1: true,
+  },
+  {
     href: "/supplier/consegne",
     label: "Consegne",
     iconName: "Truck",
@@ -88,12 +105,33 @@ const BASE_NAV: GatedNavItem[] = [
 ];
 
 const MOBILE_NAV: MobileNavItem[] = [
-  { href: "/supplier/dashboard", label: "Home", iconName: "LayoutDashboard" },
-  { href: "/supplier/catalogo", label: "Catalogo", iconName: "Package" },
+  { href: "/supplier/oggi", label: "Oggi", iconName: "Sun" },
   { href: "/supplier/ordini", label: "Ordini", iconName: "ClipboardList" },
   { href: "/supplier/clienti", label: "Clienti", iconName: "Users" },
+  { href: "/supplier/catalogo", label: "Catalogo", iconName: "Package" },
   { href: "/supplier/impostazioni", label: "Altro", iconName: "Settings" },
 ];
+
+// Bottom tab bar per role: the warehouse floor and the van need different
+// shortcuts than the office.
+const MOBILE_NAV_BY_ROLE: Record<SupplierRole, MobileNavItem[]> = {
+  admin: MOBILE_NAV,
+  sales: MOBILE_NAV,
+  warehouse: [
+    { href: "/supplier/oggi", label: "Oggi", iconName: "Sun" },
+    { href: "/supplier/ordini", label: "Ordini", iconName: "ClipboardList" },
+    { href: "/supplier/magazzino", label: "Magazzino", iconName: "Warehouse" },
+    { href: "/supplier/giro", label: "Giro", iconName: "Route" },
+    { href: "/supplier/impostazioni", label: "Altro", iconName: "Settings" },
+  ],
+  driver: [
+    { href: "/supplier/oggi", label: "Oggi", iconName: "Sun" },
+    { href: "/supplier/giro", label: "Giro", iconName: "Route" },
+    { href: "/supplier/ordini", label: "Ordini", iconName: "ClipboardList" },
+    { href: "/supplier/messaggi", label: "Messaggi", iconName: "MessageCircle" },
+    { href: "/supplier/impostazioni", label: "Altro", iconName: "Settings" },
+  ],
+};
 
 function buildNavItems(
   currentRole: SupplierRole | null,
@@ -218,7 +256,7 @@ export default async function SupplierLayout({ children }: { children: ReactNode
       <script dangerouslySetInnerHTML={{ __html: accentBootScript("supplier") }} />
       <DashboardShell
         navItems={navItems}
-        mobileNavItems={MOBILE_NAV}
+        mobileNavItems={currentRole ? MOBILE_NAV_BY_ROLE[currentRole] : MOBILE_NAV}
         role="supplier"
         companyName={profile?.company_name || "Fornitore"}
         userEmail={user.email || ""}

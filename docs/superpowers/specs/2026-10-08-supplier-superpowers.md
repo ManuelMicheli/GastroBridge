@@ -159,7 +159,7 @@ the client can answer; sales can then add the substitute with a phone order
 (restaurant area owned by another agent) — the proposal is also stored in the
 `partially_accepted` event metadata (`substitutions: [...]`) as the hook.
 
-### 4.4 Giro consegne — `/supplier/consegne/giro` (admin, warehouse, driver)
+### 4.4 Giro consegne — `/supplier/giro` (admin, warehouse, driver)
 
 *UX.* For a date: stops grouped by delivery slot, each with client, address,
 zone, value, status. "Ottimizza ordine" = nearest-neighbour from the
@@ -173,7 +173,7 @@ legs), per stop **Naviga** (Google Maps / Waze deep link), **Chiama**
 thread + in-app/push notification to the restaurant), **Apri consegna** (POD
 flow already built). Driver mode = big-touch mobile layout, own stops only.
 
-### 4.5 Customer intelligence — `/supplier/clienti/insight` + client detail
+### 4.5 Customer intelligence — `/supplier/insight` + client detail
 
 *Per client (real orders, last 180 days, cancelled excluded):* orders count,
 last order date, median days between orders (cadence, needs ≥3 orders),
