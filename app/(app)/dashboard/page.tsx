@@ -3,6 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 import { RestaurantDashboard } from "@/components/dashboard/restaurant/restaurant-dashboard";
 import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
 import type { SpendTrendPoint } from "@/components/dashboard/restaurant/spend-trend-chart/types";
+import { deriveOrderStatus } from "@/lib/orders/derive-order-status";
+import type {
+  DashboardDelivery,
+  DashboardSupplier,
+  DashboardStatusMix,
+} from "@/components/dashboard/restaurant/restaurant-dashboard";
 
 export const metadata: Metadata = { title: "Dashboard — GastroBridge" };
 // Intentionally no `dynamic = "force-dynamic"`: the page reads cookies via
@@ -18,6 +24,36 @@ type OrderRow = {
 };
 
 type TrendOrderRow = { id: string; created_at: string; total: number };
+
+type SplitRow = {
+  order_id: string;
+  status: string;
+  suppliers: { company_name: string } | null;
+};
+
+type UpcomingSplitRow = {
+  order_id: string;
+  status: string;
+  expected_delivery_date: string | null;
+  suppliers: { company_name: string } | null;
+};
+
+type CatalogListRow = {
+  id: string;
+  supplier_name: string;
+  delivery_days: number | null;
+  updated_at: string;
+  items: { count: number }[] | null;
+};
+
+const OPEN_DELIVERY = new Set(["confirmed", "preparing", "packed", "shipping", "shipped", "in_transit"]);
+const AWAITING = new Set(["submitted", "pending", "pending_confirmation", "pending_customer_confirmation"]);
+const CLOSED = new Set(["delivered", "completed"]);
+const VOID = new Set(["cancelled", "rejected", "draft"]);
+
+function emptyStatusMix(): DashboardStatusMix {
+  return { inDelivery: 0, awaiting: 0, closedSpend: 0, openSpend: 0 };
+}
 
 type VatItemRow = {
   order_id: string;
@@ -115,8 +151,10 @@ export default async function DashboardPage() {
   // Fetch restaurant IDs for this user
   const { data: restaurants } = (await supabase
     .from("restaurants")
-    .select("id")
-    .eq("profile_id", userId)) as { data: { id: string }[] | null };
+    .select("id, monthly_budget_eur")
+    .eq("profile_id", userId)) as {
+    data: { id: string; monthly_budget_eur: number | null }[] | null;
+  };
 
   const restaurantIds = restaurants?.map((r) => r.id) || [];
 
@@ -165,6 +203,11 @@ export default async function DashboardPage() {
           spendPointsGross={pointsGross}
           transactionsByDate={transactionsByDate}
           recentOrders={[]}
+          monthlyBudget={null}
+          statusMix={emptyStatusMix()}
+          nextDelivery={null}
+          upcomingCount={0}
+          suppliers={[]}
         />
       </>
     );
@@ -249,7 +292,17 @@ export default async function DashboardPage() {
   // them just the same. Fallback to unique suppliers from order_items when the
   // partnership table is unavailable or RLS hides it, so historical orders
   // still count.
-  const [activeRelsRes, importedCatalogsRes] = await Promise.all([
+  // Split statuses for this month's + recent orders: the restaurant-facing
+  // status is derived from splits (see lib/orders/derive-order-status).
+  const statusOrderIds = Array.from(
+    new Set<string>([
+      ...currentOrders.map((o) => o.id),
+      ...(recentOrdersRes.data ?? []).map((o) => o.id),
+    ]),
+  );
+  const todayIso = toISODate(new Date());
+
+  const [activeRelsRes, importedCatalogsRes, splitsRes, upcomingRes] = await Promise.all([
     supabase
       .from("restaurant_suppliers")
       .select("supplier_id")
@@ -259,11 +312,66 @@ export default async function DashboardPage() {
     }>,
     supabase
       .from("restaurant_catalogs")
-      .select("id")
-      .in("restaurant_id", restaurantIds) as unknown as Promise<{
-      data: { id: string }[] | null;
+      .select("id, supplier_name, delivery_days, updated_at, items:restaurant_catalog_items(count)")
+      .in("restaurant_id", restaurantIds)
+      .order("updated_at", { ascending: false }) as unknown as Promise<{
+      data: CatalogListRow[] | null;
     }>,
+    statusOrderIds.length > 0
+      ? (supabase
+          .from("order_splits")
+          .select("order_id, status, suppliers(company_name)")
+          .in("order_id", statusOrderIds) as unknown as Promise<{ data: SplitRow[] | null }>)
+      : Promise.resolve({ data: [] as SplitRow[] }),
+    supabase
+      .from("order_splits")
+      .select("order_id, status, expected_delivery_date, suppliers(company_name), orders!inner(restaurant_id)")
+      .in("orders.restaurant_id", restaurantIds)
+      .gte("expected_delivery_date", todayIso)
+      .order("expected_delivery_date", { ascending: true })
+      .limit(20) as unknown as Promise<{ data: UpcomingSplitRow[] | null }>,
   ]);
+
+  const splitsByOrder = new Map<string, { statuses: string[]; name: string | null }>();
+  for (const sp of splitsRes.data ?? []) {
+    const cur = splitsByOrder.get(sp.order_id) ?? { statuses: [], name: null };
+    cur.statuses.push(sp.status);
+    cur.name = cur.name ?? sp.suppliers?.company_name ?? null;
+    splitsByOrder.set(sp.order_id, cur);
+  }
+  const statusOf = (id: string, fallback: string) =>
+    deriveOrderStatus(splitsByOrder.get(id)?.statuses ?? [], fallback);
+
+  const statusMix = emptyStatusMix();
+  for (const o of currentOrders) {
+    const st = statusOf(o.id, o.status);
+    if (OPEN_DELIVERY.has(st)) statusMix.inDelivery += 1;
+    if (AWAITING.has(st)) statusMix.awaiting += 1;
+    if (VOID.has(st)) continue;
+    if (CLOSED.has(st)) statusMix.closedSpend += Number(o.total || 0);
+    else statusMix.openSpend += Number(o.total || 0);
+  }
+
+  const upcoming = (upcomingRes.data ?? []).filter(
+    (u) => u.expected_delivery_date && !CLOSED.has(u.status) && !VOID.has(u.status),
+  );
+  const first = upcoming[0];
+  const nextDelivery: DashboardDelivery | null = first
+    ? {
+        orderId: first.order_id,
+        supplierName: first.suppliers?.company_name ?? "Fornitore",
+        date: first.expected_delivery_date ?? todayIso,
+        status: first.status,
+      }
+    : null;
+
+  const supplierCards: DashboardSupplier[] = (importedCatalogsRes.data ?? []).slice(0, 6).map((c) => ({
+    id: c.id,
+    name: c.supplier_name,
+    itemCount: Array.isArray(c.items) ? Number(c.items[0]?.count ?? 0) : 0,
+    deliveryDays: c.delivery_days,
+    updatedAt: c.updated_at,
+  }));
 
   const platformSuppliers = new Set(
     (activeRelsRes.data ?? []).map((r) => r.supplier_id),
@@ -410,15 +518,19 @@ export default async function DashboardPage() {
   }
 
   // Recent orders
-  const recentOrders = (recentOrdersRes.data || []).map((o) => ({
-    id: o.id,
-    status: o.status,
-    total: o.total,
-    totalGross: grossFor(o.id, o.total, vatByOrder),
-    created_at: o.created_at,
-    supplier_name: "—",
-    order_number: `#${o.id.slice(0, 8)}`,
-  }));
+  const recentOrders = (recentOrdersRes.data || []).map((o) => {
+    const split = splitsByOrder.get(o.id);
+    const extra = split ? split.statuses.length - 1 : 0;
+    return {
+      id: o.id,
+      status: statusOf(o.id, o.status),
+      total: o.total,
+      totalGross: grossFor(o.id, o.total, vatByOrder),
+      created_at: o.created_at,
+      supplier_name: split?.name ? (extra > 0 ? `${split.name} +${extra}` : split.name) : "—",
+      order_number: `#${o.id.slice(0, 8)}`,
+    };
+  });
 
   return (
     <>
@@ -448,6 +560,11 @@ export default async function DashboardPage() {
         spendPointsGross={spendPointsGross}
         transactionsByDate={transactionsByDate}
         recentOrders={recentOrders}
+        monthlyBudget={restaurants?.[0]?.monthly_budget_eur ?? null}
+        statusMix={statusMix}
+        nextDelivery={nextDelivery}
+        upcomingCount={upcoming.length}
+        suppliers={supplierCards}
       />
     </>
   );

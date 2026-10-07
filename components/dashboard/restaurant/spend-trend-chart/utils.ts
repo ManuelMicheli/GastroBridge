@@ -4,11 +4,15 @@ export function formatEUR(value: number): string {
   return new Intl.NumberFormat("it-IT", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(value);
+    useGrouping: "always",
+  } as Intl.NumberFormatOptions).format(value);
 }
 
 export function formatInteger(value: number): string {
-  return new Intl.NumberFormat("it-IT", { maximumFractionDigits: 0 }).format(value);
+  return new Intl.NumberFormat("it-IT", {
+    maximumFractionDigits: 0,
+    useGrouping: "always",
+  } as Intl.NumberFormatOptions).format(value);
 }
 
 export function formatEURCompact(value: number): string {

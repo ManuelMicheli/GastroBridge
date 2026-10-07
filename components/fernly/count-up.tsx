@@ -58,7 +58,9 @@ const fmtCache = new Map<string, Intl.NumberFormat>();
 function nf(key: string, opts: Intl.NumberFormatOptions): Intl.NumberFormat {
   let f = fmtCache.get(key);
   if (!f) {
-    f = new Intl.NumberFormat("it-IT", opts);
+    // "always" grouping: identical output on the server (Node ICU) and in the
+    // browser — CLDR's min-grouping-digits otherwise causes hydration diffs.
+    f = new Intl.NumberFormat("it-IT", { useGrouping: "always", ...opts } as Intl.NumberFormatOptions);
     fmtCache.set(key, f);
   }
   return f;
