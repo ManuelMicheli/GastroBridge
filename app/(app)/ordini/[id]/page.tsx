@@ -11,6 +11,8 @@ import { GroupedList, GroupedListRow } from "@/components/ui/grouped-list";
 import { formatCurrency, formatDate } from "@/lib/utils/formatters";
 import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
 import { deriveOrderStatus } from "@/lib/orders/derive-order-status";
+import { getWorkflowState } from "@/lib/orders/workflow-state";
+import { SupplierChangesBanner } from "./_components/supplier-changes-banner";
 
 const TIMELINE_STEPS = [
   { key: "submitted", label: "Inviato", icon: Check },
@@ -90,7 +92,7 @@ export default async function OrderDetailPage({
 
   if (!order) notFound();
 
-  type SplitRow = { id: string; order_id: string; supplier_id: string; subtotal: number; status: string; suppliers: { company_name: string } | null };
+  type SplitRow = { id: string; order_id: string; supplier_id: string; subtotal: number; status: string; supplier_notes: string | null; suppliers: { company_name: string } | null };
   const { data: splits } = await supabase
     .from("order_splits")
     .select("*, suppliers(company_name)")
@@ -161,6 +163,10 @@ export default async function OrderDetailPage({
     order.status,
   );
   const currentStep = getTimelinePosition(effectiveStatus);
+  // Splits whose quantities the supplier changed and that wait for us.
+  const awaitingConfirmation = (splits ?? []).filter(
+    (s) => getWorkflowState(s.status, s.supplier_notes) === "pending_customer_confirmation",
+  );
   const isCancelled = effectiveStatus === "cancelled";
   const isDraft = effectiveStatus === "draft";
 
@@ -172,6 +178,13 @@ export default async function OrderDetailPage({
           { table: "orders", filter: `id=eq.${id}` },
         ]}
       />
+      {awaitingConfirmation.map((s) => (
+        <SupplierChangesBanner
+          key={s.id}
+          splitId={s.id}
+          supplierName={s.suppliers?.company_name ?? "Il fornitore"}
+        />
+      ))}
       {/* Mobile Apple-app view */}
       <div className="lg:hidden pb-4">
         <LargeTitle

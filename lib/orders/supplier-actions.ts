@@ -913,14 +913,110 @@ export async function transitionSplitStatus(
 // confirmCustomerResponse
 // -----------------------------------------------------------------------------
 
+type CustomerResponseSplit = {
+  id: string;
+  supplier_id: string;
+  order_id: string;
+  status: string;
+  supplier_notes: string | null;
+  assigned_sales_member_id: string | null;
+};
+
+async function loadSplitAsAdmin(
+  splitId: string,
+): Promise<{ ok: true; split: CustomerResponseSplit } | { ok: false; error: string }> {
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient() as unknown as SupabaseClient<any, any, any>;
+  const { data, error } = await (admin as any)
+    .from("order_splits")
+    .select("id, supplier_id, order_id, status, supplier_notes, assigned_sales_member_id")
+    .eq("id", splitId)
+    .maybeSingle();
+  if (error) return { ok: false, error: error.message };
+  if (!data) return { ok: false, error: "Split ordine non trovato" };
+  return { ok: true, split: data as CustomerResponseSplit };
+}
+
+/**
+ * Applica la risposta del ristorante alle modifiche proposte dal fornitore
+ * (stato `pending_customer_confirmation`). L'autorizzazione è responsabilità
+ * del chiamante (token HMAC o proprietà dell'ordine): le scritture usano il
+ * client admin perché il ristorante non ha (né deve avere) permessi di
+ * scrittura su order_splits né permessi fornitore per la prenotazione stock.
+ */
+async function applyCustomerResponse(
+  split: CustomerResponseSplit,
+  accepted: boolean,
+): Promise<SimpleResult> {
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient() as unknown as SupabaseClient<any, any, any>;
+  const splitId = split.id;
+
+  const currentState = getWorkflowState(split.status, split.supplier_notes);
+  if (currentState !== "pending_customer_confirmation") {
+    return {
+      ok: false,
+      error: "L'ordine non è in attesa della tua conferma",
+    };
+  }
+
+  const revalidateAll = () => {
+    revalidateSupplierOrders(splitId);
+    revalidatePath(`/ordini/${split.order_id}`);
+  };
+
+  if (accepted) {
+    // Stessa prenotazione FEFO dell'accettazione fornitore (reserve_split_tx).
+    const warehouseId = await ensureSplitWarehouse(admin, splitId, split.supplier_id);
+    if (warehouseId) {
+      const { data, error } = await (admin.rpc as any)("reserve_split_tx", {
+        p_split_id: splitId,
+        p_member_id: split.assigned_sales_member_id,
+      });
+      if (error) {
+        return { ok: false, error: error.message ?? "Errore prenotazione stock" };
+      }
+      const payload = (data ?? {}) as { ok?: boolean };
+      if (payload.ok === false) {
+        // La RPC ha già registrato l'evento `stock_conflict`.
+        await setSplitWorkflow(admin, splitId, "stock_conflict");
+        revalidateAll();
+        return { ok: true, data: { splitStatus: "stock_conflict" } };
+      }
+    }
+
+    const wf = await setSplitWorkflow(admin, splitId, "confirmed");
+    if (!wf.ok) return wf;
+
+    await emitOrderEvent(admin, {
+      splitId,
+      eventType: "accepted",
+      supplierId: split.supplier_id,
+      note: "Conferma ricevuta dal ristorante",
+    });
+    revalidateAll();
+    return { ok: true, data: { splitStatus: "confirmed" } };
+  }
+
+  // Rifiuto cliente: cancellazione.
+  const wf = await setSplitWorkflow(admin, splitId, "cancelled");
+  if (!wf.ok) return wf;
+
+  await emitSplitEvent(admin, {
+    splitId,
+    eventType: "canceled",
+    note: "Rifiuto ricevuto dal ristorante",
+  });
+  revalidateAll();
+  return { ok: true, data: { splitStatus: "cancelled" } };
+}
+
 /**
  * Endpoint usato dalla pagina cliente `/ordini/[id]/conferma` per approvare o
  * rifiutare le modifiche fornitore (stato `pending_customer_confirmation`).
  *
- * Il token HMAC viene verificato stateless (vedi `verifyCustomerConfirmationToken`).
- * Non verifica l'autenticazione utente: chi ha il link email ha diritto di
- * rispondere (use case B2B). Se review richiede hardening, aggiungere controllo
- * `restaurant.profile_id === user.id` e single-use via tabella token.
+ * Il token HMAC viene verificato stateless (vedi `verifyCustomerConfirmationToken`)
+ * ed è l'unica credenziale richiesta (link email, use case B2B).
  */
 export async function confirmCustomerResponse(
   splitId: string,
@@ -935,63 +1031,49 @@ export async function confirmCustomerResponse(
     const verify = verifyCustomerConfirmationToken(token, splitId);
     if (!verify.ok) return { ok: false, error: verify.error };
 
-    const supabase = await createClient();
-
-    const splitRes = await loadSplitForSupplier(supabase, splitId);
+    const splitRes = await loadSplitAsAdmin(splitId);
     if (!splitRes.ok) return splitRes;
-    const split = splitRes.split;
+    return await applyCustomerResponse(splitRes.split, accepted);
+  } catch (err) {
+    return { ok: false, error: errMsg(err, "Errore conferma cliente") };
+  }
+}
 
-    const currentState = getWorkflowState(split.status, split.supplier_notes);
-    if (currentState !== "pending_customer_confirmation") {
-      return {
-        ok: false,
-        error: "Lo split non e' in attesa di conferma cliente",
-      };
+/**
+ * Variante in-app di `confirmCustomerResponse`: il ristorante loggato
+ * risponde dal dettaglio ordine senza token. Autorizzazione: l'utente deve
+ * essere il proprietario del ristorante dell'ordine.
+ */
+export async function respondToSupplierChanges(
+  splitId: string,
+  accepted: boolean,
+): Promise<SimpleResult> {
+  if (!splitId) return { ok: false, error: "Parametri mancanti" };
+
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return { ok: false, error: "Sessione scaduta, effettua di nuovo l'accesso" };
+
+    const splitRes = await loadSplitAsAdmin(splitId);
+    if (!splitRes.ok) return splitRes;
+
+    const { createAdminClient } = await import("@/lib/supabase/admin");
+    const admin = createAdminClient() as any;
+    const { data: order } = (await admin
+      .from("orders")
+      .select("id, restaurants:restaurant_id ( profile_id )")
+      .eq("id", splitRes.split.order_id)
+      .maybeSingle()) as {
+      data: { id: string; restaurants: { profile_id: string | null } | null } | null;
+    };
+    if (!order || order.restaurants?.profile_id !== user.id) {
+      return { ok: false, error: "Non sei autorizzato a confermare questo ordine" };
     }
 
-    if (accepted) {
-      const reserve = await reserveStockForSplit(split.supplier_id, splitId);
-      if (!reserve.ok && "conflicts" in reserve && reserve.conflicts) {
-        await setSplitWorkflow(supabase, splitId, "stock_conflict");
-        await emitSplitEvent(supabase, {
-          splitId,
-          eventType: "stock_conflict",
-          metadata: { conflicts: reserve.conflicts },
-        });
-        revalidateSupplierOrders(splitId);
-        return { ok: true, data: { splitStatus: "stock_conflict" } };
-      }
-      if (!reserve.ok) return { ok: false, error: reserve.error ?? "Errore prenotazione stock" };
-
-      const wf = await setSplitWorkflow(supabase, splitId, "confirmed");
-      if (!wf.ok) return wf;
-
-      const restaurantProfileId = await resolveRestaurantProfileId(
-        supabase,
-        split.order_id,
-      );
-      await emitOrderEvent(supabase, {
-        splitId,
-        eventType: "accepted",
-        supplierId: split.supplier_id,
-        restaurantProfileIds: restaurantProfileId ? [restaurantProfileId] : undefined,
-        note: "Conferma ricevuta dal ristorante",
-      });
-      revalidateSupplierOrders(splitId);
-      return { ok: true, data: { splitStatus: "confirmed" } };
-    }
-
-    // Rifiuto cliente: cancellazione.
-    const wf = await setSplitWorkflow(supabase, splitId, "cancelled");
-    if (!wf.ok) return wf;
-
-    await emitSplitEvent(supabase, {
-      splitId,
-      eventType: "canceled",
-      note: "Rifiuto ricevuto dal ristorante",
-    });
-    revalidateSupplierOrders(splitId);
-    return { ok: true, data: { splitStatus: "cancelled" } };
+    return await applyCustomerResponse(splitRes.split, accepted);
   } catch (err) {
     return { ok: false, error: errMsg(err, "Errore conferma cliente") };
   }
