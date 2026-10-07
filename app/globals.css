@@ -1613,6 +1613,7 @@ html[data-accent="ambra"] [data-area="supplier"] {
   --font-mono: var(--font-app), ui-sans-serif, system-ui, sans-serif;
   --font-num: var(--font-app), ui-sans-serif, system-ui, sans-serif;
   font-family: var(--font-app), ui-sans-serif, system-ui, sans-serif;
+  accent-color: var(--acc-600);
 
   /* Brand tokens → accent steps (every legacy alias follows the accent) */
   --color-brand-primary: var(--acc-600);
@@ -1773,6 +1774,34 @@ html[data-accent="ambra"] [data-area="supplier"] {
 }
 [data-strong-card-borders] section.rounded-xl.bg-surface-card {
   border-color: var(--f-line);
+}
+
+/* Legacy page titles (h1.text-2xl/3xl) read as Fernly page titles. */
+[data-area="restaurant"] h1:where(.text-2xl, .text-3xl),
+[data-area="supplier"] h1:where(.text-2xl, .text-3xl) {
+  font-size: 30px;
+  line-height: 1.12;
+  letter-spacing: -0.024em;
+  font-weight: 600;
+  color: var(--f-ink);
+}
+@media (max-width: 1023px) {
+  [data-area="restaurant"] h1:where(.text-2xl, .text-3xl),
+  [data-area="supplier"] h1:where(.text-2xl, .text-3xl) { font-size: 26px; }
+}
+
+/* Legacy filled CTAs (bg-accent-green / bg-brand-primary on a button or
+   link) across the remaining pages become Fernly primary pills. */
+[data-area="restaurant"]:not(.dark) :where(button, a):where(.bg-accent-green, .bg-brand-primary, .bg-forest),
+[data-area="supplier"]:not(.dark) :where(button, a):where(.bg-accent-green, .bg-brand-primary, .bg-forest) {
+  border-radius: 9999px;
+  color: #fff;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--acc-700) 65%, var(--acc-800)) 0%, var(--acc-800) 100%);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.14) inset, 0 6px 14px color-mix(in oklab, var(--acc-800) 22%, transparent);
+}
+[data-area="restaurant"]:not(.dark) :where(button, a):where(.bg-accent-green, .bg-brand-primary, .bg-forest):hover,
+[data-area="supplier"]:not(.dark) :where(button, a):where(.bg-accent-green, .bg-brand-primary, .bg-forest):hover {
+  background: var(--acc-900);
 }
 
 /* The previous editorial design hard-coded Georgia/serif inline in many
