@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { ReceiveFormClient } from "./receive-form-client";
 import type { Database } from "@/types/database";
+import { getCurrentSupplierMember } from "@/lib/supplier/current-member";
 
 type WarehouseRow = Database["public"]["Tables"]["warehouses"]["Row"];
 type ProductRow = Database["public"]["Tables"]["products"]["Row"];
@@ -12,15 +13,8 @@ export const metadata: Metadata = { title: "Nuovo carico" };
 
 export default async function NuovoCaricoPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: supplier } = await supabase
-    .from("suppliers")
-    .select("id")
-    .eq("profile_id", user?.id ?? "")
-    .maybeSingle<{ id: string }>();
+  const member = await getCurrentSupplierMember();
+  const supplier = member ? { id: member.supplier_id } : null;
 
   if (!supplier?.id) {
     return (

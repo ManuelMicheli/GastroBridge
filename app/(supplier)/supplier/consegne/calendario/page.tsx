@@ -1,9 +1,11 @@
+import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { DeliveryCalendar } from "@/components/supplier/delivery/delivery-calendar";
 import { CalendarClient } from "./calendar-client";
 import type { Database } from "@/types/database";
+import { getCurrentSupplierMember, memberCan } from "@/lib/supplier/current-member";
 
 export const metadata: Metadata = {
   title: "Calendario consegne — Fornitore",
@@ -98,15 +100,10 @@ export default async function DeliveryCalendarPage({ searchParams }: PageProps) 
   const anchor = parseISODate(sp.start);
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: supplier } = await supabase
-    .from("suppliers")
-    .select("id")
-    .eq("profile_id", user?.id ?? "")
-    .maybeSingle<{ id: string }>();
+  const member = await getCurrentSupplierMember();
+  const supplier = member ? { id: member.supplier_id } : null;
+  // Same gate as the sidebar (lib/supplier/permissions.ts ROLE_MATRIX).
+  if (member && !memberCan(member, "delivery.execute")) redirect("/supplier/dashboard");
 
   if (!supplier?.id) {
     return (

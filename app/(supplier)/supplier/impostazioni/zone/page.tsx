@@ -1,9 +1,11 @@
+import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
 import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
 import { ZonesClient } from "./zones-client";
 import type { Database } from "@/types/database";
+import { getCurrentSupplierMember, memberCan } from "@/lib/supplier/current-member";
 
 type ZoneRow = Database["public"]["Tables"]["delivery_zones"]["Row"];
 type WarehouseRow = Database["public"]["Tables"]["warehouses"]["Row"];
@@ -12,15 +14,10 @@ export const metadata: Metadata = { title: "Zone di Consegna" };
 
 export default async function DeliveryZonesPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: supplier } = await supabase
-    .from("suppliers")
-    .select("id")
-    .eq("profile_id", user?.id ?? "")
-    .maybeSingle<{ id: string }>();
+  const member = await getCurrentSupplierMember();
+  const supplier = member ? { id: member.supplier_id } : null;
+  // Same gate as the sidebar (lib/supplier/permissions.ts ROLE_MATRIX).
+  if (member && !memberCan(member, "settings.manage")) redirect("/supplier/dashboard");
 
   if (!supplier?.id) {
     return (

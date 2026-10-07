@@ -4,20 +4,19 @@ import { ReviewCard } from "@/components/reviews/review-card";
 import { Star } from "lucide-react";
 import { LargeTitle } from "@/components/ui/large-title";
 import { SectionFrame } from "@/components/dashboard/supplier/_awwwards/section-frame";
+import { getCurrentSupplierMember } from "@/lib/supplier/current-member";
 
 export const metadata: Metadata = { title: "Recensioni" };
 
 export default async function SupplierReviewsPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const member = await getCurrentSupplierMember();
 
   const { data: supplier } = await supabase
     .from("suppliers")
     .select("id, rating_avg, rating_count")
-    .eq("profile_id", user?.id ?? "")
-    .single<{
+    .eq("id", member?.supplier_id ?? "00000000-0000-0000-0000-000000000000")
+    .maybeSingle<{
       id: string;
       rating_avg: number;
       rating_count: number;

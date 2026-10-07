@@ -16,6 +16,7 @@ import {
   getTopProducts,
   getRecentDeliveries,
 } from "@/lib/supplier/dashboard/queries";
+import { getCurrentSupplierMember } from "@/lib/supplier/current-member";
 
 export const metadata: Metadata = { title: "Dashboard Fornitore — GastroBridge" };
 
@@ -30,16 +31,12 @@ export default async function SupplierDashboardPage() {
 
   const supabase = await createClient();
 
-  const [profile, supplierRes] = await Promise.all([
+  const [profile, member] = await Promise.all([
     userId ? getCachedProfile(userId) : Promise.resolve(null),
-    supabase
-      .from("suppliers")
-      .select("id")
-      .eq("profile_id", userId)
-      .single() as unknown as Promise<{ data: { id: string } | null }>,
+    getCurrentSupplierMember(),
   ]);
 
-  const supplierId = supplierRes.data?.id;
+  const supplierId = member?.supplier_id;
 
   // No supplier record — empty dashboard
   if (!supplierId) {

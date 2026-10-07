@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { SendMessageSchema, type SendMessageInput } from "./schemas";
 import type { MessageRole, PartnershipMessageRow, Result } from "./types";
+import { getCurrentSupplierMember } from "@/lib/supplier/current-member";
 
 /**
  * Detect sender role by checking if the current user owns the restaurant or supplier
@@ -30,13 +31,9 @@ async function detectSenderRole(relationshipId: string): Promise<MessageRole | n
     .maybeSingle<{ id: string }>();
   if (restaurant) return "restaurant";
 
-  const { data: supplier } = await supabase
-    .from("suppliers")
-    .select("id")
-    .eq("id", rel.supplier_id)
-    .eq("profile_id", user.id)
-    .maybeSingle<{ id: string }>();
-  if (supplier) return "supplier";
+  // Any active member of the supplier (owner or staff) speaks as "supplier".
+  const member = await getCurrentSupplierMember();
+  if (member && member.supplier_id === rel.supplier_id) return "supplier";
 
   return null;
 }

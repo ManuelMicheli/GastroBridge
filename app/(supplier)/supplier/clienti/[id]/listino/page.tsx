@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { getRelationshipById } from "@/lib/relationships/queries";
 import { getPriceListByRelationship } from "@/lib/price-lists/queries";
 import { PriceListEditor } from "./editor";
+import { getCurrentSupplierMember } from "@/lib/supplier/current-member";
 
 type Params = Promise<{ id: string }>;
 
@@ -23,13 +24,8 @@ export default async function ListinoPage({ params }: { params: Params }) {
   if (!rel) notFound();
   if (rel.status !== "active") notFound();
 
-  const { data: supplier } = await supabase
-    .from("suppliers")
-    .select("id")
-    .eq("id", rel.supplier_id)
-    .eq("profile_id", user.id)
-    .maybeSingle<{ id: string }>();
-  if (!supplier) notFound();
+  const member = await getCurrentSupplierMember();
+  if (!member || member.supplier_id !== rel.supplier_id) notFound();
 
   const { data: restaurant } = await supabase
     .from("restaurants")
@@ -41,7 +37,7 @@ export default async function ListinoPage({ params }: { params: Params }) {
   const { data: products } = await supabase
     .from("products")
     .select("id, name, unit, price")
-    .eq("supplier_id", supplier.id)
+    .eq("supplier_id", member.supplier_id)
     .eq("is_available", true)
     .order("name", { ascending: true })
     .returns<{ id: string; name: string; unit: string | null; price: number | null }[]>();

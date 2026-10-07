@@ -7,6 +7,7 @@ import {
   SupplierOrdersClient,
   type SupplierOrderRow,
 } from "./orders-client";
+import { getCurrentSupplierMember } from "@/lib/supplier/current-member";
 
 export const metadata: Metadata = { title: "Ordini Fornitore" };
 
@@ -48,15 +49,8 @@ export default async function SupplierOrdersPage({
   await markSectionSeen("supplier_orders");
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: supplier } = await supabase
-    .from("suppliers")
-    .select("id")
-    .eq("profile_id", user?.id ?? "")
-    .single<{ id: string }>();
+  const member = await getCurrentSupplierMember();
+  const supplier = member ? { id: member.supplier_id } : null;
 
   const supplierId = supplier?.id;
 

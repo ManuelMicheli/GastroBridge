@@ -6,6 +6,7 @@ import type {
   RelationshipWithSupplier,
   RestaurantSupplierRow,
 } from "./types";
+import { getCurrentSupplierMember } from "@/lib/supplier/current-member";
 
 const RELATIONSHIP_WITH_SUPPLIER_SELECT = `
   *,
@@ -68,21 +69,13 @@ export async function getClientsForSupplier(
   options?: { status?: RelationshipStatus[] },
 ): Promise<RelationshipWithRestaurant[]> {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return [];
-
-  const { data: supplier } = await supabase
-    .from("suppliers")
-    .select("id")
-    .eq("profile_id", user.id)
-    .limit(1)
-    .maybeSingle<{ id: string }>();
-  if (!supplier) return [];
+  const member = await getCurrentSupplierMember();
+  if (!member) return [];
 
   let query = (supabase as any)
     .from("restaurant_suppliers")
     .select(RELATIONSHIP_WITH_RESTAURANT_SELECT)
-    .eq("supplier_id", supplier.id)
+    .eq("supplier_id", member.supplier_id)
     .order("invited_at", { ascending: false });
 
   if (options?.status && options.status.length > 0) {

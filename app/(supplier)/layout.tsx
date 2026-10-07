@@ -21,7 +21,9 @@ type GatedNavItem = NavItem & {
 
 const BASE_NAV: GatedNavItem[] = [
   { href: "/supplier/dashboard", label: "Dashboard", iconName: "LayoutDashboard" },
-  { href: "/supplier/catalogo", label: "Catalogo", iconName: "Package" },
+  // Role lists mirror ROLE_MATRIX in lib/supplier/permissions.ts and the
+  // page-level gates (catalog.read, stock.read, pricing.read, ...).
+  { href: "/supplier/catalogo", label: "Catalogo", iconName: "Package", roles: ["admin", "sales", "warehouse"] },
   { href: "/supplier/ordini", label: "Ordini", iconName: "ClipboardList" },
   { href: "/supplier/clienti", label: "Clienti", iconName: "Users" },
   { href: "/supplier/messaggi", label: "Messaggi", iconName: "MessageCircle" },
@@ -32,6 +34,7 @@ const BASE_NAV: GatedNavItem[] = [
     label: "Magazzino",
     iconName: "Warehouse",
     section: "Gestione",
+    roles: ["admin", "warehouse"],
     requiresPhase1: true,
   },
   {
@@ -71,7 +74,7 @@ const BASE_NAV: GatedNavItem[] = [
     label: "DDT",
     iconName: "FileText",
     section: "Gestione",
-    roles: ["admin", "warehouse", "sales"],
+    roles: ["admin", "warehouse"],
     requiresPhase1: true,
   },
   { href: "/supplier/impostazioni", label: "Impostazioni", iconName: "Settings", section: "Gestione" },

@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { PriceListEditorClient } from "./price-list-editor-client";
 import type { Database } from "@/types/database";
 import type { EditorRow } from "@/components/supplier/pricing/types";
+import { getCurrentSupplierMember, memberCan } from "@/lib/supplier/current-member";
 
 type PriceListRow = Database["public"]["Tables"]["price_lists"]["Row"];
 type PriceListItemRow =
@@ -41,16 +42,11 @@ export default async function PriceListEditorPage({
 
   if (!list) notFound();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   // Verify ownership
-  const { data: supplier } = await supabase
-    .from("suppliers")
-    .select("id")
-    .eq("profile_id", user?.id ?? "")
-    .maybeSingle<{ id: string }>();
+  const member = await getCurrentSupplierMember();
+  const supplier = member ? { id: member.supplier_id } : null;
+  // Same gate as the sidebar (lib/supplier/permissions.ts ROLE_MATRIX).
+  if (member && !memberCan(member, "pricing.read")) redirect("/supplier/dashboard");
 
   if (!supplier?.id || supplier.id !== list.supplier_id) {
     notFound();

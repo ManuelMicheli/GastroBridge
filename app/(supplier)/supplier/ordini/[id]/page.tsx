@@ -5,6 +5,7 @@ import { getWorkflowState } from "@/lib/orders/workflow-state";
 import { resolveRelationshipIdForPair } from "@/lib/messages/context";
 import { getUnreadCount } from "@/lib/messages/queries";
 import { OrderDetailClient } from "./order-detail-client";
+import { getCurrentSupplierMember } from "@/lib/supplier/current-member";
 
 export const metadata: Metadata = { title: "Dettaglio Ordine Fornitore" };
 
@@ -64,11 +65,8 @@ export default async function SupplierOrderDetailPage({
 
   if (!user) redirect("/login");
 
-  const { data: supplier } = await supabase
-    .from("suppliers")
-    .select("id")
-    .eq("profile_id", user.id)
-    .maybeSingle<{ id: string }>();
+  const member = await getCurrentSupplierMember();
+  const supplier = member ? { id: member.supplier_id } : null;
 
   if (!supplier) notFound();
 

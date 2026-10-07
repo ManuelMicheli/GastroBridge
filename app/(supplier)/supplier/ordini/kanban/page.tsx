@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getWorkflowState } from "@/lib/orders/workflow-state";
 import { KanbanClient, type KanbanCard } from "./kanban-client";
+import { getCurrentSupplierMember } from "@/lib/supplier/current-member";
 
 export const metadata: Metadata = { title: "Kanban Ordini — Fornitore" };
 
@@ -27,15 +28,8 @@ type ItemRow = {
 
 export default async function SupplierOrdersKanbanPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: supplier } = await supabase
-    .from("suppliers")
-    .select("id")
-    .eq("profile_id", user?.id ?? "")
-    .single<{ id: string }>();
+  const member = await getCurrentSupplierMember();
+  const supplier = member ? { id: member.supplier_id } : null;
 
   const supplierId = supplier?.id ?? null;
 

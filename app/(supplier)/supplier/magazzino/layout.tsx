@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -6,6 +7,7 @@ import {
   type WarehouseOption,
 } from "@/components/supplier/shared/warehouse-switcher";
 import type { Database } from "@/types/database";
+import { getCurrentSupplierMember, memberCan } from "@/lib/supplier/current-member";
 
 type WarehouseRow = Database["public"]["Tables"]["warehouses"]["Row"];
 
@@ -36,11 +38,10 @@ export default async function SupplierMagazzinoLayout({
   let warehouses: WarehouseOption[] = [];
 
   if (user) {
-    const { data: supplier } = await supabase
-      .from("suppliers")
-      .select("id")
-      .eq("profile_id", user.id)
-      .maybeSingle<{ id: string }>();
+    const member = await getCurrentSupplierMember();
+    const supplier = member ? { id: member.supplier_id } : null;
+    // Same gate as the sidebar (lib/supplier/permissions.ts ROLE_MATRIX).
+    if (member && !memberCan(member, "stock.read")) redirect("/supplier/dashboard");
 
     if (supplier?.id) {
       const { data } = await supabase
