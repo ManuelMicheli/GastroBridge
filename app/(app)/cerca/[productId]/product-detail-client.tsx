@@ -2,6 +2,7 @@
 
 import { PriceCompareTable } from "@/components/products/price-compare-table";
 import { toast } from "@/components/ui/toast";
+import { useCart } from "@/lib/hooks/useCart";
 import type { UnitType } from "@/types/database";
 import type { PriceCompareRow } from "@/types/products";
 
@@ -16,6 +17,7 @@ interface ProductDetailClientProps {
     unit: string;
     certifications: string[] | null;
     is_available: boolean;
+    lead_time_days?: number | null;
     suppliers: unknown;
   }>;
 }
@@ -25,7 +27,14 @@ export function ProductDetailClient({
   unit,
   comparisons,
 }: ProductDetailClientProps) {
-  const rows: PriceCompareRow[] = comparisons.map((c, i) => {
+  const { addItem } = useCart();
+  // Rows arrive sorted by price; still compute the min so the badge is right
+  // regardless of ordering.
+  const minPrice = comparisons.length
+    ? Math.min(...comparisons.map((c) => c.price))
+    : null;
+
+  const rows: PriceCompareRow[] = comparisons.map((c) => {
     const supplier = c.suppliers as {
       id: string; company_name: string; rating_avg: number;
       rating_count: number; is_verified: boolean; city: string | null;
@@ -33,7 +42,7 @@ export function ProductDetailClient({
     };
 
     const badges: PriceCompareRow["badges"] = [];
-    if (i === 0) badges.push("miglior-prezzo");
+    if (minPrice !== null && c.price === minPrice) badges.push("miglior-prezzo");
     if (c.certifications?.includes("BIO")) badges.push("bio");
     if (c.certifications?.includes("DOP")) badges.push("dop");
 
@@ -58,7 +67,7 @@ export function ProductDetailClient({
         is_featured: false,
         quality_tier: "standard",
         is_bio: false,
-        lead_time_days: 1,
+        lead_time_days: c.lead_time_days ?? 1,
         packaging_size: null,
         packaging_unit: null,
         certifications_structured: [],
@@ -82,7 +91,7 @@ export function ProductDetailClient({
         min_order_amount: supplier.min_order_amount,
       },
       deliveryInfo: {
-        canDeliverTomorrow: Math.random() > 0.5,
+        canDeliverTomorrow: (c.lead_time_days ?? 1) <= 1,
         deliveryFee: 0,
         freeDeliveryAbove: null,
       },
@@ -91,8 +100,19 @@ export function ProductDetailClient({
   });
 
   function handleAddToCart(row: PriceCompareRow, quantity: number) {
-    // Will be connected to cart context in Phase 4
-    toast(`${quantity}x ${row.product.name} da ${row.supplier.company_name} aggiunto al carrello`);
+    addItem({
+      productId: row.product.id,
+      supplierId: row.supplier.id,
+      supplierName: row.supplier.company_name,
+      name: row.product.name,
+      brand: row.product.brand,
+      unit: row.product.unit,
+      unitPrice: row.product.price,
+      quantity,
+      imageUrl: row.product.image_url,
+      minQuantity: row.product.min_quantity,
+    });
+    toast.success(`${quantity}x ${row.product.name} da ${row.supplier.company_name} aggiunto al carrello`);
   }
 
   return (

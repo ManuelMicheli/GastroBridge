@@ -24,7 +24,7 @@ type CheckoutDeps = {
 };
 
 export type CheckoutOutcome =
-  | { ok: true }
+  | { ok: true; orderIds: string[] }
   | { ok: false; error: string };
 
 /**
@@ -54,6 +54,7 @@ export async function runCheckout({
   }
 
   let anyOk = false;
+  const orderIds: string[] = [];
 
   // 1. Marketplace items via submitOrder (RPC atomica).
   if (realItems.length > 0) {
@@ -74,6 +75,7 @@ export async function runCheckout({
       return { ok: false, error: `ordine: ${res.error}` };
     }
     anyOk = true;
+    orderIds.push(res.data.orderId);
   }
 
   // 2. Catalog items via createCatalogOrder (legacy, header-only).
@@ -96,11 +98,12 @@ export async function runCheckout({
       return { ok: false, error: `ordine catalogo: ${res.error}` };
     }
     anyOk = true;
+    orderIds.push(res.data.id);
   }
 
   if (!anyOk) {
     return { ok: false, error: "nessun ordine inviato" };
   }
 
-  return { ok: true };
+  return { ok: true, orderIds };
 }

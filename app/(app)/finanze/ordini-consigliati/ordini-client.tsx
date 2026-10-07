@@ -49,7 +49,19 @@ function snapshotField<T>(snapshot: Record<string, unknown>, key: string): T | n
   return key in snapshot ? (snapshot[key] as T) : null;
 }
 
-export function OrdiniConsigliatiClient({ restaurantId, suggestions }: Props) {
+// /cerca reads `q` and `suppliers` (see cerca/_lib/url-state.ts). The search
+// category facet is keyed on macro-category, not category_id, so the
+// suggestion's product/category name is used as the query instead.
+function cercaHref(s: ReorderSuggestionRow): string {
+  const sp = new URLSearchParams();
+  const q = s.product_name ?? s.category_name;
+  if (q) sp.set("q", q);
+  if (s.preferred_supplier_id) sp.set("suppliers", s.preferred_supplier_id);
+  const qs = sp.toString();
+  return qs ? `/cerca?${qs}` : "/cerca";
+}
+
+export function OrdiniConsigliatiClient({ suggestions }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -172,7 +184,7 @@ export function OrdiniConsigliatiClient({ restaurantId, suggestions }: Props) {
 
                 <div className="flex flex-col gap-2 shrink-0">
                   <Link
-                    href={`/cerca?r=${restaurantId}&category=${s.category_id ?? ""}${s.preferred_supplier_id ? `&supplier=${s.preferred_supplier_id}` : ""}`}
+                    href={cercaHref(s)}
                     onClick={() => run(() => actSuggestion(s.id))}
                     className="inline-flex items-center gap-2 bg-accent-green text-surface-base text-sm font-medium rounded-lg px-4 py-2 hover:bg-accent-green/90"
                   >

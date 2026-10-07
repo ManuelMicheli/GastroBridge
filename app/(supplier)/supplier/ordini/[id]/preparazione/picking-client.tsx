@@ -222,7 +222,7 @@ function PickingRow({
       return;
     }
     if (!(quantityBase > 0)) {
-      toast.error("Quantita' non valida");
+      toast.error("Quantità non valida");
       return;
     }
     onPickStart();

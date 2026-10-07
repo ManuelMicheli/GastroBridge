@@ -156,7 +156,7 @@ export function SupplierDetailPane({
               <ArrowUpRight className="h-4 w-4" /> Vai al profilo completo
             </Button>
           </Link>
-          <Link href={`/cataloghi/${s.id}`} className="w-full">
+          <Link href={`/cerca?suppliers=${encodeURIComponent(s.id)}`} className="w-full">
             <Button
               variant="secondary"
               size="md"

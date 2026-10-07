@@ -132,7 +132,7 @@ const LINE_STATUS_VARIANT: Record<string, "default" | "success" | "warning" | "i
 const REJECTION_REASONS = [
   "Prodotto esaurito",
   "Fuori catalogo",
-  "Quantita' non disponibile",
+  "Quantità non disponibile",
   "Prezzo non sostenibile",
   "Zona di consegna non coperta",
   "Altro",
@@ -376,7 +376,7 @@ export function OrderDetailClient({
         return;
       }
       if (d.action === "modify" && !(Number(d.quantityAccepted) > 0)) {
-        toast.error(`Quantita' non valida per ${l.productName}`);
+        toast.error(`Quantità non valida per ${l.productName}`);
         return;
       }
     }

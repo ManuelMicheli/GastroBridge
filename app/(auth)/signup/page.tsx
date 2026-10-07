@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { signUp } from "../actions";
@@ -12,11 +12,27 @@ import { cn } from "@/lib/utils/formatters";
 import { SUPPLIER_PLATFORM_ENABLED } from "@/lib/utils/constants";
 import type { UserRole } from "@/types/database";
 
-export default function SignupPage() {
+// Marketing CTAs link here with ?role=restaurant|supplier (and &plan=...).
+function roleFromQuery(raw: string | string[] | undefined): UserRole | null {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (value === "restaurant") return "restaurant";
+  if (value === "supplier" && SUPPLIER_PLATFORM_ENABLED) return "supplier";
+  return null;
+}
+
+export default function SignupPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const router = useRouter();
-  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+  const { role: roleParam } = use(searchParams);
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(() =>
+    roleFromQuery(roleParam),
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
 
   async function handleSubmit(formData: FormData) {
     if (!selectedRole) return;
@@ -28,10 +44,37 @@ export default function SignupPage() {
       setError(result.error);
       toast(result.error);
       setIsLoading(false);
-    } else if (result?.redirectTo) {
-      toast("Account creato! Controlla la tua email per confermare.");
+    } else if (result?.redirectTo && result.hasSession) {
+      toast("Account creato!");
       router.push(result.redirectTo);
+    } else if (result?.success) {
+      setAwaitingConfirmation(true);
+      setIsLoading(false);
     }
+  }
+
+  if (awaitingConfirmation) {
+    return (
+      <div className="rounded-2xl border border-[color:var(--color-sage-muted)] bg-white p-7 shadow-[0_1px_2px_rgba(26,26,26,0.04),0_18px_48px_-20px_rgba(26,26,26,0.18)] sm:p-8">
+        <Mail className="h-8 w-8 text-brand-primary" aria-hidden />
+        <h2 className="mt-4 font-display text-[27px] leading-tight text-charcoal">
+          Controlla la tua email
+        </h2>
+        <p className="mt-1.5 text-sm text-sage">
+          Account creato. Ti abbiamo inviato un link per confermare
+          l&apos;indirizzo: aprilo per attivare l&apos;account, poi accedi.
+        </p>
+        <p className="mt-7 text-center text-sm text-sage">
+          Hai già confermato?{" "}
+          <Link
+            href="/login"
+            className="font-semibold text-brand-primary hover:underline"
+          >
+            Accedi
+          </Link>
+        </p>
+      </div>
+    );
   }
 
   return (

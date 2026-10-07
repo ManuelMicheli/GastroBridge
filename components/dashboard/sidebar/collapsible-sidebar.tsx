@@ -133,7 +133,7 @@ export function CollapsibleSidebar({ navItems, role }: Props) {
             )}
             <div className="space-y-0.5">
               {items.map((item) => (
-                <SidebarItem key={item.href} {...item} role={role} />
+                <SidebarItem key={item.href} {...item} role={role} allHrefs={prefetchHrefs} />
               ))}
               {/* Logout lives at the end of the last group, like the reference */}
               {sIdx === Object.keys(sections).length - 1 && (

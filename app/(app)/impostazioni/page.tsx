@@ -170,6 +170,13 @@ export default async function SettingsPage() {
   const app = SETTINGS_SECTIONS.filter((s) => s.group === "app");
   const account = SETTINGS_SECTIONS.filter((s) => s.group === "account");
 
+  const profileRows = [
+    { k: "Azienda", v: profile?.company_name },
+    { k: "P.IVA", v: profile?.vat_number },
+    { k: "Città", v: profile?.city },
+    { k: "Telefono", v: profile?.phone },
+  ];
+
   return (
     <>
       {/* Mobile Apple-app view */}
@@ -249,7 +256,9 @@ export default async function SettingsPage() {
           {azienda.map((s) => (
             <GroupedListRow
               key={s.href}
-              href={s.href}
+              // The desktop #profilo section is hidden on mobile: point the
+              // row at the mobile profile block below instead.
+              href={s.href === "#profilo" ? "#profilo-mobile" : s.href}
               leading={
                 <div
                   className="flex h-[26px] w-[26px] items-center justify-center rounded-md text-white"
@@ -264,6 +273,18 @@ export default async function SettingsPage() {
             />
           ))}
         </GroupedList>
+
+        <div id="profilo-mobile" className="scroll-mt-16">
+          <GroupedList className="mt-2" label="Profilo">
+            {profileRows.map((row) => (
+              <GroupedListRow
+                key={row.k}
+                title={row.k}
+                trailing={<ProfileValue value={row.v} />}
+              />
+            ))}
+          </GroupedList>
+        </div>
 
         <GroupedList className="mt-2" label="App">
           {app.map((s) => (
@@ -377,12 +398,7 @@ export default async function SettingsPage() {
       <section id="profilo">
         <SectionFrame label={`Profilo \u00B7 Azienda`}>
           <dl className="grid grid-cols-[96px_1fr] sm:grid-cols-[140px_1fr] gap-x-4 gap-y-0">
-            {[
-              { k: "Azienda", v: profile?.company_name },
-              { k: "P.IVA", v: profile?.vat_number },
-              { k: "Citta", v: profile?.city },
-              { k: "Telefono", v: profile?.phone },
-            ].map((row, idx, arr) => (
+            {profileRows.map((row, idx, arr) => (
               <div key={row.k} className="contents">
                 <dt
                   className={[
@@ -410,7 +426,7 @@ export default async function SettingsPage() {
               href="/impostazioni/sedi"
               className="inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.08em] text-text-secondary hover:text-accent-green transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-green rounded"
             >
-              Modifica profilo
+              Gestisci sedi
               <span aria-hidden>{"\u2192"}</span>
             </Link>
           </div>

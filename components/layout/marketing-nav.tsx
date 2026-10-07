@@ -48,10 +48,12 @@ export function MarketingNav() {
   }, []);
 
   function handleAnchorClick(e: React.MouseEvent<HTMLAnchorElement>, href: string) {
-    e.preventDefault();
     setMobileOpen(false);
     const target = document.querySelector<HTMLElement>(href);
+    // Sections only exist on the home page: elsewhere (/pricing,
+    // /per-fornitori) let the link navigate to "/#section" normally.
     if (target) {
+      e.preventDefault();
       // Native smooth scroll — drops the GSAP ScrollToPlugin dependency from
       // the nav (which sits in every marketing page) so it never ships to the
       // client. 80px offset clears the fixed nav.
@@ -91,7 +93,7 @@ export function MarketingNav() {
             return link.type === "anchor" ? (
               <a
                 key={link.href}
-                href={link.href}
+                href={`/${link.href}`}
                 onClick={(e) => handleAnchorClick(e, link.href)}
                 className={cn(base, tone)}
               >
@@ -167,7 +169,7 @@ export function MarketingNav() {
             link.type === "anchor" ? (
               <a
                 key={link.href}
-                href={link.href}
+                href={`/${link.href}`}
                 onClick={(e) => handleAnchorClick(e, link.href)}
                 className="font-display text-[clamp(32px,7vw,56px)] leading-[1.02] text-[var(--color-marketing-ink)] hover:text-[var(--color-marketing-primary)] transition-colors"
               >

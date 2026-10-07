@@ -40,7 +40,7 @@ export function ReviewForm({ onSubmit }: ReviewFormProps) {
 
       <div className="grid grid-cols-3 gap-4">
         <div>
-          <label className="text-xs text-sage block mb-1">Qualita</label>
+          <label className="text-xs text-sage block mb-1">Qualità</label>
           <RatingStars rating={qualityRating} size="sm" interactive onChange={setQualityRating} />
         </div>
         <div>

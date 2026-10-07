@@ -18,11 +18,54 @@ const LABEL_MAP: Record<string, string> = {
   abbonamento: "Abbonamento",
   supplier: "Fornitore",
   catalogo: "Catalogo",
-  nuovo: "Nuovo Prodotto",
+  nuovo: "Nuovo",
   import: "Importa CSV",
   clienti: "Clienti",
   recensioni: "Recensioni",
   zone: "Zone Consegna",
+  cataloghi: "Cataloghi",
+  confronta: "Confronta",
+  messaggi: "Messaggi",
+  finanze: "Finanze",
+  scontrini: "Scontrini",
+  integrazioni: "Integrazioni",
+  csv: "CSV",
+  "ordini-consigliati": "Ordini consigliati",
+  "esigenze-fornitura": "Esigenze di fornitura",
+  budget: "Budget",
+  notifiche: "Notifiche",
+  sicurezza: "Sicurezza",
+  guida: "Guida",
+  ordine: "Ordine",
+  conferma: "Conferma",
+  magazzino: "Magazzino",
+  carichi: "Carichi",
+  lotti: "Lotti",
+  movimenti: "Movimenti",
+  inventario: "Inventario",
+  ddt: "DDT",
+  templates: "Template",
+  consegne: "Consegne",
+  calendario: "Calendario",
+  listini: "Listini",
+  listino: "Listino",
+  aggiungi: "Aggiungi",
+  staff: "Staff",
+  profilo: "Profilo",
+  preparazione: "Preparazione",
+  kanban: "Kanban",
+  invito: "Invito",
+  accetta: "Accetta",
+};
+
+// Same segment, different meaning depending on its parent ("parent/segment").
+const CONTEXT_LABEL_MAP: Record<string, string> = {
+  "catalogo/nuovo": "Nuovo Prodotto",
+  "listini/nuovo": "Nuovo listino",
+  "carichi/nuovo": "Nuovo carico",
+  "staff/nuovo": "Nuovo membro",
+  "templates/nuovo": "Nuovo template",
+  "fornitori/cerca": "Cerca fornitori",
 };
 
 export function Breadcrumbs() {
@@ -37,7 +80,11 @@ export function Breadcrumbs() {
 
   const crumbs = segments.map((segment, i) => {
     const href = "/" + segments.slice(0, i + 1).join("/");
-    const label = LABEL_MAP[segment] || segment;
+    const parent = i > 0 ? segments[i - 1] : undefined;
+    const label =
+      (parent && CONTEXT_LABEL_MAP[`${parent}/${segment}`]) ||
+      LABEL_MAP[segment] ||
+      segment;
     const isLast = i === segments.length - 1;
     // Skip UUID segments — show a shortened version
     const isUuid = /^[0-9a-f]{8}-/.test(segment);
