@@ -2,9 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Bell, Check } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
-import { Badge } from "@/components/ui/badge";
-import { PulseDot } from "@/components/supplier/signature";
+import { useRouter } from "next/navigation";
 import { useRecentNotifications } from "@/lib/realtime/supplier-hooks";
 
 type Props = {
@@ -27,9 +25,7 @@ function formatRelative(iso: string): string {
 export function NotificationBell({ count: legacyCount = 0 }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  const pathname = usePathname();
   const router = useRouter();
-  const isSupplier = pathname.startsWith("/supplier");
   const { notifications, unreadCount, markRead, markAllRead } = useRecentNotifications();
 
   // Prefer the live unread count from whichever provider is mounted.
@@ -46,11 +42,8 @@ export function NotificationBell({ count: legacyCount = 0 }: Props) {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [open]);
 
-  // Area-adaptive color tokens for the button. We keep a single dropdown
-  // render path for both areas — the dropdown itself doesn't need branching.
-  const buttonClasses = isSupplier
-    ? "relative h-10 w-10 rounded-lg text-text-tertiary hover:text-text-primary hover:bg-surface-hover transition-colors inline-flex items-center justify-center"
-    : "relative p-2 rounded-lg text-text-tertiary hover:text-text-secondary hover:bg-surface-hover transition-colors inline-flex items-center justify-center";
+  // Fernly round icon button for both areas (the dropdown is shared too).
+  const buttonClasses = "f-icon-btn";
 
   return (
     <div ref={ref} className="relative">
@@ -59,30 +52,24 @@ export function NotificationBell({ count: legacyCount = 0 }: Props) {
         className={buttonClasses}
         aria-label={`Notifiche (${effectiveCount} non lette)`}
       >
-        <Bell className="h-5 w-5" />
+        <Bell className="h-[18px] w-[18px]" strokeWidth={1.75} />
         {hasUnread && (
-          <>
-            <span className="absolute -top-1 -right-1">
-              <Badge variant="highlight" size="xs" mono>
-                {effectiveCount > 9 ? "9+" : effectiveCount}
-              </Badge>
-            </span>
-            <span className="absolute -top-1.5 -right-1.5 pointer-events-none">
-              <PulseDot variant="brand" size={6} />
-            </span>
-          </>
+          <span
+            aria-hidden
+            className="absolute right-[10px] top-[9px] h-2 w-2 rounded-full bg-[#E5484D] ring-2 ring-[var(--f-card)]"
+          />
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-96 max-h-[32rem] overflow-hidden bg-surface-elevated border border-border-default rounded-xl shadow-elevated-dark z-50 flex flex-col">
+        <div className="absolute right-0 z-50 mt-2 flex max-h-[32rem] w-96 flex-col overflow-hidden rounded-[20px] border border-[var(--f-line)] bg-[var(--f-card)] shadow-[0_2px_6px_rgba(16,24,20,0.06),0_24px_56px_rgba(16,24,20,0.16)]">
           <div className="px-4 py-3 border-b border-border-subtle flex items-center justify-between">
             <h3 className="text-sm font-semibold text-text-primary">Notifiche</h3>
             {hasUnread && (
               <button
                 type="button"
                 onClick={() => void markAllRead()}
-                className="text-xs text-accent-green hover:underline inline-flex items-center gap-1"
+                className="text-xs font-medium text-[var(--acc-700)] hover:underline inline-flex items-center gap-1"
               >
                 <Check className="h-3 w-3" /> Segna tutte lette
               </button>

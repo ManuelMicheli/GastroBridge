@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils/formatters";
 import { signOut } from "@/app/(auth)/actions";
 import { resolveIcon } from "../icons";
 import type { NavItem } from "../sidebar/sidebar-item";
+import { BrandMark, BrandWordmark } from "@/components/fernly/brand-mark";
+import { Avatar } from "@/components/fernly/primitives";
 
 type Props = {
   open: boolean;
@@ -37,12 +39,6 @@ export function SidebarDrawer({ open, onClose, navItems, role, companyName }: Pr
     }
   }
 
-  const initials = companyName
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 
   return (
     <AnimatePresence>
@@ -53,7 +49,7 @@ export function SidebarDrawer({ open, onClose, navItems, role, companyName }: Pr
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 lg:hidden bg-surface-overlay backdrop-blur-xl"
+            className="fixed inset-0 z-40 lg:hidden bg-[rgba(20,24,22,0.30)] backdrop-blur-[4px]"
             onClick={onClose}
           />
 
@@ -65,26 +61,27 @@ export function SidebarDrawer({ open, onClose, navItems, role, companyName }: Pr
             transition={{ type: "spring", stiffness: 400, damping: 35 }}
             onPointerDown={handlePointerDown}
             onPointerUp={handlePointerUp}
-            className="fixed left-0 top-0 bottom-0 w-72 bg-surface-sidebar border-r border-border-subtle z-50 flex flex-col lg:hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+            className="fixed left-2 top-2 bottom-2 w-[min(288px,calc(100vw-48px))] rounded-[24px] bg-[var(--f-panel)] shadow-[0_24px_60px_rgba(16,24,20,0.22)] z-50 flex flex-col overflow-hidden lg:hidden pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-4 h-16 border-b border-border-subtle">
-              <div className="flex items-center gap-1">
-                <span className="text-lg font-display text-text-primary">Gastro</span>
-                <span className="text-lg font-bold text-accent-green">Bridge</span>
+            <div className="flex items-center justify-between px-5 h-[72px]">
+              <div className="flex items-center gap-2.5">
+                <BrandMark size={32} />
+                <BrandWordmark />
               </div>
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-lg text-text-tertiary hover:text-text-primary hover:bg-surface-hover transition-colors"
+                aria-label="Chiudi menu"
+                className="f-icon-btn !h-9 !w-9"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             {/* Role badge */}
-            <div className="px-5 py-3">
-              <span className="text-[10px] uppercase tracking-widest font-bold text-text-tertiary">
-                {role === "supplier" ? "Area Fornitore" : "Area Ristorante"}
+            <div className="px-6 pb-1.5">
+              <span className="f-eyebrow !font-medium !tracking-[0.1em] !text-[var(--f-faint)]">
+                {role === "supplier" ? "Area fornitore" : "Menu"}
               </span>
             </div>
 
@@ -99,13 +96,16 @@ export function SidebarDrawer({ open, onClose, navItems, role, companyName }: Pr
                     href={item.href}
                     onClick={onClose}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-colors",
+                      "relative flex h-11 items-center gap-3 rounded-xl px-3 text-[15px] transition-colors",
                       isActive
-                        ? "bg-accent-green-muted text-accent-green"
-                        : "text-text-secondary hover:text-text-primary hover:bg-surface-hover"
+                        ? "font-semibold text-[var(--f-ink)] bg-[var(--f-card)] shadow-[0_1px_2px_rgba(16,24,20,0.05)]"
+                        : "font-medium text-[var(--f-muted)] hover:text-[var(--f-ink)]"
                     )}
                   >
-                    <Icon className="h-5 w-5" />
+                    {isActive && (
+                      <span aria-hidden className="absolute -left-3 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full bg-[var(--acc-600)]" />
+                    )}
+                    <Icon className={cn("h-5 w-5", isActive && "text-[var(--acc-600)]")} strokeWidth={isActive ? 2 : 1.75} />
                     {item.label}
                   </Link>
                 );
@@ -113,11 +113,9 @@ export function SidebarDrawer({ open, onClose, navItems, role, companyName }: Pr
             </nav>
 
             {/* User + Logout */}
-            <div className="border-t border-border-subtle p-4">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="h-9 w-9 rounded-lg bg-accent-green-muted flex items-center justify-center">
-                  <span className="text-xs font-bold text-accent-green">{initials}</span>
-                </div>
+            <div className="m-3 rounded-[18px] bg-[var(--f-card)] p-3">
+              <div className="flex items-center gap-3 mb-2">
+                <Avatar name={companyName} size={36} />
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium text-text-primary truncate">{companyName}</p>
                 </div>
@@ -125,9 +123,9 @@ export function SidebarDrawer({ open, onClose, navItems, role, companyName }: Pr
               <form action={signOut}>
                 <button
                   type="submit"
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-text-tertiary hover:text-text-warning hover:bg-surface-hover transition-colors w-full"
+                  className="f-btn f-btn-sm f-btn-soft w-full"
                 >
-                  <LogOut className="h-5 w-5" />
+                  <LogOut className="h-4 w-4" />
                   Esci
                 </button>
               </form>

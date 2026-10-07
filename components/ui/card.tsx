@@ -12,7 +12,7 @@ interface CardProps extends HTMLAttributes<HTMLDivElement> {
 const paddingMap: Record<CardPadding, string> = {
   none: "p-0",
   compact: "p-4",
-  default: "p-5",
+  default: "p-5 sm:px-[22px]",
   hero: "p-7",
 };
 
@@ -31,14 +31,14 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
     <div
       ref={ref}
       className={cn(
-        "bg-white rounded-xl border border-[color:var(--color-border-subtle)]",
+        "f-card",
         paddingMap[padding],
         clickable &&
-          "cursor-pointer hover:-translate-y-[1px] transition-[transform,box-shadow] duration-[var(--duration-fast,150ms)]",
+          "cursor-pointer hover:-translate-y-[1px] hover:[box-shadow:var(--elevation-card-hover)] transition-[transform,box-shadow] duration-200",
         glow && "dark:hover:[box-shadow:var(--glow-brand)]",
         className
       )}
-      style={{ boxShadow: "var(--elevation-card-active)", ...style }}
+      style={style}
       {...props}
     />
   )
@@ -62,7 +62,7 @@ const CardTitle = forwardRef<
 >(({ className, ...props }, ref) => (
   <h3
     ref={ref}
-    className={cn("text-lg font-bold text-charcoal font-body", className)}
+    className={cn("f-card-title", className)}
     {...props}
   />
 ));
@@ -72,7 +72,7 @@ const CardDescription = forwardRef<
   HTMLParagraphElement,
   HTMLAttributes<HTMLParagraphElement>
 >(({ className, ...props }, ref) => (
-  <p ref={ref} className={cn("text-sm text-sage", className)} {...props} />
+  <p ref={ref} className={cn("text-sm text-[var(--f-muted)]", className)} {...props} />
 ));
 CardDescription.displayName = "CardDescription";
 
@@ -99,7 +99,7 @@ const CardEyebrow = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
     <div
       ref={ref}
       className={cn(
-        "font-mono text-[10px] uppercase tracking-[0.2em] text-brand-depth",
+        "f-eyebrow",
         className
       )}
       {...props}

@@ -13,6 +13,7 @@ import { SidebarDrawer } from "./mobile/sidebar-drawer";
 import { CommandPaletteProvider } from "./command-palette/command-palette-provider";
 import { CommandPalette } from "./command-palette/command-palette";
 import type { NavItem } from "./sidebar/sidebar-item";
+import { AppearanceProvider } from "@/components/fernly/appearance-provider";
 import { cn } from "@/lib/utils/formatters";
 
 type Props = {
@@ -25,6 +26,12 @@ type Props = {
   hero?: ReactNode;
 };
 
+/**
+ * Fernly app shell: three floating panels on a light canvas — sidebar,
+ * topbar, content (spec §1). The page keeps window scrolling (sticky
+ * sidebar/topbar) so every existing page layout keeps working; mobile keeps
+ * its own topbar, drawer and floating pill nav.
+ */
 export function DashboardShell({
   children,
   navItems,
@@ -38,97 +45,103 @@ export function DashboardShell({
   const { resolvedTheme } = useTheme();
 
   // Avoid hydration mismatch: theme is unknown on first render.
-  // Default to light before mount so restaurant area opens with the
-  // brand-correct white surface (carmine palette via [data-area]).
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const isDark = mounted && resolvedTheme === "dark";
 
-  return (
-    <CommandPaletteProvider navItems={navItems} role={role}>
-      <div
-        data-area={role}
-        className={cn(
-          "flex min-h-screen bg-surface-base text-text-primary",
-          isDark && "dark dashboard-dark"
-        )}
-      >
-        {/* Desktop sidebar */}
-        <CollapsibleSidebar
-          navItems={navItems}
-          role={role}
-          companyName={companyName}
-          userEmail={userEmail}
-        />
+  const messagesHref = role === "supplier" ? "/supplier/messaggi" : "/messaggi";
+  const unreadMessages = navItems.find((n) => n.href === messagesHref)?.badge ?? 0;
+  const settingsHref = role === "supplier" ? "/supplier/impostazioni" : "/impostazioni";
 
-        {/* Main content */}
-        <div className="flex-1 flex flex-col min-w-0">
-          {role === "restaurant" ? (
-            <>
-              <div className="lg:hidden">
-                <MobileRestaurantTopbar
-                  onMenuToggle={() => setDrawerOpen(true)}
-                />
-              </div>
-              <div className="hidden lg:block">
-                <DarkTopbar onMenuToggle={() => setDrawerOpen(true)} />
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="lg:hidden">
-                <MobileSupplierTopbar
-                  onMenuToggle={() => setDrawerOpen(true)}
-                />
-              </div>
-              <div className="hidden lg:block">
-                <DarkTopbar onMenuToggle={() => setDrawerOpen(true)} />
-              </div>
-            </>
+  return (
+    <AppearanceProvider area={role}>
+      <CommandPaletteProvider navItems={navItems} role={role}>
+        <div
+          data-area={role}
+          style={{ ["--chrome-top" as string]: "86px" }}
+          className={cn(
+            "flex min-h-screen bg-[var(--f-canvas)] text-text-primary lg:gap-2.5 lg:px-2.5",
+            isDark && "dark dashboard-dark",
           )}
-          <main
-            className={cn(
-              "flex-1 w-full cq-shell lg:pb-6",
-              "bg-[color:var(--ios-grouped-bg)] lg:bg-transparent"
+        >
+          {/* Desktop sidebar panel */}
+          <div className="hidden pt-2.5 lg:block">
+            <CollapsibleSidebar
+              navItems={navItems}
+              role={role}
+              companyName={companyName}
+              userEmail={userEmail}
+            />
+          </div>
+
+          {/* Main column */}
+          <div className="flex min-w-0 flex-1 flex-col">
+            {role === "restaurant" ? (
+              <div className="lg:hidden">
+                <MobileRestaurantTopbar onMenuToggle={() => setDrawerOpen(true)} />
+              </div>
+            ) : (
+              <div className="lg:hidden">
+                <MobileSupplierTopbar onMenuToggle={() => setDrawerOpen(true)} />
+              </div>
             )}
-            style={{
-              paddingBottom:
-                "max(92px, calc(92px + env(safe-area-inset-bottom, 0px)))",
-            }}
-          >
-            <div
-              className={cn("w-full mx-auto", "lg:py-6 py-1")}
+            <div className="hidden lg:block">
+              <DarkTopbar
+                onMenuToggle={() => setDrawerOpen(true)}
+                companyName={companyName}
+                userEmail={userEmail}
+                messagesHref={messagesHref}
+                unreadMessages={unreadMessages}
+                settingsHref={settingsHref}
+              />
+            </div>
+            <main
+              className={cn(
+                "cq-shell w-full flex-1",
+                "bg-[color:var(--ios-grouped-bg)] lg:mb-2.5 lg:rounded-[24px] lg:bg-[var(--f-panel)]",
+              )}
               style={{
-                paddingLeft: "var(--page-gutter, 0px)",
-                paddingRight: "var(--page-gutter, 0px)",
-                maxWidth: "var(--page-max-width, 100%)",
+                paddingBottom:
+                  "max(92px, calc(92px + env(safe-area-inset-bottom, 0px)))",
               }}
             >
-              {hero ? <div className="mb-8">{hero}</div> : null}
-              {children}
-            </div>
-          </main>
+              <div
+                className="mx-auto w-full py-1 lg:px-0 lg:py-6"
+                style={{
+                  paddingLeft: "var(--page-gutter, 0px)",
+                  paddingRight: "var(--page-gutter, 0px)",
+                  maxWidth: "var(--page-max-width, 100%)",
+                }}
+              >
+                {hero ? <div className="mb-8">{hero}</div> : null}
+                {children}
+              </div>
+            </main>
+          </div>
+
+          {/* Mobile drawer */}
+          <SidebarDrawer
+            open={drawerOpen}
+            onClose={() => setDrawerOpen(false)}
+            navItems={navItems}
+            role={role}
+            companyName={companyName}
+          />
+
+          {/* Mobile bottom nav — both areas get the floating pill */}
+          {role === "restaurant" ? (
+            <FloatingPillNavWithCart items={mobileNavItems} />
+          ) : (
+            <FloatingPillNav items={mobileNavItems} />
+          )}
+
+          <CommandPalette />
+
+          {/* Overlay root (modals, drawers) — inside the area scope so
+              portals inherit accent + font tokens. */}
+          <div id="f-portal" />
         </div>
-
-        {/* Mobile drawer */}
-        <SidebarDrawer
-          open={drawerOpen}
-          onClose={() => setDrawerOpen(false)}
-          navItems={navItems}
-          role={role}
-          companyName={companyName}
-        />
-
-        {/* Mobile bottom nav — both areas get floating-pill */}
-        {role === "restaurant" ? (
-          <FloatingPillNavWithCart items={mobileNavItems} />
-        ) : (
-          <FloatingPillNav items={mobileNavItems} />
-        )}
-
-        {/* Command Palette overlay */}
-        <CommandPalette />
-      </div>
-    </CommandPaletteProvider>
+      </CommandPaletteProvider>
+    </AppearanceProvider>
   );
 }

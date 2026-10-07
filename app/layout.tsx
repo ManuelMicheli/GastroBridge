@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DM_Serif_Display, Inter, JetBrains_Mono } from "next/font/google";
+import { DM_Serif_Display, Inter, JetBrains_Mono, Plus_Jakarta_Sans } from "next/font/google";
 import { Toaster } from "@/components/ui/toast";
 import { PostHogProvider } from "@/components/providers/posthog-provider";
 import { ThemeProvider } from "@/components/providers/theme-provider";
@@ -30,6 +30,17 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
   preload: false,
   adjustFontFallback: false,
+});
+
+// Logged-in app + auth font (geometric grotesk). Not preloaded so the public
+// marketing pages keep their exact first-paint budget; the app/auth roots
+// opt into it through `--font-app` (see the Fernly layer in globals.css).
+const appFont = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-app",
+  display: "swap",
+  preload: false,
 });
 
 const SUPABASE_ORIGIN = (() => {
@@ -96,7 +107,7 @@ export default function RootLayout({
       lang="it"
       translate="no"
       suppressHydrationWarning
-      className={`${dmSerifDisplay.variable} ${bodyFont.variable} ${jetbrainsMono.variable}`}
+      className={`${dmSerifDisplay.variable} ${bodyFont.variable} ${jetbrainsMono.variable} ${appFont.variable}`}
     >
       <head>
         <meta name="google" content="notranslate" />

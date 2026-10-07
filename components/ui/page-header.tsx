@@ -10,6 +10,10 @@ interface PageHeaderProps {
   className?: string;
 }
 
+/**
+ * Fernly page header: big near-black title (revealed left→right on mount),
+ * muted subtitle, actions (pill buttons) on the right.
+ */
 export function PageHeader({
   title,
   subtitle,
@@ -21,42 +25,26 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between",
-        divider && "pb-6 border-b border-[color:var(--color-border-subtle)]",
+        "mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between",
+        divider && "pb-6 border-b border-[color:var(--f-line)]",
         className
       )}
     >
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-3">
-          <h1
-            className="font-display"
-            style={{
-              fontSize: "var(--text-display-lg)",
-              lineHeight: "var(--text-display-lg--line-height)",
-              letterSpacing: "var(--text-display-lg--letter-spacing)",
-              fontWeight: "var(--text-display-lg--font-weight)",
-              color: "var(--color-text-primary)",
-            }}
-          >
-            {title}
-          </h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="f-title f-type">{title}</h1>
           {meta && <div className="flex items-center gap-2">{meta}</div>}
         </div>
         {subtitle && (
-          <p
-            className="mt-1.5 text-[color:var(--color-text-secondary)]"
-            style={{
-              fontSize: "var(--text-body-sm)",
-              lineHeight: "var(--text-body-sm--line-height)",
-              maxWidth: "60ch",
-            }}
-          >
+          <p className="f-subtitle f-fade mt-1 max-w-[62ch]" style={{ ["--d" as string]: "120ms" }}>
             {subtitle}
           </p>
         )}
       </div>
       {actions && (
-        <div className="flex items-center gap-2 shrink-0">{actions}</div>
+        <div className="f-fade flex flex-wrap items-center gap-2 shrink-0" style={{ ["--d" as string]: "80ms" }}>
+          {actions}
+        </div>
       )}
     </header>
   );

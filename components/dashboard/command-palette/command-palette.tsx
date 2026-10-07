@@ -80,7 +80,7 @@ export function CommandPalette() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
-            className="fixed inset-0 bg-surface-overlay backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-[rgba(20,24,22,0.28)] backdrop-blur-[4px] z-50"
             onClick={close}
           />
 
@@ -91,11 +91,11 @@ export function CommandPalette() {
             exit={{ opacity: 0, scale: 0.96, y: -10 }}
             transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
             className={cn(
-              "fixed z-50 bg-surface-elevated border border-border-default shadow-elevated-dark overflow-hidden",
+              "fixed z-50 bg-[var(--f-card)] border border-[var(--f-line)] shadow-[0_2px_6px_rgba(16,24,20,0.06),0_28px_64px_rgba(16,24,20,0.20)] overflow-hidden",
               // Mobile: full-screen flex column
               "inset-0 flex flex-col md:inset-auto md:block",
               // Desktop: centered panel
-              "md:left-1/2 md:top-[20%] md:-translate-x-1/2 md:w-[90vw] md:max-w-lg md:rounded-2xl"
+              "md:left-1/2 md:top-[18%] md:-translate-x-1/2 md:w-[90vw] md:max-w-xl md:rounded-[22px]"
             )}
           >
             {/* Search input */}
@@ -110,7 +110,7 @@ export function CommandPalette() {
                 placeholder="Cerca pagine, azioni..."
                 className="flex-1 bg-transparent text-base md:text-sm text-text-primary placeholder:text-text-tertiary outline-none"
               />
-              <kbd className="hidden md:inline-block px-1.5 py-0.5 rounded bg-surface-base text-[10px] font-mono text-text-tertiary border border-border-subtle">
+              <kbd className="hidden md:inline-flex h-6 items-center px-2 rounded-full bg-[var(--f-fill)] text-[10.5px] font-semibold text-[var(--f-ink-2)]">
                 ESC
               </kbd>
               <button
@@ -126,7 +126,7 @@ export function CommandPalette() {
             <div className="flex-1 md:flex-none md:max-h-72 overflow-y-auto py-2">
               {Object.entries(grouped).map(([section, items]) => (
                 <div key={section}>
-                  <p className="px-4 py-1.5 text-[10px] uppercase tracking-widest font-bold text-text-tertiary">
+                  <p className="f-eyebrow px-4 py-1.5">
                     {section}
                   </p>
                   {items.map((item) => {
