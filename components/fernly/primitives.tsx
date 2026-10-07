@@ -49,7 +49,7 @@ export function FCard({
     >
       {(title || action) && (
         <header className="mb-4 flex items-center justify-between gap-3">
-          {title ? <h2 className="f-card-title truncate">{title}</h2> : <span />}
+          {title ? <h2 className="f-card-title min-w-0">{title}</h2> : <span />}
           {action ? <div className="flex shrink-0 items-center gap-2">{action}</div> : null}
         </header>
       )}
