@@ -5,7 +5,6 @@ import { PageHeader } from "@/components/ui/page-header";
 import { LargeTitle } from "@/components/ui/large-title";
 import { GroupedList, GroupedListRow } from "@/components/ui/grouped-list";
 import { SectionFrame } from "@/components/dashboard/restaurant/_awwwards/section-frame";
-import { SettingsNavRow } from "./_components/settings-nav-row";
 import { ShieldCheck, ShieldAlert, ChevronRight } from "lucide-react";
 
 export const metadata: Metadata = { title: "Impostazioni" };
@@ -373,26 +372,7 @@ export default async function SettingsPage() {
         </span>
       </Link>
 
-      <SectionFrame
-        label={`Sezioni \u00B7 ${SETTINGS_SECTIONS.length}`}
-        padded={false}
-      >
-        <nav aria-label="Sezioni impostazioni" className="px-1 pb-1">
-          <ul className="flex flex-col">
-            {SETTINGS_SECTIONS.map((section, i) => (
-              <li key={section.href}>
-                <SettingsNavRow
-                  index={i + 1}
-                  href={section.href}
-                  label={section.label}
-                  description={section.description}
-                  isLast={i === SETTINGS_SECTIONS.length - 1}
-                />
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </SectionFrame>
+      {/* Section navigation lives in the settings sub-nav (layout.tsx). */}
 
       <section id="profilo">
         <SectionFrame label={`Profilo \u00B7 Azienda`}>

@@ -11,8 +11,7 @@ interface LargeTitleProps {
 
 /**
  * LargeTitle — editorial hero header for mobile routes.
- * Eyebrow caption (carmine tracked) + serif Georgia display title + subtitle.
- * Mirrors iOS UINavigationBar largeTitle but with editorial serif.
+ * Eyebrow caption + Fernly display title (app grotesk) + muted subtitle.
  * Viewport agnostic — container-query responsive via fluid tokens.
  */
 export function LargeTitle({
@@ -25,22 +24,18 @@ export function LargeTitle({
   return (
     <div className={cn("px-4 pt-3 pb-1 md:px-6 md:pt-5", className)}>
       {eyebrow && (
-        <div className="text-[10px] font-medium uppercase tracking-[0.14em] text-[color:var(--caption-color)]">
+        <div className="f-eyebrow">
           {eyebrow}
         </div>
       )}
       <div className="mt-1 flex items-end justify-between gap-3">
-        <h1
-          className="font-serif text-[length:var(--text-display-lg)] font-medium leading-[var(--text-display-lg--line-height)] tracking-[-0.022em] text-[color:var(--color-text-primary)]"
-          style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}
-          tabIndex={-1}
-        >
+        <h1 className="f-title f-type" tabIndex={-1}>
           {title}
         </h1>
         {actions && <div className="flex-shrink-0 pb-1">{actions}</div>}
       </div>
       {subtitle && (
-        <p className="mt-0.5 text-[13px] leading-snug text-[color:var(--color-text-secondary,#6B6B6B)]">
+        <p className="f-subtitle mt-1">
           {subtitle}
         </p>
       )}

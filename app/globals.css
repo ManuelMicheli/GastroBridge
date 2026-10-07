@@ -1775,6 +1775,16 @@ html[data-accent="ambra"] [data-area="supplier"] {
   border-color: var(--f-line);
 }
 
+/* The previous editorial design hard-coded Georgia/serif inline in many
+   mobile views; inside the app everything uses the app grotesk. */
+[data-area="restaurant"] [style*="Georgia"],
+[data-area="supplier"] [style*="Georgia"],
+[data-area="restaurant"] .font-serif,
+[data-area="supplier"] .font-serif {
+  font-family: var(--font-app), ui-sans-serif, system-ui, sans-serif !important;
+  letter-spacing: -0.015em;
+}
+
 [data-area="restaurant"] ::selection,
 [data-area="supplier"] ::selection {
   background: color-mix(in oklab, var(--acc-600) 22%, transparent);
