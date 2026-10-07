@@ -4,6 +4,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { accessCan, getRestaurantAccess } from "@/lib/restaurants/context";
 import { emitOrderEvent } from "@/lib/orders/events";
 import { encodeWorkflowNotes, getWorkflowState } from "@/lib/orders/workflow-state";
 
@@ -17,8 +18,10 @@ type Result = { ok: true } | { ok: false; error: string };
  * no stock has been reserved, so cancelling has no warehouse side effects.
  * Later states go through the supplier (cancelOrderSplit releases stock).
  *
- * Authorization: the user must own the order's restaurant. Split writes use
- * the admin client because restaurants have no UPDATE policy on order_splits.
+ * Authorization: the user must own the order's restaurant or be a team member
+ * whose role has order.submit. Split and header writes use the admin client
+ * (restaurants have no UPDATE policy on order_splits, and members have none
+ * on orders until 20261008000000_restaurant_team_rls.sql is applied).
  */
 export async function cancelOrderByRestaurant(orderId: string): Promise<Result> {
   if (!orderId) return { ok: false, error: "Ordine non valido" };
@@ -32,13 +35,17 @@ export async function cancelOrderByRestaurant(orderId: string): Promise<Result> 
     const admin = createAdminClient() as any;
     const { data: order } = (await admin
       .from("orders")
-      .select("id, status, restaurants:restaurant_id ( profile_id )")
+      .select("id, status, restaurant_id")
       .eq("id", orderId)
       .maybeSingle()) as {
-      data: { id: string; status: string; restaurants: { profile_id: string | null } | null } | null;
+      data: { id: string; status: string; restaurant_id: string } | null;
     };
-    if (!order || order.restaurants?.profile_id !== user.id) {
+    const access = order ? await getRestaurantAccess(order.restaurant_id) : null;
+    if (!order || !access) {
       return { ok: false, error: "Ordine non trovato" };
+    }
+    if (!accessCan(access, "order.submit")) {
+      return { ok: false, error: "Il tuo ruolo non consente di annullare ordini" };
     }
     if (order.status === "cancelled") return { ok: true };
 
@@ -85,8 +92,8 @@ export async function cancelOrderByRestaurant(orderId: string): Promise<Result> 
       });
     }
 
-    // Header (catalog orders have only this) — restaurant owner policy.
-    const { error: orderErr } = await (supabase as any)
+    // Header (catalog orders have only this) — authorized above.
+    const { error: orderErr } = await admin
       .from("orders")
       .update({ status: "cancelled" })
       .eq("id", orderId);

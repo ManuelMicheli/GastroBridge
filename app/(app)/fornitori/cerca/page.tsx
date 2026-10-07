@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, MapPin, Shield, Star } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { contextCan, getRestaurantContext } from "@/lib/restaurants/context";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -34,16 +35,10 @@ export default async function CercaFornitoriPage({
   const { q, city } = await searchParams;
 
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: restaurant } = await supabase
-    .from("restaurants")
-    .select("id")
-    .eq("profile_id", user?.id ?? "")
-    .limit(1)
-    .maybeSingle<{ id: string }>();
+  // Active restaurant: owned, or the one the user is a team member of.
+  const ctx = await getRestaurantContext();
+  const restaurant = ctx ? { id: ctx.restaurantId } : null;
+  const canManage = contextCan(ctx, "partnership.manage");
 
   let query = supabase
     .from("suppliers")
@@ -166,7 +161,9 @@ export default async function CercaFornitoriPage({
                         </Badge>
                       ))}
                     </div>
-                    <InviteSupplierButton supplierId={s.id} existingStatus={relStatus} />
+                    {canManage ? (
+                      <InviteSupplierButton supplierId={s.id} existingStatus={relStatus} />
+                    ) : null}
                   </div>
                 </div>
               </Card>

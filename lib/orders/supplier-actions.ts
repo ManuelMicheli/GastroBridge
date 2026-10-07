@@ -1064,12 +1064,15 @@ export async function respondToSupplierChanges(
     const admin = createAdminClient() as any;
     const { data: order } = (await admin
       .from("orders")
-      .select("id, restaurants:restaurant_id ( profile_id )")
+      .select("id, restaurant_id")
       .eq("id", splitRes.split.order_id)
       .maybeSingle()) as {
-      data: { id: string; restaurants: { profile_id: string | null } | null } | null;
+      data: { id: string; restaurant_id: string } | null;
     };
-    if (!order || order.restaurants?.profile_id !== user.id) {
+    // Owner, or a team member whose role may submit orders.
+    const { accessCan, getRestaurantAccess } = await import("@/lib/restaurants/context");
+    const access = order ? await getRestaurantAccess(order.restaurant_id) : null;
+    if (!order || !access || !accessCan(access, "order.submit")) {
       return { ok: false, error: "Non sei autorizzato a confermare questo ordine" };
     }
 

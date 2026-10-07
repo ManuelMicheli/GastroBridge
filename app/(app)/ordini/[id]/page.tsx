@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { accessCan, getRestaurantAccess } from "@/lib/restaurants/context";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Check, Clock, Download, MessageCircle, Package, Truck } from "lucide-react";
@@ -94,6 +95,12 @@ export default async function OrderDetailPage({
 
   if (!order) notFound();
 
+  // Owner or team member of the order's restaurant; only roles with
+  // order.submit may reorder, cancel or answer supplier changes.
+  const access = await getRestaurantAccess(order.restaurant_id);
+  if (!access) notFound();
+  const canOrder = accessCan(access, "order.submit");
+
   type SplitRow = { id: string; order_id: string; supplier_id: string; subtotal: number; status: string; supplier_notes: string | null; suppliers: { company_name: string } | null };
   const { data: splits } = await supabase
     .from("order_splits")
@@ -149,11 +156,12 @@ export default async function OrderDetailPage({
       minQuantity: Number(p?.min_quantity ?? 1),
     });
   }
-  const reorderLines = [...reorderByProduct.values()];
+  const reorderLines = canOrder ? [...reorderByProduct.values()] : [];
 
   // "Annulla ordine": only while no supplier has taken it in charge (see
   // cancelOrderByRestaurant, which re-checks on the server).
   const canCancel =
+    canOrder &&
     order.status !== "cancelled" &&
     (hasMarketplaceSplits
       ? (splits ?? []).every((s) => getWorkflowState(s.status, s.supplier_notes) === "submitted")
@@ -238,7 +246,7 @@ export default async function OrderDetailPage({
           { table: "orders", filter: `id=eq.${id}` },
         ]}
       />
-      {awaitingConfirmation.map((s) => (
+      {(canOrder ? awaitingConfirmation : []).map((s) => (
         <SupplierChangesBanner
           key={s.id}
           splitId={s.id}

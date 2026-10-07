@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createClient } from "@/lib/supabase/server";
+import { getRestaurantContext } from "@/lib/restaurants/context";
 import type {
   RelationshipStatus,
   RelationshipWithRestaurant,
@@ -37,16 +38,10 @@ export async function getRelationshipsForRestaurant(
   options?: { status?: RelationshipStatus[] },
 ): Promise<RelationshipWithSupplier[]> {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return [];
-
-  const { data: restaurant } = await supabase
-    .from("restaurants")
-    .select("id")
-    .eq("profile_id", user.id)
-    .limit(1)
-    .maybeSingle<{ id: string }>();
-  if (!restaurant) return [];
+  // Active restaurant: owned, or the one the user is a team member of.
+  const ctx = await getRestaurantContext();
+  if (!ctx) return [];
+  const restaurant = { id: ctx.restaurantId };
 
   let query = (supabase as any)
     .from("restaurant_suppliers")
@@ -111,16 +106,9 @@ export async function getRelationshipById(id: string): Promise<RestaurantSupplie
  */
 export async function hasActiveRelationshipWith(supplierId: string): Promise<boolean> {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return false;
-
-  const { data: restaurant } = await supabase
-    .from("restaurants")
-    .select("id")
-    .eq("profile_id", user.id)
-    .limit(1)
-    .maybeSingle<{ id: string }>();
-  if (!restaurant) return false;
+  const ctx = await getRestaurantContext();
+  if (!ctx) return false;
+  const restaurant = { id: ctx.restaurantId };
 
   const { data } = await (supabase as any)
     .from("restaurant_suppliers")
