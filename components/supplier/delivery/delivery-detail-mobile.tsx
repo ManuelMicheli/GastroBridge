@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -7,7 +8,6 @@ import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { ExpiryBadge } from "@/components/supplier/inventory/expiry-badge";
-import { SignatureCanvas } from "./signature-canvas";
 import { PodPhotoCapture } from "./pod-photo-capture";
 import {
   MapPin,
@@ -21,6 +21,14 @@ import {
   PenLine,
 } from "lucide-react";
 import type { DeliveryStatus } from "@/types/database";
+
+// signature_pad only ships when the sheet component mounts (after hydration),
+// not in the route's first-load JS. The closed sheet renders nothing, so the
+// placeholder is empty too.
+const SignatureCanvas = dynamic(
+  () => import("./signature-canvas").then((m) => m.SignatureCanvas),
+  { ssr: false, loading: () => null },
+);
 
 export type DeliveryItemRow = {
   id: string;
