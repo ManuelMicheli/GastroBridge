@@ -126,6 +126,12 @@ export default async function ClienteDetailPage({ params }: { params: Params }) 
                 <List className="h-4 w-4" /> Listino personalizzato
               </Link>
             )}
+            <Link
+              href={`/supplier/messaggi/${rel.id}`}
+              className="inline-flex items-center gap-1 text-sm text-accent-green hover:underline"
+            >
+              <MessageCircle className="h-4 w-4" /> Apri conversazione
+            </Link>
           </div>
         </div>
       </Card>

@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Check, Clock, Download, Package, Truck } from "lucide-react";
+import { ArrowLeft, Check, Clock, Download, MessageCircle, Package, Truck } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { OrderStatusBadge } from "@/components/ui/order-status-badge";
 import { PageHeader } from "@/components/ui/page-header";
@@ -12,6 +12,7 @@ import { formatCurrency, formatDate } from "@/lib/utils/formatters";
 import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
 import { deriveOrderStatus } from "@/lib/orders/derive-order-status";
 import { getWorkflowState } from "@/lib/orders/workflow-state";
+import { resolveRelationshipIdForPair } from "@/lib/messages/context";
 import { SupplierChangesBanner } from "./_components/supplier-changes-banner";
 
 const TIMELINE_STEPS = [
@@ -88,7 +89,7 @@ export default async function OrderDetailPage({
     .from("orders")
     .select("*")
     .eq("id", id)
-    .single<{ id: string; total: number; status: string; notes: string | null; created_at: string }>();
+    .single<{ id: string; restaurant_id: string; total: number; status: string; notes: string | null; created_at: string }>();
 
   if (!order) notFound();
 
@@ -107,6 +108,15 @@ export default async function OrderDetailPage({
     .returns<ItemRow[]>();
 
   const hasMarketplaceSplits = (splits ?? []).length > 0;
+
+  // Conversation with each supplier of the order (relationship chat).
+  const relationshipBySupplier = new Map<string, string>();
+  await Promise.all(
+    (splits ?? []).map(async (s) => {
+      const relId = await resolveRelationshipIdForPair(order.restaurant_id, s.supplier_id);
+      if (relId) relationshipBySupplier.set(s.supplier_id, relId);
+    }),
+  );
   const catalogDetail = !hasMarketplaceSplits && order.notes
     ? parseCatalogOrderNotes(order.notes)
     : null;
@@ -354,6 +364,14 @@ export default async function OrderDetailPage({
                   }
                   showChevron
                 />
+                {relationshipBySupplier.get(split.supplier_id) && (
+                  <GroupedListRow
+                    href={`/messaggi/${relationshipBySupplier.get(split.supplier_id)}`}
+                    leading={<MessageCircle className="h-4 w-4" aria-hidden />}
+                    title="Scrivi al fornitore"
+                    showChevron
+                  />
+                )}
               </GroupedList>
             );
           })}
@@ -574,7 +592,16 @@ export default async function OrderDetailPage({
               <span>Subtotale</span>
               <span className="font-mono">{formatCurrency(split.subtotal)}</span>
             </div>
-            <div className="mt-3 flex justify-end">
+            <div className="mt-3 flex flex-wrap justify-end gap-2">
+              {relationshipBySupplier.get(split.supplier_id) && (
+                <Link
+                  href={`/messaggi/${relationshipBySupplier.get(split.supplier_id)}`}
+                  className="inline-flex items-center gap-2 rounded-md border border-border-subtle px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:text-text-primary"
+                >
+                  <MessageCircle className="h-4 w-4" aria-hidden />
+                  Messaggio
+                </Link>
+              )}
               <a
                 href={`/api/ordini/${id}/suppliers/${split.supplier_id}/pdf`}
                 className="inline-flex items-center gap-2 rounded-md border border-[color:var(--color-brand-primary)] px-3 py-2 text-sm font-medium text-[color:var(--color-brand-primary)] transition-colors hover:bg-[color:var(--color-brand-primary-subtle)]"

@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowUpRight, MapPin, Search, Shield, Star, X } from "lucide-react";
+import { ArrowUpRight, MapPin, MessageCircle, Search, Shield, Star, X } from "lucide-react";
 import { RelationshipStatusBadge } from "@/components/ui/relationship-status-badge";
 import { Button } from "@/components/ui/button";
 import { ratingColorClass, type RelationshipRow } from "../_lib/types";
@@ -166,6 +166,18 @@ export function SupplierDetailPane({
               <Search className="h-4 w-4" /> Cerca nei suoi prodotti
             </Button>
           </Link>
+          {relationship.status !== "archived" && relationship.status !== "rejected" && (
+            <Link href={`/messaggi/${relationship.id}`} className="w-full">
+              <Button
+                variant="secondary"
+                size="md"
+                density="compact"
+                className="w-full justify-center"
+              >
+                <MessageCircle className="h-4 w-4" /> Messaggio
+              </Button>
+            </Link>
+          )}
         </div>
       </footer>
     </aside>
