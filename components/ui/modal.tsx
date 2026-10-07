@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useFocusTrap } from "./use-focus-trap";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { X } from "lucide-react";
@@ -69,6 +70,9 @@ export function Modal({
       document.body.style.overflow = "";
     };
   }, [isOpen, onClose]);
+
+  // Keep Tab inside the dialog while it is open.
+  useFocusTrap(contentRef, isOpen, { autoFocus: false });
 
   // Move focus into the dialog when it opens (a11y), restore on close.
   useEffect(() => {

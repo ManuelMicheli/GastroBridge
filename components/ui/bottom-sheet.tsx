@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
+import { useFocusTrap } from "./use-focus-trap";
 import { AnimatePresence, motion, type PanInfo } from "motion/react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils/formatters";
@@ -38,6 +39,8 @@ export function BottomSheet({
   showHandle = true,
 }: BottomSheetProps) {
   const overlayRef = useRef<HTMLDivElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
+  useFocusTrap(sheetRef, isOpen);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -75,8 +78,10 @@ export function BottomSheet({
           onClick={handleOverlayClick}
         >
           <motion.div
+            ref={sheetRef}
+            tabIndex={-1}
             className={cn(
-              "w-full bg-white rounded-t-2xl shadow-elevated overflow-hidden",
+              "w-full bg-white rounded-t-2xl shadow-elevated overflow-hidden outline-none",
               "pb-[var(--safe-bottom)]",
               className
             )}

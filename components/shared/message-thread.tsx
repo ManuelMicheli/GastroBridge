@@ -133,6 +133,7 @@ export function MessageThread({
               isLoading={isPending}
               disabled={!body.trim() || isPending}
               className="self-end"
+              aria-label="Invia messaggio"
             >
               <Send className="h-4 w-4" />
             </Button>

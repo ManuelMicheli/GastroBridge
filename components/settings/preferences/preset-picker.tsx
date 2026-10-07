@@ -81,6 +81,7 @@ export function PresetPicker({
         const isActive = current === preset;
         return (
           <button
+            aria-pressed={isActive}
             key={preset}
             type="button"
             onClick={() => void onPick(preset)}

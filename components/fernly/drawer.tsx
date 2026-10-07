@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { X } from "lucide-react";
 import { usePortalTarget } from "@/components/ui/modal";
+import { useFocusTrap } from "@/components/ui/use-focus-trap";
 import { cn } from "@/lib/utils/formatters";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -32,6 +33,8 @@ export function Drawer({
   const target = usePortalTarget();
   const reduce = useReducedMotion();
   const panel = useRef<HTMLDivElement>(null);
+  // Tab stays in the panel; focus returns to the opener on close.
+  useFocusTrap(panel, open, { autoFocus: false });
 
   useEffect(() => {
     if (!open) return;

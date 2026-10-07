@@ -669,6 +669,7 @@ export function OrderDetailClient({
                             <div className="flex flex-col gap-2">
                               <div className="flex gap-1">
                                 <button
+                                  aria-pressed={action === "accept"}
                                   type="button"
                                   title="Accetta (A)"
                                   onClick={() =>
@@ -686,6 +687,7 @@ export function OrderDetailClient({
                                   <Check className="h-3.5 w-3.5" />
                                 </button>
                                 <button
+                                  aria-pressed={action === "modify"}
                                   type="button"
                                   title="Modifica (M)"
                                   onClick={() => {
@@ -705,6 +707,7 @@ export function OrderDetailClient({
                                   <Edit3 className="h-3.5 w-3.5" />
                                 </button>
                                 <button
+                                  aria-pressed={action === "reject"}
                                   type="button"
                                   title="Rifiuta (R)"
                                   onClick={() => {
