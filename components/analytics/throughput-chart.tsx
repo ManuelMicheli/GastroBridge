@@ -11,7 +11,14 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { DailyPoint } from "@/lib/analytics/restaurant";
+/** One day of the selected period, aligned with the same day-offset of the
+ *  previous period. `prevSpend` is null when the previous period is shorter.
+ *  (Structurally compatible with the restaurant `DailyPoint`.) */
+export type TrendPoint = {
+  date: string; // YYYY-MM-DD
+  spend: number;
+  prevSpend: number | null;
+};
 
 type Row = {
   date: string;
@@ -52,12 +59,18 @@ function ChartTooltip({
 }
 
 /**
- * "Andamento spesa" area chart: accent line + soft gradient fill for the
+ * "Andamento spesa" / "Andamento fatturato" area chart: accent line + soft gradient fill for the
  * selected period, dashed grey line for the previous one, dashed vertical
  * guide + ringed dot + dark accent tooltip on hover (spec §4 Analytics).
  * Recharts animates the series when the range changes.
  */
-export function ThroughputChart({ data }: { data: DailyPoint[] }) {
+export function ThroughputChart({
+  data,
+  emptyLabel = "Nessun dato nel periodo",
+}: {
+  data: TrendPoint[];
+  emptyLabel?: string;
+}) {
   const rows = useMemo<Row[]>(() => {
     return data.map((d, i) => {
       const from = Math.max(0, i - 6);
@@ -76,7 +89,7 @@ export function ThroughputChart({ data }: { data: DailyPoint[] }) {
   if (rows.length === 0) {
     return (
       <div className="flex h-[260px] items-center justify-center text-[13px] text-[var(--f-muted)]">
-        Nessun dato nel periodo
+        {emptyLabel}
       </div>
     );
   }

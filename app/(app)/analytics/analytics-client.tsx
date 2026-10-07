@@ -11,18 +11,18 @@
 import dynamic from "next/dynamic";
 import { useMemo } from "react";
 import { PageHeader } from "@/components/ui/page-header";
-import { CountUp, type CountFormat } from "@/components/fernly/count-up";
-import { Sparkline } from "@/components/fernly/sparkline";
 import { Avatar, FCard, riseStyle } from "@/components/fernly/primitives";
 import { SectionFrame } from "@/components/fernly/section-frame";
 import { formatCurrency } from "@/lib/utils/formatters";
 import type { RestaurantAnalytics } from "@/lib/analytics/restaurant";
-import { PeriodSelector } from "./_components/period-selector";
+import { PeriodSelector } from "@/components/analytics/period-selector";
+import { KpiSpark } from "@/components/analytics/kpi-spark";
 import { BudgetTracker } from "./_components/budget-tracker";
 import { VarianceCard } from "./_components/variance-card";
 import { ProductInsightsTable } from "./_components/product-insights-table";
 import { WeekdayHeatmap } from "./_components/weekday-heatmap";
-import { ExportCsvButton } from "./_components/export-csv-button";
+import { ExportCsvButton } from "@/components/analytics/export-csv-button";
+import { exportOrdersCsv } from "@/lib/analytics/export-csv";
 import { AnalyticsRecentOrdersLog } from "./_components/recent-orders-log";
 import { ActivityHeatmap } from "./_components/activity-heatmap";
 
@@ -37,73 +37,13 @@ const YoyTrendChart = dynamic(
   { ssr: false, loading: () => <div className="h-[17rem] animate-pulse rounded-[16px] bg-[var(--f-fill)]" /> },
 );
 const ThroughputChart = dynamic(
-  () => import("./_components/throughput-chart").then((m) => m.ThroughputChart),
+  () => import("@/components/analytics/throughput-chart").then((m) => m.ThroughputChart),
   { ssr: false, loading: () => <div className="h-[280px] animate-pulse rounded-[16px] bg-[var(--f-fill)]" /> },
 );
 
 type Props = {
   data: RestaurantAnalytics;
 };
-
-function delta(current: number, previous: number): { pct: number | null; up: boolean } {
-  if (previous === 0) return { pct: current === 0 ? 0 : null, up: current >= 0 };
-  const d = ((current - previous) / previous) * 100;
-  return { pct: d, up: d >= 0 };
-}
-
-function KpiSpark({
-  title,
-  value,
-  format,
-  previous,
-  spark,
-  periodLabel,
-  index,
-  lowerIsBetter = false,
-}: {
-  title: string;
-  value: number;
-  format: CountFormat;
-  previous: number;
-  spark: number[];
-  periodLabel: string;
-  index: number;
-  lowerIsBetter?: boolean;
-}) {
-  const d = delta(value, previous);
-  const good = d.pct === null || d.pct === 0 ? null : lowerIsBetter ? !d.up : d.up;
-  return (
-    <section className="f-card f-rise flex min-w-0 flex-col overflow-hidden" style={riseStyle(index)} aria-label={title}>
-      <div className="px-5 pt-[18px]">
-        <h3 className="text-[14px] font-medium text-[var(--f-ink-2)]">{title}</h3>
-        <div className="mt-2 text-[34px] font-medium leading-none tracking-[-0.035em] text-[var(--f-ink)] tabular-nums">
-          <CountUp value={value} format={format} />
-        </div>
-        <p className="mt-2 flex items-center gap-1 text-[12px] text-[var(--f-muted)]">
-          {d.pct === null ? (
-            <span>nuovo rispetto al periodo precedente</span>
-          ) : (
-            <>
-              <span
-                className="inline-flex items-center gap-0.5 font-semibold tabular-nums"
-                style={{ color: good === null ? "var(--f-muted)" : good ? "var(--f-success)" : "var(--f-danger)" }}
-              >
-                <svg width="8" height="8" viewBox="0 0 8 8" aria-hidden className={d.up ? "" : "rotate-180"}>
-                  <path d="M4 1.5 7 6H1z" fill="currentColor" />
-                </svg>
-                {Math.abs(d.pct).toFixed(1).replace(".", ",")}%
-              </span>
-              <span>vs {periodLabel}</span>
-            </>
-          )}
-        </p>
-      </div>
-      <div className="mt-3">
-        <Sparkline values={spark} height={44} />
-      </div>
-    </section>
-  );
-}
 
 export function AnalyticsContent({ data }: Props) {
   const maxSupplier = data.supplierBreakdown.reduce((m, s) => Math.max(m, s.spending), 0) || 1;
@@ -127,7 +67,7 @@ export function AnalyticsContent({ data }: Props) {
         actions={
           <>
             <PeriodSelector current={data.period.key} />
-            <ExportCsvButton period={data.period.key} />
+            <ExportCsvButton period={data.period.key} exportCsv={exportOrdersCsv} />
           </>
         }
       />
