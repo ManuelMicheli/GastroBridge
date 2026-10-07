@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
 import { CheckCircle2, AlertTriangle } from "lucide-react";
 import { acceptInvite } from "@/lib/supplier/staff/actions";
 import { AutoRedirect } from "./auto-redirect";
@@ -37,11 +36,9 @@ export default async function AcceptSupplierInvitePage() {
             Impossibile accettare l&apos;invito
           </h1>
           <p className="text-sage mb-6">{result.error}</p>
-          <Link href="/supplier/dashboard">
-            <Button size="sm" variant="secondary">
+          <ButtonLink href="/supplier/dashboard" size="sm" variant="secondary">
               Vai alla dashboard
-            </Button>
-          </Link>
+            </ButtonLink>
         </Card>
       </div>
     );
@@ -68,9 +65,7 @@ export default async function AcceptSupplierInvitePage() {
           Il tuo ruolo è <strong className="text-charcoal">{roleLabel}</strong>
           . Verrai reindirizzato alla dashboard…
         </p>
-        <Link href="/supplier/dashboard">
-          <Button size="sm">Vai subito alla dashboard</Button>
-        </Link>
+        <ButtonLink href="/supplier/dashboard" size="sm">Vai subito alla dashboard</ButtonLink>
       </Card>
     </div>
   );

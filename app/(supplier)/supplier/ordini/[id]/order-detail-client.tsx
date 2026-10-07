@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
@@ -504,12 +504,10 @@ export function OrderDetailClient({
             </p>
             <div className="flex gap-2">
               {canMarkPacked && (
-                <Link href={`/supplier/ordini/${splitId}/preparazione`}>
-                  <Button size="sm" variant="secondary">
+                <ButtonLink href={`/supplier/ordini/${splitId}/preparazione`} size="sm" variant="secondary">
                     <Package className="h-4 w-4" />
                     Vai al picking
-                  </Button>
-                </Link>
+                  </ButtonLink>
               )}
               {canMarkShipped && (
                 <Button

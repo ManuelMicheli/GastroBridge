@@ -4,7 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
 import { hasPermission, ROLE_LABELS } from "@/lib/supplier/permissions";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
@@ -303,11 +303,9 @@ export default async function DeliveryDetailPage({
         >
           <ArrowLeft className="h-4 w-4" /> Consegne
         </Link>
-        <Link href={`/supplier/ordini/${raw.order_splits?.id ?? ""}`}>
-          <Button size="sm" variant="ghost">
+        <ButtonLink href={`/supplier/ordini/${raw.order_splits?.id ?? ""}`} size="sm" variant="ghost">
             Vedi ordine
-          </Button>
-        </Link>
+          </ButtonLink>
       </div>
       {canAssign && (
         <DriverAssignSelect

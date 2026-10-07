@@ -1,11 +1,10 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, Percent, Save } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import {
   bulkUpdatePrices,
   updatePriceList,
@@ -294,16 +293,14 @@ export function PriceListEditorClient({
         </button>
 
         <div className="ml-auto">
-          <Link href={`/supplier/listini/${list.id}/aggiungi`}>
-            <Button size="sm" variant="secondary">
+          <ButtonLink href={`/supplier/listini/${list.id}/aggiungi`} size="sm" variant="secondary">
               <Plus className="h-4 w-4" /> Aggiungi prodotti
               {missingProductsCount > 0 && (
                 <span className="ml-1 inline-flex items-center rounded-full bg-accent-green/15 text-accent-green px-1.5 py-0.5 text-[10px] font-medium">
                   {missingProductsCount}
                 </span>
               )}
-            </Button>
-          </Link>
+            </ButtonLink>
         </div>
       </div>
 
@@ -313,11 +310,9 @@ export function PriceListEditorClient({
           <p className="text-text-secondary mb-4">
             Questo listino non contiene righe.
           </p>
-          <Link href={`/supplier/listini/${list.id}/aggiungi`}>
-            <Button size="sm">
+          <ButtonLink href={`/supplier/listini/${list.id}/aggiungi`} size="sm">
               <Plus className="h-4 w-4" /> Aggiungi prodotti
-            </Button>
-          </Link>
+            </ButtonLink>
         </div>
       ) : (
         <div className="rounded-xl border border-border-subtle bg-surface-card overflow-hidden">

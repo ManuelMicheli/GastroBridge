@@ -9,12 +9,11 @@ import {
   useRef,
   useState,
 } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Filter, Keyboard, Plus, Store, FileSpreadsheet } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Button } from "@/components/ui/button";
+import { ButtonLink } from "@/components/ui/button";
 import { EmptySuppliersIllustration } from "@/components/illustrations";
 import {
   CheatsheetOverlay,
@@ -270,11 +269,9 @@ export function SuppliersClient({
           title="Fornitori"
           subtitle="I partner con cui hai una relazione attiva o in corso di attivazione."
           actions={
-            <Link href="/fornitori/cerca">
-              <Button variant="primary" size="md" density="compact">
+            <ButtonLink href="/fornitori/cerca" variant="primary" size="md" density="compact">
                 <Plus className="h-4 w-4" /> Aggiungi fornitore
-              </Button>
-            </Link>
+              </ButtonLink>
           }
         />
         <EmptyState
@@ -282,11 +279,9 @@ export function SuppliersClient({
           description="Trova e invita i fornitori con cui lavori già."
           illustration={<EmptySuppliersIllustration />}
           action={
-            <Link href="/fornitori/cerca">
-              <Button variant="primary" size="md" density="compact">
+            <ButtonLink href="/fornitori/cerca" variant="primary" size="md" density="compact">
                 <Plus className="h-4 w-4" /> Cerca fornitori
-              </Button>
-            </Link>
+              </ButtonLink>
           }
           context="page"
         />
@@ -324,11 +319,9 @@ export function SuppliersClient({
           >
             <Keyboard className="h-3.5 w-3.5" /> ?
           </button>
-          <Link href="/fornitori/cerca">
-            <Button variant="primary" size="md" density="compact">
+          <ButtonLink href="/fornitori/cerca" variant="primary" size="md" density="compact">
               <Plus className="h-4 w-4" /> Aggiungi fornitore
-            </Button>
-          </Link>
+            </ButtonLink>
         </div>
       </div>
 
