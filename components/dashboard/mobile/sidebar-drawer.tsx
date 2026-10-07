@@ -91,7 +91,11 @@ export function SidebarDrawer({ open, onClose, navItems, role, companyName }: Pr
             {/* Nav */}
             <nav className="flex-1 px-3 py-1 space-y-1 overflow-y-auto">
               {navItems.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                const matches = (h: string) => pathname === h || pathname.startsWith(h + "/");
+                // Most specific match wins (/finanze vs /finanze/ordini-consigliati).
+                const isActive =
+                  matches(item.href) &&
+                  !navItems.some((n) => n.href.length > item.href.length && matches(n.href));
                 const Icon = resolveIcon(item.iconName);
                 return (
                   <Link

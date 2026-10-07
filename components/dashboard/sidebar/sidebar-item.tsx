@@ -20,7 +20,13 @@ export type NavItem = {
 
 type SidebarItemProps = NavItem & {
   role?: "restaurant" | "supplier";
+  /** Every nav href in the sidebar, used to pick the most specific match. */
+  allHrefs?: string[];
 };
+
+function matchesPath(pathname: string, href: string): boolean {
+  return pathname === href || pathname.startsWith(href + "/");
+}
 
 function pickSupplierBadgeVariant(href: string): BadgeVariant {
   if (href.startsWith("/supplier/ordini")) return "highlight";
@@ -35,11 +41,17 @@ function pickBadgeKey(href: string): keyof Badges | null {
   return null;
 }
 
-function SidebarItemBase({ href, label, iconName, badge, role }: SidebarItemProps) {
+function SidebarItemBase({ href, label, iconName, badge, role, allHrefs }: SidebarItemProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { isCollapsed } = useSidebar();
-  const isActive = pathname === href || pathname.startsWith(href + "/");
+  // Active only if no other, more specific nav item also matches (e.g.
+  // /finanze must not light up on /finanze/ordini-consigliati).
+  const isActive =
+    matchesPath(pathname, href) &&
+    !(allHrefs ?? []).some(
+      (h) => h.length > href.length && matchesPath(pathname, h),
+    );
   const Icon = resolveIcon(iconName);
   const isSupplier = role === "supplier";
 

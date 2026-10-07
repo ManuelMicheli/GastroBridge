@@ -110,7 +110,7 @@ export function CollapsibleSidebar({ navItems, role, companyName, userEmail }: P
               </p>
             )}
             {items.map((item) => (
-              <SidebarItem key={item.href} {...item} role={role} />
+              <SidebarItem key={item.href} {...item} role={role} allHrefs={prefetchHrefs} />
             ))}
           </div>
         ))}
