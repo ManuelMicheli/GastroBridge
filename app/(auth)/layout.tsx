@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { Check, ShieldCheck } from "lucide-react";
+import { BrandMark, BrandWordmark } from "@/components/fernly/brand-mark";
+import { accentBootScript } from "@/lib/appearance";
 
 const FEATURES = [
   "Confronta i prezzi tra tutti i tuoi fornitori",
@@ -15,56 +17,28 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div
       data-area="restaurant"
-      className="min-h-screen w-full bg-white lg:grid lg:grid-cols-[1.05fr_1fr]"
+      className="min-h-screen w-full bg-[var(--f-canvas)] lg:grid lg:grid-cols-[1fr_1fr] lg:gap-2.5 lg:p-2.5"
     >
-      {/* ─── Left: editorial brand panel (lg+) ─── */}
-      <aside
-        className="relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16"
-        style={{
-          background:
-            "linear-gradient(152deg, #7B1F2E 0%, #B91C3C 58%, #9A1833 100%)",
-        }}
-      >
-        {/* Decorative glows + hairline grid */}
-        <div aria-hidden className="pointer-events-none absolute inset-0">
-          <div
-            className="absolute -right-28 -top-28 h-96 w-96 rounded-full blur-3xl"
-            style={{
-              background:
-                "radial-gradient(circle, rgba(249,198,208,0.20), transparent 70%)",
-            }}
-          />
-          <div
-            className="absolute -bottom-32 -left-20 h-[26rem] w-[26rem] rounded-full blur-3xl"
-            style={{
-              background:
-                "radial-gradient(circle, rgba(255,255,255,0.09), transparent 70%)",
-            }}
-          />
-          <div
-            className="absolute inset-0 opacity-[0.06]"
-            style={{
-              backgroundImage:
-                "linear-gradient(to right, #fff 1px, transparent 1px), linear-gradient(to bottom, #fff 1px, transparent 1px)",
-              backgroundSize: "44px 44px",
-            }}
-          />
-        </div>
-
+      {/* Applies the saved workspace accent before first paint. */}
+      <script dangerouslySetInnerHTML={{ __html: accentBootScript("restaurant") }} />
+      {/* ─── Left: brand panel (lg+) — deep accent with arc texture ─── */}
+      <aside className="f-deep relative hidden overflow-hidden rounded-[24px] lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
         {/* Wordmark */}
         <div className="relative">
-          <Link href="/" className="inline-flex items-baseline text-2xl">
-            <span className="font-display text-white">Gastro</span>
-            <span className="font-body font-bold text-[#F9C6D0]">Bridge</span>
+          <Link href="/" className="inline-flex items-center gap-2.5 text-2xl">
+            <BrandMark size={36} />
+            <span className="text-[22px] font-semibold tracking-[-0.02em] text-white">
+              Gastro<span className="text-[var(--acc-300)]">Bridge</span>
+            </span>
           </Link>
         </div>
 
         {/* Editorial copy */}
         <div className="relative max-w-md">
-          <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-white/65">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
             Marketplace B2B · Ho.Re.Ca.
           </p>
-          <h2 className="mt-5 font-display text-[2.6rem] leading-[1.08] text-white xl:text-5xl">
+          <h2 className="mt-5 text-[2.6rem] font-semibold leading-[1.06] tracking-[-0.03em] text-white xl:text-5xl">
             Tutti i tuoi fornitori.
             <br />
             Un solo posto.
@@ -98,15 +72,13 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       </aside>
 
       {/* ─── Right: form column ─── */}
-      <main className="flex min-h-screen flex-col items-center justify-center px-5 py-12 sm:px-8">
+      <main className="flex min-h-screen flex-col items-center justify-center px-5 py-12 sm:px-8 lg:min-h-0 lg:rounded-[24px] lg:bg-[var(--f-panel)]">
         <div className="auth-anim w-full max-w-[400px] animate-[authIn_520ms_cubic-bezier(0.16,1,0.3,1)_both]">
           {/* Mobile wordmark */}
           <div className="mb-8 text-center lg:hidden">
-            <Link href="/" className="inline-flex items-baseline text-2xl">
-              <span className="font-display text-charcoal">Gastro</span>
-              <span className="font-body font-bold text-brand-primary">
-                Bridge
-              </span>
+            <Link href="/" className="inline-flex items-center gap-2.5">
+              <BrandMark size={34} />
+              <BrandWordmark className="text-[22px]" />
             </Link>
             <p className="mt-2 text-sm text-sage">
               Tutti i tuoi fornitori. Un solo posto.

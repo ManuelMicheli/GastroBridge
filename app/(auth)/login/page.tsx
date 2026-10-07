@@ -69,9 +69,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="rounded-2xl border border-[color:var(--color-sage-muted)] bg-white p-7 shadow-[0_1px_2px_rgba(26,26,26,0.04),0_18px_48px_-20px_rgba(26,26,26,0.18)] sm:p-8">
+    <div className="f-card rounded-[24px] p-7 sm:p-8">
       <div className="mb-7">
-        <h2 className="font-display text-[27px] leading-tight text-charcoal">
+        <h2 className="text-[27px] font-semibold leading-tight tracking-[-0.025em] text-[var(--f-ink)]">
           Bentornato
         </h2>
         <p className="mt-1.5 text-sm text-sage">
@@ -135,7 +135,7 @@ export default function LoginPage() {
         <button
           type="button"
           onClick={handleGoogleSignIn}
-          className="inline-flex w-full items-center justify-center gap-2.5 rounded-xl border border-[color:var(--color-sage-muted)] bg-white py-3.5 font-body font-semibold text-charcoal transition-colors hover:bg-[#FAFAFA] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-2"
+          className="f-btn f-btn-soft w-full"
         >
           <GoogleIcon />
           Continua con Google
