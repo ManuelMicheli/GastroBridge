@@ -14,7 +14,7 @@ const PILLS: Pill[] = [
   { href: "/cerca", label: "Cerca prodotti" },
   { href: "/fornitori", label: "Fornitori" },
   { href: "/ordini", label: "Ordini" },
-  { href: "/cerca/ordine", label: "Carrello" },
+  { href: "/carrello", label: "Carrello" },
 ];
 
 export function QuickActionBar() {
