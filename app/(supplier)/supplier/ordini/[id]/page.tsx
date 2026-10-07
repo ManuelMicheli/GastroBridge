@@ -4,7 +4,10 @@ import { createClient } from "@/lib/supabase/server";
 import { getWorkflowState } from "@/lib/orders/workflow-state";
 import { resolveRelationshipIdForPair } from "@/lib/messages/context";
 import { getUnreadCount } from "@/lib/messages/queries";
-import { OrderDetailClient } from "./order-detail-client";
+import { OrderDetailClient, type OrderIntel } from "./order-detail-client";
+import { computeStockCoverage } from "@/lib/supplier/intel/coverage";
+import { getSubstituteSuggestions } from "@/lib/supplier/intel/substitutions";
+import { getCreditSnapshots } from "@/lib/supplier/intel/credit";
 import { getCurrentSupplierMember, memberCan } from "@/lib/supplier/current-member";
 import Link from "next/link";
 
@@ -17,6 +20,7 @@ type SplitRow = {
   subtotal: number;
   status: string;
   supplier_notes: string | null;
+  warehouse_id: string | null;
   confirmed_at: string | null;
   shipped_at: string | null;
   delivered_at: string | null;
@@ -74,7 +78,7 @@ export default async function SupplierOrderDetailPage({
   const { data: split } = await supabase
     .from("order_splits")
     .select(
-      "id, order_id, supplier_id, subtotal, status, supplier_notes, confirmed_at, shipped_at, delivered_at, expected_delivery_date, orders:order_id(id, created_at, restaurants:restaurant_id(id, name))",
+      "id, order_id, supplier_id, subtotal, status, supplier_notes, warehouse_id, confirmed_at, shipped_at, delivered_at, expected_delivery_date, orders:order_id(id, created_at, restaurants:restaurant_id(id, name))",
     )
     .eq("id", splitId)
     .eq("supplier_id", supplier.id)
@@ -144,6 +148,57 @@ export default async function SupplierOrderDetailPage({
     }
   }
 
+  // Intake intelligence (pending lines only): stock coverage, substitutes for
+  // short lines, client credit. Same data the "Oggi" board uses.
+  let intel: OrderIntel | null = null;
+  const pendingLines = (lines ?? []).filter((l) => l.status === "pending");
+  if (memberCan(member, "order.accept_line") && pendingLines.length > 0) {
+    const coverage = await computeStockCoverage(
+      supabase,
+      split.supplier_id,
+      [{ id: split.id, warehouse_id: split.warehouse_id }],
+      pendingLines.map((l) => ({
+        id: l.id,
+        order_split_id: l.order_split_id,
+        product_id: l.product_id,
+        quantity_requested: Number(l.quantity_requested),
+        status: l.status,
+      })),
+    );
+    const cov = coverage.get(split.id);
+    const tracked = !!cov && cov.status !== "untracked";
+    const short = (cov?.lines ?? []).filter((l) => l.short > 0);
+    const priceByLine = new Map(pendingLines.map((l) => [l.id, Number(l.unit_price)]));
+    const [substitutes, credit] = await Promise.all([
+      getSubstituteSuggestions(
+        supabase,
+        split.supplier_id,
+        short.map((l) => ({
+          lineId: l.lineId,
+          productId: l.productId,
+          requested: l.requested,
+          unitPrice: priceByLine.get(l.lineId) ?? 0,
+        })),
+        { stockTracked: tracked },
+      ),
+      restaurantId
+        ? getCreditSnapshots(supabase, split.supplier_id, [restaurantId])
+        : Promise.resolve(null),
+    ]);
+    const snap = restaurantId ? credit?.snapshots.get(restaurantId) ?? null : null;
+    intel = {
+      tracked,
+      coverage: Object.fromEntries(
+        (cov?.lines ?? []).map((l) => [l.lineId, { available: l.available, short: l.short, firstExpiry: l.firstExpiry }]),
+      ),
+      substitutes,
+      credit: snap
+        ? { flag: snap.flag, exposure: snap.exposure, creditLimit: snap.creditLimit, paymentTermsDays: snap.paymentTermsDays }
+        : null,
+      addProductsHref: relationshipId ? `/supplier/ordini/nuovo?cliente=${relationshipId}` : null,
+    };
+  }
+
   return (
     <>
     {logisticsLinks.length > 0 && (
@@ -166,6 +221,7 @@ export default async function SupplierOrderDetailPage({
       relationshipId={relationshipId}
       currentUserId={user.id}
       unreadChat={unreadChat}
+      intel={intel}
       lines={(lines ?? []).map((l) => ({
         id: l.id,
         productName: l.products?.name ?? "Prodotto",

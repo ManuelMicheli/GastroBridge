@@ -35,6 +35,9 @@ import {
   type LineDecision,
 } from "@/lib/orders/supplier-actions";
 import { OrderChatDrawer } from "@/components/shared/chat/OrderChatDrawer";
+import { sendSubstitutionProposals } from "@/lib/supplier/orders/substitution-actions";
+import type { SubstituteCandidate } from "@/lib/supplier/intel/substitutions";
+import { CREDIT_FLAG_LABEL, type CreditSnapshot } from "@/lib/supplier/intel/credit";
 
 // -----------------------------------------------------------------------------
 // Types
@@ -70,7 +73,19 @@ type Decision = {
   notes: string;
 };
 
+/** Intake intelligence computed server-side for pending lines. */
+export type OrderIntel = {
+  /** False when the supplier has no warehouse (stock not managed). */
+  tracked: boolean;
+  coverage: Record<string, { available: number; short: number; firstExpiry: string | null }>;
+  substitutes: Record<string, SubstituteCandidate[]>;
+  credit: (Pick<CreditSnapshot, "flag" | "exposure" | "creditLimit" | "paymentTermsDays">) | null;
+  /** Phone-order form prefilled with this client (ordine integrativo). */
+  addProductsHref: string | null;
+};
+
 type Props = {
+  intel?: OrderIntel | null;
   splitId: string;
   restaurantName: string;
   orderCreatedAt: string | null;
@@ -195,6 +210,7 @@ export function OrderDetailClient({
   relationshipId,
   currentUserId,
   unreadChat = 0,
+  intel = null,
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -220,6 +236,25 @@ export function OrderDetailClient({
   const [decisions, setDecisions] = useState<Record<string, Decision>>(initialDecisions);
   const [focusedLineId, setFocusedLineId] = useState<string | null>(null);
   const [rejectModalLineId, setRejectModalLineId] = useState<string | null>(null);
+  // Substitution proposals chosen per line (sent to the client in chat once
+  // the response is submitted).
+  const [proposals, setProposals] = useState<Record<string, SubstituteCandidate>>({});
+
+  function proposeSubstitute(lineId: string, sub: SubstituteCandidate) {
+    setProposals((prev) => ({ ...prev, [lineId]: sub }));
+    updateDecision(lineId, {
+      action: "reject",
+      rejectionReason: `Non disponibile — alternativa proposta: ${sub.name} (${formatCurrency(sub.price)}/${sub.unit})`,
+    });
+  }
+
+  function clearProposal(lineId: string) {
+    setProposals((prev) => {
+      const next = { ...prev };
+      delete next[lineId];
+      return next;
+    });
+  }
 
   // Mantieni sincronizzato quando le righe cambiano (es. realtime refresh).
   useEffect(() => {
@@ -348,6 +383,15 @@ export function OrderDetailClient({
         }
         router.push(`/supplier/ordini/${splitId}/preparazione`);
         return;
+      }
+
+      const toSend = Object.entries(proposals)
+        .filter(([lineId]) => payload.some((p) => p.lineId === lineId && p.action === "reject"))
+        .map(([lineId, sub]) => ({ lineId, substituteProductId: sub.productId }));
+      if (toSend.length > 0) {
+        const sent = await sendSubstitutionProposals(splitId, toSend);
+        if (sent.ok) toast.success("Alternative proposte al cliente in chat");
+        else toast.error(`Alternative non inviate: ${sent.error}`);
       }
 
       toast.success(
@@ -562,6 +606,27 @@ export function OrderDetailClient({
               )}
             </div>
 
+            {intel && (intel.credit || intel.addProductsHref) && (
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                {intel.credit && intel.credit.flag !== "none" && (
+                  <span
+                    className="f-status"
+                    data-tone={
+                      intel.credit.flag === "ok" ? "success" : intel.credit.flag === "near" ? "warning" : "danger"
+                    }
+                  >
+                    {CREDIT_FLAG_LABEL[intel.credit.flag]} · esposizione stimata {formatCurrency(intel.credit.exposure)}
+                    {intel.credit.creditLimit !== null ? ` su ${formatCurrency(intel.credit.creditLimit)}` : ""}
+                  </span>
+                )}
+                {intel.addProductsHref && (
+                  <Link href={intel.addProductsHref} className="f-btn f-btn-ghost f-btn-xs">
+                    + Ordine integrativo per questo cliente
+                  </Link>
+                )}
+              </div>
+            )}
+
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="border-b border-sage-muted text-left text-xs uppercase tracking-wider text-sage">
@@ -625,6 +690,25 @@ export function OrderDetailClient({
                           )}
                           {line.notes && (
                             <p className="mt-1 text-xs text-sage italic">Note: {line.notes}</p>
+                          )}
+                          {isPendingLine && intel && (
+                            <LineIntel
+                              coverage={intel.tracked ? intel.coverage[line.id] ?? null : null}
+                              substitutes={intel.substitutes[line.id] ?? []}
+                              proposed={action === "reject" ? proposals[line.id] ?? null : null}
+                              onPropose={(sub) => proposeSubstitute(line.id, sub)}
+                              onClear={() => {
+                                clearProposal(line.id);
+                                updateDecision(line.id, {
+                                  action: "accept",
+                                  quantityAccepted: line.quantityRequested,
+                                  rejectionReason: REJECTION_REASONS[0] ?? "Altro",
+                                });
+                              }}
+                              onPartial={(qty) =>
+                                updateDecision(line.id, { action: "modify", quantityAccepted: qty })
+                              }
+                            />
                           )}
                         </td>
                         <td className="py-3 pr-3 align-top font-mono text-charcoal">
@@ -827,6 +911,79 @@ export function OrderDetailClient({
           counterpartyName={restaurantName}
           initialUnread={unreadChat}
         />
+      )}
+    </div>
+  );
+}
+
+// -----------------------------------------------------------------------------
+// Line intelligence: stock coverage + substitutes
+// -----------------------------------------------------------------------------
+
+function LineIntel({
+  coverage,
+  substitutes,
+  proposed,
+  onPropose,
+  onClear,
+  onPartial,
+}: {
+  coverage: { available: number; short: number; firstExpiry: string | null } | null;
+  substitutes: SubstituteCandidate[];
+  proposed: SubstituteCandidate | null;
+  onPropose: (sub: SubstituteCandidate) => void;
+  onClear: () => void;
+  onPartial: (qty: number) => void;
+}) {
+  const qtyFmt = (n: number) => new Intl.NumberFormat("it-IT", { maximumFractionDigits: 2 }).format(n);
+  return (
+    <div className="mt-1.5 space-y-1.5">
+      {coverage && (
+        <p className={`text-[11.5px] ${coverage.short > 0 ? "text-[var(--f-danger)]" : "text-[var(--f-muted)]"}`}>
+          {coverage.short > 0
+            ? `Scoperto: disponibili ${qtyFmt(coverage.available)}, mancano ${qtyFmt(coverage.short)}`
+            : `Disponibili ${qtyFmt(coverage.available)}`}
+          {coverage.firstExpiry ? ` · primo lotto scade il ${formatDate(coverage.firstExpiry)}` : ""}
+        </p>
+      )}
+      {coverage && coverage.short > 0 && coverage.available > 0 && (
+        <button
+          type="button"
+          onClick={() => onPartial(Math.floor(coverage.available * 100) / 100)}
+          className="f-btn f-btn-ghost f-btn-xs"
+        >
+          Evadi parziale ({qtyFmt(coverage.available)})
+        </button>
+      )}
+      {proposed ? (
+        <p className="text-[11.5px] text-[var(--acc-800)]">
+          Alternativa proposta: <strong>{proposed.name}</strong>{" "}
+          <button type="button" className="underline" onClick={onClear}>
+            annulla
+          </button>
+        </p>
+      ) : (
+        substitutes.length > 0 && (
+          <div className="rounded-[10px] bg-[var(--f-fill)] px-2.5 py-2">
+            <p className="f-eyebrow mb-1">Alternative disponibili</p>
+            <ul className="space-y-1">
+              {substitutes.map((sub) => (
+                <li key={sub.productId} className="flex items-center gap-2 text-[12px]">
+                  <span className="min-w-0 flex-1 truncate text-[var(--f-ink)]">
+                    {sub.name}{" "}
+                    <span className="text-[var(--f-muted)] tabular-nums">
+                      {formatCurrency(sub.price)}/{sub.unit} ({sub.priceDeltaPct > 0 ? "+" : ""}
+                      {sub.priceDeltaPct}%){sub.available !== null ? ` · disp. ${qtyFmt(sub.available)}` : ""}
+                    </span>
+                  </span>
+                  <button type="button" className="f-btn f-btn-soft f-btn-xs" onClick={() => onPropose(sub)}>
+                    Proponi
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )
       )}
     </div>
   );
