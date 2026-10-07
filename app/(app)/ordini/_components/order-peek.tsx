@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { ArrowRight, X } from "lucide-react";
-import { OrderStatusBadge } from "@/components/ui/order-status-badge";
+import { OrderStatusPill } from "@/components/fernly/primitives";
 import { formatCurrency, formatDateTime } from "@/lib/utils/formatters";
 import type { OrderFeedRow } from "../_lib/types";
 
@@ -17,10 +17,10 @@ export function OrderPeek({
   if (!row) {
     return (
       <div className="flex h-full flex-col items-center justify-center p-8 text-center">
-        <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-text-tertiary">
+        <p className="text-[15px] font-medium text-[var(--f-ink)]">
           Nessun ordine selezionato
         </p>
-        <p className="mt-2 text-[13px] text-text-secondary">
+        <p className="mt-1 text-[13px] text-[var(--f-muted)]">
           Seleziona una riga per vedere i dettagli
         </p>
       </div>
@@ -30,23 +30,21 @@ export function OrderPeek({
   const shortId = row.id.slice(0, 8).toUpperCase();
 
   return (
-    <div className="flex h-full flex-col bg-surface-card">
+    <div className="flex h-full flex-col">
       {/* Header */}
-      <header className="flex items-start justify-between gap-3 border-b border-border-subtle px-5 py-4">
+      <header className="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
         <div className="min-w-0">
-          <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-tertiary">
-            Ordine
-          </p>
-          <h2 className="mt-1 font-mono text-[14px] text-text-primary">
+          <p className="f-eyebrow">Ordine</p>
+          <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.02em] text-[var(--f-ink)]">
             #{shortId}
           </h2>
-          <p className="mt-0.5 text-[12px] text-text-tertiary">
+          <p className="mt-0.5 text-[12.5px] text-[var(--f-muted)]">
             {formatDateTime(row.createdAt)}
           </p>
         </div>
         <button
           onClick={onClose}
-          className="rounded-md p-1 text-text-tertiary hover:bg-surface-hover hover:text-text-primary"
+          className="f-icon-btn !h-8 !w-8 !border-0 !bg-[var(--f-fill)]"
           aria-label="Chiudi"
         >
           <X className="h-4 w-4" />
@@ -54,12 +52,12 @@ export function OrderPeek({
       </header>
 
       {/* Meta grid */}
-      <div className="grid grid-cols-2 gap-3 border-b border-border-subtle px-5 py-4">
+      <div className="mx-5 grid grid-cols-2 gap-3 rounded-[16px] bg-[var(--f-fill)] px-4 py-4">
         <MetaItem label="Stato">
-          <OrderStatusBadge status={row.status} size="md" />
+          <OrderStatusPill status={row.status} />
         </MetaItem>
         <MetaItem label="Totale">
-          <span className="font-mono text-[14px] tabular-nums text-text-primary">
+          <span className="text-[16px] font-semibold tabular-nums text-[var(--f-ink)]">
             {formatCurrency(row.total)}
           </span>
         </MetaItem>
@@ -82,11 +80,9 @@ export function OrderPeek({
 
       {/* Notes */}
       {row.notes && (
-        <div className="border-b border-border-subtle px-5 py-4">
-          <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-tertiary">
-            Note
-          </p>
-          <pre className="mt-2 whitespace-pre-wrap break-words font-mono text-[11px] leading-relaxed text-text-secondary">
+        <div className="px-5 py-4">
+          <p className="f-eyebrow">Note</p>
+          <pre className="mt-2 whitespace-pre-wrap break-words font-[inherit] text-[12.5px] leading-relaxed text-[var(--f-ink-2)]">
             {row.notes.length > 400
               ? `${row.notes.slice(0, 400)}…`
               : row.notes}
@@ -95,12 +91,9 @@ export function OrderPeek({
       )}
 
       {/* Actions */}
-      <div className="mt-auto border-t border-border-subtle px-5 py-4">
-        <Link
-          href={`/ordini/${row.id}`}
-          className="inline-flex w-full items-center justify-between gap-2 rounded-lg bg-accent-green px-4 py-2.5 font-medium text-brand-on-primary transition-colors hover:bg-accent-green/90"
-        >
-          <span className="text-[13px]">Vai ai dettagli</span>
+      <div className="mt-auto px-5 py-5">
+        <Link href={`/ordini/${row.id}`} className="f-btn f-btn-primary f-btn-block">
+          Vai ai dettagli
           <ArrowRight className="h-4 w-4" />
         </Link>
       </div>
@@ -117,7 +110,7 @@ function MetaItem({
 }) {
   return (
     <div className="min-w-0">
-      <p className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-tertiary">
+      <p className="text-[11.5px] text-[var(--f-muted)]">
         {label}
       </p>
       <div className="mt-1 truncate">{children}</div>

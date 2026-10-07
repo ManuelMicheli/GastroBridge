@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { OrdersClient } from "./orders-client";
 import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
 import { deriveOrderStatus } from "@/lib/orders/derive-order-status";
-import type { OrderFeedRow, OrderStats } from "./_lib/types";
+import type { OrderDelivery, OrderFeedRow, OrderStats } from "./_lib/types";
 
 export const metadata: Metadata = { title: "Ordini" };
 
@@ -18,6 +18,7 @@ type OrderRow = {
 type SplitSupplierRow = {
   order_id: string;
   status: string;
+  expected_delivery_date: string | null;
   suppliers: { company_name: string } | null;
 };
 
@@ -54,14 +55,24 @@ export default async function OrdersPage() {
     string,
     { name: string | null; count: number; statuses: string[] }
   >();
+  // Expected delivery dates per split (for the "Calendario consegne" view).
+  const deliveries: OrderDelivery[] = [];
   if (orderIds.length > 0) {
     const { data: splits } = await supabase
       .from("order_splits")
-      .select("order_id, status, suppliers(company_name)")
+      .select("order_id, status, expected_delivery_date, suppliers(company_name)")
       .in("order_id", orderIds)
       .returns<SplitSupplierRow[]>();
 
     for (const s of splits ?? []) {
+      if (s.expected_delivery_date) {
+        deliveries.push({
+          orderId: s.order_id,
+          supplierName: s.suppliers?.company_name ?? null,
+          date: s.expected_delivery_date,
+          status: s.status,
+        });
+      }
       const existing = splitsByOrder.get(s.order_id);
       const name = s.suppliers?.company_name ?? null;
       if (!existing) {
@@ -117,7 +128,7 @@ export default async function OrdersPage() {
           { table: "orders" },
         ]}
       />
-      <OrdersClient orders={rows} stats={stats} />
+      <OrdersClient orders={rows} stats={stats} deliveries={deliveries} />
     </>
   );
 }

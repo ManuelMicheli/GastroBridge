@@ -22,7 +22,7 @@ export function Timeline({
   if (rows.length === 0) {
     return (
       <div className="flex h-full items-center justify-center p-8">
-        <p className="font-mono text-[11px] uppercase tracking-[0.1em] text-text-tertiary">
+        <p className="text-[13px] text-[var(--f-muted)]">
           {emptyLabel}
         </p>
       </div>
@@ -37,21 +37,17 @@ export function Timeline({
       {buckets.map(({ bucket, rows: bucketRows }) => (
         <section key={bucket} className="py-1">
           <header
-            className="flex items-center gap-2 px-3 pt-4 pb-2"
+            className="flex items-center gap-2 px-4 pt-4 pb-2"
             aria-label={bucketLabel(bucket)}
           >
-            <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-text-tertiary">
+            <span className="f-eyebrow">
               {bucketLabel(bucket)}
             </span>
-            <span
-              aria-hidden
-              className="h-px flex-1 bg-border-subtle"
-            />
-            <span className="font-mono text-[10px] tabular-nums text-text-tertiary">
+            <span className="ml-auto text-[12px] font-medium tabular-nums text-[var(--f-muted)]">
               {bucketRows.length}
             </span>
           </header>
-          <ul className="flex flex-col">
+          <ul className="flex flex-col gap-0.5 px-2">
             {bucketRows.map((row) => (
               <li key={row.id}>
                 <TimelineRow
