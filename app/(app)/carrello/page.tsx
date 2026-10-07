@@ -19,10 +19,13 @@ import { CartPageMobile } from "./cart-page-mobile";
 import type { CartItem } from "@/types/orders";
 import { runCheckout } from "./_lib/checkout";
 import {
-  fetchCurrentRestaurant,
   fetchSupplierRequirements,
   type SupplierRequirementsMap,
 } from "./_lib/supplier-requirements";
+import {
+  getActiveRestaurantSummary,
+  type ActiveRestaurantSummary,
+} from "@/lib/restaurants/active-actions";
 
 export default function CartPage() {
   const router = useRouter();
@@ -37,7 +40,7 @@ export default function CartPage() {
   } = useCart();
   const [pending, startTransition] = useTransition();
 
-  const [restaurant, setRestaurant] = useState<{ id: string; name: string } | null>(null);
+  const [restaurant, setRestaurant] = useState<ActiveRestaurantSummary | null>(null);
   const [requirements, setRequirements] = useState<SupplierRequirementsMap>({});
 
   const supplierGroups = getCartBySupplier();
@@ -50,9 +53,11 @@ export default function CartPage() {
 
   useEffect(() => {
     let cancelled = false;
-    fetchCurrentRestaurant().then((r) => {
-      if (!cancelled) setRestaurant(r);
-    });
+    getActiveRestaurantSummary()
+      .then((r) => {
+        if (!cancelled) setRestaurant(r);
+      })
+      .catch(() => {});
     return () => { cancelled = true; };
   }, []);
 
@@ -70,8 +75,15 @@ export default function CartPage() {
 
   const itemCount = items.length;
 
+  // Roles without order.submit (viewer) can browse the cart but not send it;
+  // submitOrder / createCatalogOrder enforce the same rule server-side.
+  const blockedReason =
+    restaurant && !restaurant.canOrder
+      ? `Il tuo ruolo (${restaurant.roleLabel}) non può inviare ordini: chiedi al titolare o a un manager.`
+      : null;
+
   function handleCheckout() {
-    if (items.length === 0) return;
+    if (items.length === 0 || blockedReason) return;
     startTransition(async () => {
       const res = await runCheckout({
         items,
@@ -133,6 +145,7 @@ export default function CartPage() {
           itemCount={itemCount}
           ctaLabel={ctaLabel}
           pending={pending}
+          blockedReason={blockedReason}
           onCheckout={handleCheckout}
           onInc={(it: CartItem) => updateQuantity(it.productId, it.quantity + 1)}
           onDec={(it: CartItem) =>
@@ -237,6 +250,7 @@ export default function CartPage() {
           supplierCount={supplierGroups.length}
           pending={pending}
           ctaLabel={ctaLabel}
+          blockedReason={blockedReason}
           onCheckout={handleCheckout}
         />
 

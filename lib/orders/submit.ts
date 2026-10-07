@@ -4,6 +4,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { accessCan, getRestaurantAccess } from "@/lib/restaurants/context";
 
 /**
  * Plan 1C Task 2 — submitOrder.
@@ -63,16 +64,12 @@ export async function submitOrder(input: SubmitOrderInput): Promise<SubmitOrderR
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Sessione scaduta, effettua di nuovo l'accesso" };
 
-  // 3. Verifica che il ristorante appartenga all'utente corrente (RLS-safe).
-  const { data: restaurant } = await supabase
-    .from("restaurants")
-    .select("id, profile_id")
-    .eq("id", data.restaurantId)
-    .maybeSingle<{ id: string; profile_id: string }>();
-
-  if (!restaurant) return { ok: false, error: "Ristorante non trovato" };
-  if (restaurant.profile_id !== user.id) {
-    return { ok: false, error: "Non sei autorizzato a ordinare per questo ristorante" };
+  // 3. Il ristorante deve essere dell'utente (titolare) o di un team di cui fa
+  //    parte con un ruolo che può inviare ordini (order.submit).
+  const access = await getRestaurantAccess(data.restaurantId);
+  if (!access) return { ok: false, error: "Ristorante non trovato" };
+  if (!accessCan(access, "order.submit")) {
+    return { ok: false, error: "Il tuo ruolo non consente di inviare ordini per questo ristorante" };
   }
 
   // 4. Raggruppa righe per fornitore → uno split per supplier.

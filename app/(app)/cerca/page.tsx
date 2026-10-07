@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { getRestaurantContext } from "@/lib/restaurants/context";
 import { getPreferences } from "@/lib/restaurants/preferences";
 import { bundleToScoringPrefs } from "@/lib/scoring";
 import type { Preferences } from "@/lib/scoring";
@@ -13,33 +14,21 @@ export const metadata: Metadata = { title: "Cerca Prodotti" };
 export default async function SearchPage() {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const userId = user?.id ?? "";
+  // Active restaurant (owner or team member) and its scope (multi-sede).
+  const ctx = await getRestaurantContext();
+  const restaurantIds: string[] = ctx?.scopeIds ?? [];
+  const primary = ctx ? { id: ctx.restaurantId } : null;
 
-  // --- Phase 1: independent reads in parallel (restaurants, manual catalogs,
-  //     connected supplier catalogs). None depend on each other.
-  const [restaurantsRes, catalogsRes, connected] = await Promise.all([
-    user
-      ? supabase
-          .from("restaurants")
-          .select("id")
-          .eq("profile_id", user.id)
-          .order("is_primary", { ascending: false })
-          .order("created_at", { ascending: true })
-          .returns<{ id: string }[]>()
-      : Promise.resolve({ data: [] as { id: string }[] }),
+  // --- Phase 1: independent reads in parallel (manual catalogs, connected
+  //     supplier catalogs). None depend on each other.
+  const [catalogsRes, connected] = await Promise.all([
     supabase
       .from("restaurant_catalogs")
       .select("id, supplier_name, delivery_days, min_order_amount")
+      .in("restaurant_id", restaurantIds)
       .order("supplier_name", { ascending: true }),
-    loadConnectedSupplierCatalogs(userId),
+    loadConnectedSupplierCatalogs(restaurantIds),
   ]);
-
-  const restaurants = restaurantsRes.data;
-  const restaurantIds: string[] = (restaurants ?? []).map((r) => r.id);
-  const primary = restaurants?.[0];
 
   const catalogs = catalogsRes.data;
   const manualSuppliers: SupplierLite[] = (catalogs ?? []).map((c: any) => ({

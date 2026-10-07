@@ -47,8 +47,11 @@ function normalize(s: string): string {
  */
 export function CatalogsClient({
   initialCatalogs,
+  canManage = true,
 }: {
   initialCatalogs: EnrichedCatalog[];
+  /** Role may create/edit catalogs (partnership.manage). */
+  canManage?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -148,7 +151,9 @@ export function CatalogsClient({
   }, [query, sort, sourceFilter, category, router, pathname]);
 
   const focusSearch = useCallback(() => searchInputRef.current?.focus(), []);
-  const openNewDialog = useCallback(() => setDialogOpen(true), []);
+  const openNewDialog = useCallback(() => {
+    if (canManage) setDialogOpen(true);
+  }, [canManage]);
   const clearOrBlur = useCallback(() => {
     if (profileId) setProfileId(null);
     else if (query) setQuery("");
@@ -174,7 +179,7 @@ export function CatalogsClient({
           target.isContentEditable);
       if (isTyping) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.key.toLowerCase() === "n") {
+      if (e.key.toLowerCase() === "n" && canManage) {
         e.preventDefault();
         setDialogOpen(true);
       }
@@ -195,9 +200,11 @@ export function CatalogsClient({
       }
       actions={
         <>
-          <button type="button" onClick={() => setDialogOpen(true)} className="f-btn f-btn-primary">
-            <Plus className="h-4 w-4" strokeWidth={2.2} /> Nuovo catalogo
-          </button>
+          {canManage ? (
+            <button type="button" onClick={() => setDialogOpen(true)} className="f-btn f-btn-primary">
+              <Plus className="h-4 w-4" strokeWidth={2.2} /> Nuovo catalogo
+            </button>
+          ) : null}
           {canCompare ? (
             <Link href="/cataloghi/confronta" className="f-btn f-btn-outline">
               <GitCompareArrows className="h-4 w-4" /> Confronta prezzi
@@ -228,9 +235,11 @@ export function CatalogsClient({
           <p className="mt-1.5 max-w-sm text-[14px] text-[var(--f-muted)]">
             Crea il primo listino per iniziare a confrontare i prezzi dei tuoi fornitori.
           </p>
-          <button type="button" onClick={() => setDialogOpen(true)} className="f-btn f-btn-primary mt-5">
-            <Plus className="h-4 w-4" /> Nuovo catalogo
-          </button>
+          {canManage ? (
+            <button type="button" onClick={() => setDialogOpen(true)} className="f-btn f-btn-primary mt-5">
+              <Plus className="h-4 w-4" /> Nuovo catalogo
+            </button>
+          ) : null}
         </div>
         {dialog}
       </div>

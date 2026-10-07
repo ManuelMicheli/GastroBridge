@@ -18,9 +18,12 @@ type ItemData = { id: string; product_name: string; unit: string; price: number;
 export function CatalogDetailClient({
   catalog,
   initialItems,
+  canManage = true,
 }: {
   catalog: CatalogRow;
   initialItems: CatalogItemRow[];
+  /** Role may edit catalogs (partnership.manage). */
+  canManage?: boolean;
 }) {
   const router = useRouter();
   const [editCatalog, setEditCatalog] = useState(false);
@@ -87,6 +90,7 @@ export function CatalogDetailClient({
             {catalog.notes && <p className="mt-1.5 text-[13px] text-[var(--f-ink-2)]">{catalog.notes}</p>}
           </div>
         </div>
+        {canManage ? (
         <div className="flex flex-wrap gap-2">
           <button onClick={() => setItemDialog({ open: true, item: null })} className="f-btn f-btn-primary">
             <Plus className="h-4 w-4" /> Aggiungi prodotto
@@ -107,6 +111,7 @@ export function CatalogDetailClient({
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
+        ) : null}
       </header>
 
       <label className="relative flex h-10 w-full max-w-sm items-center">
@@ -142,6 +147,8 @@ export function CatalogDetailClient({
                 <td className="px-3 py-2.5 text-right font-semibold tabular-nums text-[var(--f-ink)]">€ {i.price.toFixed(2)}</td>
                 <td className="px-3 py-2.5 text-[var(--f-muted)]">{i.notes}</td>
                 <td className="whitespace-nowrap px-5 py-2.5 text-right">
+                  {canManage ? (
+                  <>
                   <button
                     onClick={() => setItemDialog({ open: true, item: { id: i.id, product_name: i.product_name, unit: i.unit, price: i.price, notes: i.notes } })}
                     className="rounded-full p-1.5 text-[var(--f-muted)] hover:bg-[var(--f-fill-2)] hover:text-[var(--f-ink)]" title="Modifica" aria-label={`Modifica ${i.product_name}`}
@@ -154,6 +161,8 @@ export function CatalogDetailClient({
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
+                  </>
+                  ) : null}
                 </td>
               </tr>
             ))}

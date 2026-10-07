@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { SendMessageSchema, type SendMessageInput } from "./schemas";
 import type { MessageRole, PartnershipMessageRow, Result } from "./types";
 import { getCurrentSupplierMember } from "@/lib/supplier/current-member";
+import { accessCan, getRestaurantAccess } from "@/lib/restaurants/context";
 
 /**
  * Detect sender role by checking if the current user owns the restaurant or supplier
@@ -23,13 +24,11 @@ async function detectSenderRole(relationshipId: string): Promise<MessageRole | n
     .maybeSingle() as { data: { restaurant_id: string; supplier_id: string } | null };
   if (!rel) return null;
 
-  const { data: restaurant } = await supabase
-    .from("restaurants")
-    .select("id")
-    .eq("id", rel.restaurant_id)
-    .eq("profile_id", user.id)
-    .maybeSingle<{ id: string }>();
-  if (restaurant) return "restaurant";
+  // Owner, or a team member allowed to talk to suppliers, speaks as "restaurant".
+  const access = await getRestaurantAccess(rel.restaurant_id);
+  if (access && (accessCan(access, "partnership.manage") || accessCan(access, "order.submit"))) {
+    return "restaurant";
+  }
 
   // Any active member of the supplier (owner or staff) speaks as "supplier".
   const member = await getCurrentSupplierMember();

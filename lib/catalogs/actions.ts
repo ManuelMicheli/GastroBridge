@@ -5,35 +5,44 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { contextCan, getRestaurantContext } from "@/lib/restaurants/context";
 import { CatalogSchema, CatalogItemSchema, type CatalogInput, type CatalogItemInput } from "./schemas";
 import { normalizeName, normalizeUnit } from "./normalize";
 import type { CatalogRow } from "./types";
 
 type Result<T = void> = { ok: true; data: T } | { ok: false; error: string };
 
-async function getRestaurantId(): Promise<string | null> {
+// Active restaurant of the caller, if their role may manage catalogs
+// (owner, or a team member with partnership.manage). Team members never
+// auto-provision a restaurant of their own.
+async function getRestaurantScope(): Promise<
+  { ok: true; restaurantId: string; scopeIds: string[] } | { ok: false; error: string }
+> {
+  const ctx = await getRestaurantContext();
+  if (ctx) {
+    if (!contextCan(ctx, "partnership.manage")) {
+      return { ok: false, error: "Il tuo ruolo non consente di modificare i cataloghi" };
+    }
+    return { ok: true, restaurantId: ctx.restaurantId, scopeIds: ctx.scopeIds };
+  }
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data: existing } = await supabase
-    .from("restaurants")
-    .select("id")
-    .eq("profile_id", user.id)
-    .limit(1)
-    .maybeSingle<{ id: string }>();
-
-  if (existing?.id) return existing.id;
+  if (!user) return { ok: false, error: "Ristorante non trovato" };
 
   // Auto-provision a restaurant row for users who signed up as restaurant
-  // but never completed the onboarding step that creates one.
+  // but never completed the onboarding step that creates one — unless they
+  // were invited into someone else's team (they work on that restaurant).
+  if ((user.user_metadata as { invited_restaurant_id?: string } | null)?.invited_restaurant_id) {
+    return { ok: false, error: "Ristorante non trovato" };
+  }
   const { data: profile } = await supabase
     .from("profiles")
     .select("role, company_name")
     .eq("id", user.id)
     .single<{ role: string; company_name: string }>();
 
-  if (!profile || profile.role !== "restaurant") return null;
+  if (!profile || profile.role !== "restaurant") return { ok: false, error: "Ristorante non trovato" };
 
   const fallbackName = profile.company_name?.trim() || user.email?.split("@")[0] || "Ristorante";
   const { data: created } = await (supabase as any)
@@ -42,19 +51,21 @@ async function getRestaurantId(): Promise<string | null> {
     .select("id")
     .single();
 
-  return created?.id ?? null;
+  return created?.id
+    ? { ok: true, restaurantId: created.id, scopeIds: [created.id] }
+    : { ok: false, error: "Ristorante non trovato" };
 }
 
 // Confirms the catalog belongs to the caller's restaurant. The SELECT is RLS-scoped
 // (a user only sees their own catalogs), so a forged id from another tenant returns
 // nothing. Defense-in-depth over the FOR ALL RLS policy + a correct "not found" error.
-async function ownsCatalog(catalogId: string, restaurantId: string): Promise<boolean> {
+async function ownsCatalog(catalogId: string, scopeIds: string[]): Promise<boolean> {
   const supabase = await createClient();
   const { data } = await (supabase as any)
     .from("restaurant_catalogs")
     .select("id")
     .eq("id", catalogId)
-    .eq("restaurant_id", restaurantId)
+    .in("restaurant_id", scopeIds)
     .maybeSingle();
   return !!data;
 }
@@ -63,8 +74,9 @@ export async function createCatalog(input: CatalogInput): Promise<Result<Catalog
   const parsed = CatalogSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Dati non validi" };
 
-  const restaurantId = await getRestaurantId();
-  if (!restaurantId) return { ok: false, error: "Ristorante non trovato" };
+  const scope = await getRestaurantScope();
+  if (!scope.ok) return { ok: false, error: scope.error };
+  const { restaurantId } = scope;
 
   const supabase = await createClient();
   const { data, error } = await (supabase as any)
@@ -88,9 +100,10 @@ export async function updateCatalog(id: string, input: CatalogInput): Promise<Re
   const parsed = CatalogSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Dati non validi" };
 
-  const restaurantId = await getRestaurantId();
-  if (!restaurantId) return { ok: false, error: "Ristorante non trovato" };
-  if (!(await ownsCatalog(id, restaurantId))) return { ok: false, error: "Catalogo non trovato" };
+  const scope = await getRestaurantScope();
+  if (!scope.ok) return { ok: false, error: scope.error };
+  const { scopeIds } = scope;
+  if (!(await ownsCatalog(id, scopeIds))) return { ok: false, error: "Catalogo non trovato" };
 
   const supabase = await createClient();
   const { error } = await (supabase as any)
@@ -102,7 +115,7 @@ export async function updateCatalog(id: string, input: CatalogInput): Promise<Re
       notes:            parsed.data.notes ?? null,
     })
     .eq("id", id)
-    .eq("restaurant_id", restaurantId);
+    .in("restaurant_id", scopeIds);
 
   if (error) return { ok: false, error: error.message };
   revalidatePath("/cataloghi");
@@ -111,16 +124,17 @@ export async function updateCatalog(id: string, input: CatalogInput): Promise<Re
 }
 
 export async function deleteCatalog(id: string): Promise<Result> {
-  const restaurantId = await getRestaurantId();
-  if (!restaurantId) return { ok: false, error: "Ristorante non trovato" };
-  if (!(await ownsCatalog(id, restaurantId))) return { ok: false, error: "Catalogo non trovato" };
+  const scope = await getRestaurantScope();
+  if (!scope.ok) return { ok: false, error: scope.error };
+  const { scopeIds } = scope;
+  if (!(await ownsCatalog(id, scopeIds))) return { ok: false, error: "Catalogo non trovato" };
 
   const supabase = await createClient();
   const { error } = await supabase
     .from("restaurant_catalogs")
     .delete()
     .eq("id", id)
-    .eq("restaurant_id", restaurantId);
+    .in("restaurant_id", scopeIds);
   if (error) return { ok: false, error: error.message };
   revalidatePath("/cataloghi");
   return { ok: true, data: undefined };
@@ -130,9 +144,10 @@ export async function createCatalogItem(catalogId: string, input: CatalogItemInp
   const parsed = CatalogItemSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Dati non validi" };
 
-  const restaurantId = await getRestaurantId();
-  if (!restaurantId) return { ok: false, error: "Ristorante non trovato" };
-  if (!(await ownsCatalog(catalogId, restaurantId))) return { ok: false, error: "Catalogo non trovato" };
+  const scope = await getRestaurantScope();
+  if (!scope.ok) return { ok: false, error: scope.error };
+  const { scopeIds } = scope;
+  if (!(await ownsCatalog(catalogId, scopeIds))) return { ok: false, error: "Catalogo non trovato" };
 
   const supabase = await createClient();
   const { error } = await (supabase as any).from("restaurant_catalog_items").insert({
@@ -153,9 +168,10 @@ export async function updateCatalogItem(id: string, catalogId: string, input: Ca
   const parsed = CatalogItemSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Dati non validi" };
 
-  const restaurantId = await getRestaurantId();
-  if (!restaurantId) return { ok: false, error: "Ristorante non trovato" };
-  if (!(await ownsCatalog(catalogId, restaurantId))) return { ok: false, error: "Catalogo non trovato" };
+  const scope = await getRestaurantScope();
+  if (!scope.ok) return { ok: false, error: scope.error };
+  const { scopeIds } = scope;
+  if (!(await ownsCatalog(catalogId, scopeIds))) return { ok: false, error: "Catalogo non trovato" };
 
   const supabase = await createClient();
   const { error } = await (supabase as any)
@@ -176,9 +192,10 @@ export async function updateCatalogItem(id: string, catalogId: string, input: Ca
 }
 
 export async function deleteCatalogItem(id: string, catalogId: string): Promise<Result> {
-  const restaurantId = await getRestaurantId();
-  if (!restaurantId) return { ok: false, error: "Ristorante non trovato" };
-  if (!(await ownsCatalog(catalogId, restaurantId))) return { ok: false, error: "Catalogo non trovato" };
+  const scope = await getRestaurantScope();
+  if (!scope.ok) return { ok: false, error: scope.error };
+  const { scopeIds } = scope;
+  if (!(await ownsCatalog(catalogId, scopeIds))) return { ok: false, error: "Catalogo non trovato" };
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -203,9 +220,10 @@ export async function importCatalogItems(
   if (rows.length === 0) return { ok: false, error: "Nessuna riga da importare" };
   if (rows.length > 5000) return { ok: false, error: "Massimo 5000 righe per import" };
 
-  const restaurantId = await getRestaurantId();
-  if (!restaurantId) return { ok: false, error: "Ristorante non trovato" };
-  if (!(await ownsCatalog(catalogId, restaurantId))) return { ok: false, error: "Catalogo non trovato" };
+  const scope = await getRestaurantScope();
+  if (!scope.ok) return { ok: false, error: scope.error };
+  const { scopeIds } = scope;
+  if (!(await ownsCatalog(catalogId, scopeIds))) return { ok: false, error: "Catalogo non trovato" };
 
   // Validate all rows before touching DB
   const prepared: {

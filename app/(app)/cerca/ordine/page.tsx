@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { getRestaurantContext } from "@/lib/restaurants/context";
 import { getPreferences } from "@/lib/restaurants/preferences";
 import { bundleToScoringPrefs } from "@/lib/scoring";
 import type { Preferences } from "@/lib/scoring";
@@ -12,30 +13,20 @@ export const metadata: Metadata = { title: "Carrello ottimale" };
 export default async function OptimalCartPage() {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const userId = user?.id ?? "";
+  // Active restaurant (owner or team member) and its scope (multi-sede).
+  const ctx = await getRestaurantContext();
+  const restaurantIds = ctx?.scopeIds ?? [];
 
   let preferences: Preferences | null = null;
-  if (user) {
-    const { data: restaurants } = await supabase
-      .from("restaurants")
-      .select("id")
-      .eq("profile_id", user.id)
-      .order("is_primary", { ascending: false })
-      .order("created_at", { ascending: true })
-      .returns<{ id: string }[]>();
-    const primary = restaurants?.[0];
-    if (primary) {
-      const prefResult = await getPreferences(primary.id);
-      preferences = bundleToScoringPrefs(prefResult.ok ? prefResult.data : null);
-    }
+  if (ctx) {
+    const prefResult = await getPreferences(ctx.restaurantId);
+    preferences = bundleToScoringPrefs(prefResult.ok ? prefResult.data : null);
   }
 
   const { data: catalogs } = await supabase
     .from("restaurant_catalogs")
     .select("id, supplier_name, delivery_days, min_order_amount")
+    .in("restaurant_id", restaurantIds)
     .order("supplier_name", { ascending: true });
 
   const manualSuppliers: SupplierLite[] = (catalogs ?? []).map((c: any) => ({
@@ -63,7 +54,7 @@ export default async function OptimalCartPage() {
   }
 
   const { suppliers: connectedSuppliers, items: connectedItemsRaw } =
-    await loadConnectedSupplierCatalogs(userId);
+    await loadConnectedSupplierCatalogs(restaurantIds);
 
   const connectedItems: CatalogItemLite[] = connectedItemsRaw.map((r) => ({
     id:                      r.id,

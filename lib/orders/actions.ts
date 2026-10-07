@@ -3,26 +3,9 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { requireRestaurantContext } from "@/lib/restaurants/context";
 
 type Result<T = void> = { ok: true; data: T } | { ok: false; error: string };
-
-async function getRestaurantId(): Promise<string | null> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  // Primary location first (same rule as /cerca and esigenze-fornitura).
-  const { data } = await supabase
-    .from("restaurants")
-    .select("id")
-    .eq("profile_id", user.id)
-    .order("is_primary", { ascending: false })
-    .order("created_at", { ascending: true })
-    .limit(1)
-    .maybeSingle<{ id: string }>();
-
-  return data?.id ?? null;
-}
 
 /**
  * Create a minimal order row from the catalog-based cart.
@@ -42,8 +25,10 @@ export async function createCatalogOrder(input: {
     return { ok: false, error: "Totale non valido" };
   }
 
-  const restaurantId = await getRestaurantId();
-  if (!restaurantId) return { ok: false, error: "Ristorante non trovato" };
+  // Owner or a team member whose role may submit orders (chef / manager).
+  const auth = await requireRestaurantContext("order.submit");
+  if (!auth.ok) return { ok: false, error: auth.error };
+  const restaurantId = auth.ctx.restaurantId;
 
   const supabase = await createClient();
 
@@ -53,6 +38,7 @@ export async function createCatalogOrder(input: {
     const { data: catalogs } = await (supabase as any)
       .from("restaurant_catalogs")
       .select("id, supplier_name, min_order_amount")
+      .in("restaurant_id", auth.ctx.scopeIds)
       .in("id", groups.map((g) => g.catalogId)) as {
         data: { id: string; supplier_name: string | null; min_order_amount: number | null }[] | null;
       };
