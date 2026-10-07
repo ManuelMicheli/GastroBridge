@@ -279,7 +279,7 @@ export function SuppliersClient({
         />
         <EmptyState
           title="Nessun fornitore collegato"
-          description="Trova e invita i fornitori con cui vuoi lavorare. Inizia esplorando il marketplace."
+          description="Trova e invita i fornitori con cui lavori già."
           illustration={<EmptySuppliersIllustration />}
           action={
             <Link href="/fornitori/cerca">
@@ -443,7 +443,7 @@ function TabStrip({
   }> = [
     // v1: "Marketplace" (platform connection) tab hidden until v2.
     ...(SUPPLIER_PLATFORM_ENABLED
-      ? [{ id: "connessi" as const, label: "Marketplace", icon: Store, count: connessiCount }]
+      ? [{ id: "connessi" as const, label: "Collegati", icon: Store, count: connessiCount }]
       : []),
     {
       id: "importati",

@@ -87,7 +87,7 @@ export const RESTAURANT_PLANS: PlanDefinition[] = [
       "Catalogo vivo, prezzi aggiornati",
       "Ordini illimitati",
       "0% commissioni su ogni ordine",
-      "Stripe + cassetto fiscale",
+      "Cassetto fiscale",
       "Storico ed export CSV/PDF",
     ],
   },

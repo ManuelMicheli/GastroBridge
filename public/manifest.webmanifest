@@ -1,7 +1,7 @@
 {
   "name": "GastroBridge",
   "short_name": "GastroBridge",
-  "description": "Marketplace B2B per la ristorazione. Confronta prezzi, scopri fornitori e gestisci ordini Ho.Re.Ca. da un unico posto.",
+  "description": "I tuoi fornitori, i tuoi listini. Un ordine in 90 secondi: gli ordini Ho.Re.Ca. della tua attività in un unico posto, senza commissioni.",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",

@@ -5,7 +5,7 @@ import { BrandMark, BrandWordmark } from "@/components/fernly/brand-mark";
 import { accentBootScript } from "@/lib/appearance";
 
 const FEATURES = [
-  "Confronta i prezzi tra tutti i tuoi fornitori",
+  "I listini di tutti i tuoi fornitori, sempre aggiornati",
   "Ordina e gestisci ogni consegna da un'unica dashboard",
   "Cataloghi sempre sincronizzati e aggiornati",
 ];
@@ -36,7 +36,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
         {/* Editorial copy */}
         <div className="relative max-w-md">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/60">
-            Marketplace B2B · Ho.Re.Ca.
+            Ordini ai fornitori · Ho.Re.Ca.
           </p>
           <h2 className="mt-5 text-[2.6rem] font-semibold leading-[1.06] tracking-[-0.03em] text-white xl:text-5xl">
             Tutti i tuoi fornitori.
@@ -44,8 +44,8 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
             Un solo posto.
           </h2>
           <p className="mt-5 max-w-sm text-[15px] leading-relaxed text-white/75">
-            Ordini, cataloghi e prezzi della tua attività riuniti in un unico
-            flusso di lavoro.
+            Un ordine in 90 secondi. Ordini, cataloghi e listini della tua
+            attività in un unico flusso di lavoro, senza commissioni.
           </p>
 
           <ul className="mt-9 space-y-4">

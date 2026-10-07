@@ -58,12 +58,12 @@ export const metadata: Metadata = {
     template: "%s | GastroBridge",
   },
   description:
-    "Marketplace B2B per la ristorazione. Confronta prezzi, scopri fornitori e gestisci ordini Ho.Re.Ca. da un unico punto.",
+    "I tuoi fornitori, i tuoi listini. Un ordine in 90 secondi: gli ordini Ho.Re.Ca. della tua attività in un unico posto, senza commissioni.",
   keywords: [
     "fornitori ristorazione",
-    "marketplace B2B",
+    "ordini fornitori",
     "Ho.Re.Ca.",
-    "confronto prezzi alimentari",
+    "listini fornitori",
     "ordini ristorante",
   ],
   manifest: "/manifest.webmanifest",
@@ -79,7 +79,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "GastroBridge — Tutti i tuoi fornitori. Un solo posto.",
     description:
-      "Marketplace B2B per la ristorazione. Confronta prezzi, scopri fornitori e gestisci ordini da un unico punto.",
+      "I tuoi fornitori, i tuoi listini. Un ordine in 90 secondi: gli ordini Ho.Re.Ca. della tua attività in un unico posto, senza commissioni.",
     siteName: "GastroBridge",
     locale: "it_IT",
     type: "website",
