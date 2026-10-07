@@ -4,7 +4,11 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { NEXT_PATH_COOKIE, postLoginPath, safeNextPath } from "@/lib/auth/redirect";
-import { SUPPLIER_PLATFORM_ENABLED } from "@/lib/utils/constants";
+import {
+  RESTAURANT_PLANS,
+  SUPPLIER_PLANS,
+  SUPPLIER_PLATFORM_ENABLED,
+} from "@/lib/utils/constants";
 import { validateNewPassword } from "@/lib/auth/pwned-password";
 import type { UserRole } from "@/types/database";
 
@@ -73,6 +77,13 @@ export async function signUp(formData: FormData) {
   const password = formData.get("password") as string;
   const companyName = formData.get("companyName") as string;
   const role = formData.get("role") as UserRole;
+  // Only known plan ids for the chosen role are stored.
+  const rawPlan = formData.get("plan");
+  const plan =
+    typeof rawPlan === "string" &&
+    (role === "supplier" ? SUPPLIER_PLANS : RESTAURANT_PLANS).some((p) => p.id === rawPlan)
+      ? rawPlan
+      : null;
 
   // v1 is restaurant-only. Reject supplier signups server-side even if the
   // disabled client control is bypassed. Supplier onboarding returns in v2.
@@ -96,6 +107,8 @@ export async function signUp(formData: FormData) {
       data: {
         role,
         company_name: companyName,
+        // Plan picked on /pricing (?plan=), kept so it is not lost at signup.
+        ...(plan ? { plan } : {}),
       },
     },
   });

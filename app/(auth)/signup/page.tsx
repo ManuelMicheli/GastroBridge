@@ -26,7 +26,8 @@ export default function SignupPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const router = useRouter();
-  const { role: roleParam } = use(searchParams);
+  const { role: roleParam, plan: planParam } = use(searchParams);
+  const plan = Array.isArray(planParam) ? planParam[0] : planParam;
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(() =>
     roleFromQuery(roleParam),
   );
@@ -39,6 +40,7 @@ export default function SignupPage({
     setIsLoading(true);
     setError(null);
     formData.set("role", selectedRole);
+    if (plan) formData.set("plan", plan);
     const result = await signUp(formData);
     if (result?.error) {
       setError(result.error);
