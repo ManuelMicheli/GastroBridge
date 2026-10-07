@@ -5,7 +5,8 @@ import { getWorkflowState } from "@/lib/orders/workflow-state";
 import { resolveRelationshipIdForPair } from "@/lib/messages/context";
 import { getUnreadCount } from "@/lib/messages/queries";
 import { OrderDetailClient } from "./order-detail-client";
-import { getCurrentSupplierMember } from "@/lib/supplier/current-member";
+import { getCurrentSupplierMember, memberCan } from "@/lib/supplier/current-member";
+import Link from "next/link";
 
 export const metadata: Metadata = { title: "Dettaglio Ordine Fornitore" };
 
@@ -110,7 +111,47 @@ export default async function SupplierOrderDetailPage({
     ? await getUnreadCount(relationshipId, split.id)
     : 0;
 
+  // Delivery / DDT for this split (created by the packing step), so the
+  // order links to the logistics pages it otherwise had no path to.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- deliveries/ddt_documents not in generated types
+  const { data: deliveryRows } = (await (supabase as any)
+    .from("deliveries")
+    .select("id, status, ddt_documents ( id, number, year, canceled_at )")
+    .eq("order_split_id", splitId)) as {
+    data:
+      | {
+          id: string;
+          status: string;
+          ddt_documents: { id: string; number: number; year: number; canceled_at: string | null }[] | null;
+        }[]
+      | null;
+  };
+  const canOpenDelivery = memberCan(member, "delivery.execute");
+  const canOpenDdt = memberCan(member, "ddt.generate");
+  const logisticsLinks: { href: string; label: string }[] = [];
+  for (const d of deliveryRows ?? []) {
+    if (canOpenDelivery) {
+      logisticsLinks.push({ href: `/supplier/consegne/${d.id}`, label: "Consegna" });
+    }
+    if (canOpenDdt) {
+      for (const ddt of d.ddt_documents ?? []) {
+        if (ddt.canceled_at) continue;
+        logisticsLinks.push({ href: `/supplier/ddt/${ddt.id}`, label: `DDT ${ddt.number}/${ddt.year}` });
+      }
+    }
+  }
+
   return (
+    <>
+    {logisticsLinks.length > 0 && (
+      <nav aria-label="Logistica ordine" className="mb-3 flex flex-wrap gap-3 text-sm">
+        {logisticsLinks.map((l) => (
+          <Link key={l.href} href={l.href} className="text-text-secondary underline-offset-4 hover:text-text-primary hover:underline">
+            {l.label} →
+          </Link>
+        ))}
+      </nav>
+    )}
     <OrderDetailClient
       splitId={split.id}
       restaurantName={restaurantName}
@@ -143,5 +184,6 @@ export default async function SupplierOrderDetailPage({
         createdAt: e.created_at,
       }))}
     />
+    </>
   );
 }
