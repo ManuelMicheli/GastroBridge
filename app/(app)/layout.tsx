@@ -53,7 +53,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   );
 
   const shell = (
-    <CartProvider>
+    <CartProvider userId={userId}>
       <SidebarProvider>
         <a
           href="#main-content"
