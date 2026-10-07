@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { RouteErrorView } from "@/components/fernly/route-states";
 
-export default function GlobalError({
+export default function AppError({
   error,
   reset,
 }: {
@@ -14,9 +14,5 @@ export default function GlobalError({
     console.error(error);
   }, [error]);
 
-  return (
-    <div className="min-h-screen bg-[var(--f-canvas,#ECEEED)]">
-      <RouteErrorView reset={reset} homeHref="/" homeLabel="Torna alla home" digest={error.digest} />
-    </div>
-  );
+  return <RouteErrorView reset={reset} homeHref="/dashboard" digest={error.digest} />;
 }
