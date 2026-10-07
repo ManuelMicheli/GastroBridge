@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<p:FatturaElettronicaSemplificata xmlns:p="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.0" versione="FSM10">
+  <FatturaElettronicaHeader>
+    <DatiTrasmissione>
+      <IdTrasmittente><IdPaese>IT</IdPaese><IdCodice>04567890123</IdCodice></IdTrasmittente>
+      <ProgressivoInvio>S1</ProgressivoInvio>
+      <FormatoTrasmissione>FSM10</FormatoTrasmissione>
+      <CodiceDestinatario>JKKZDGR</CodiceDestinatario>
+    </DatiTrasmissione>
+    <CedentePrestatore>
+      <IdFiscaleIVA><IdPaese>IT</IdPaese><IdCodice>04567890123</IdCodice></IdFiscaleIVA>
+      <Denominazione>Panificio Il Forno</Denominazione>
+      <Sede><Indirizzo>Via del Pane 3</Indirizzo><CAP>20121</CAP><Comune>Milano</Comune><Nazione>IT</Nazione></Sede>
+      <RegimeFiscale>RF01</RegimeFiscale>
+    </CedentePrestatore>
+    <CessionarioCommittente>
+      <IdentificativiFiscali>
+        <IdFiscaleIVA><IdPaese>IT</IdPaese><IdCodice>09876543210</IdCodice></IdFiscaleIVA>
+      </IdentificativiFiscali>
+    </CessionarioCommittente>
+  </FatturaElettronicaHeader>
+  <FatturaElettronicaBody>
+    <DatiGenerali>
+      <DatiGeneraliDocumento>
+        <TipoDocumento>TD07</TipoDocumento>
+        <Divisa>EUR</Divisa>
+        <Data>2026-09-20</Data>
+        <Numero>77</Numero>
+      </DatiGeneraliDocumento>
+    </DatiGenerali>
+    <DatiBeniServizi>
+      <Descrizione>Pane casereccio</Descrizione>
+      <Importo>52.00</Importo>
+      <DatiIVA><Imposta>2.00</Imposta></DatiIVA>
+    </DatiBeniServizi>
+  </FatturaElettronicaBody>
+</p:FatturaElettronicaSemplificata>

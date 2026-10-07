@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ns2:FileMetadati xmlns:ns2="http://www.fatturapa.gov.it/sdi/messaggi/v1.0" versione="SDI10">
+  <IdentificativoSdI>1234567890</IdentificativoSdI>
+  <NomeFile>IT01234567890_FPR01.xml.p7m</NomeFile>
+  <Hash>0000000000000000000000000000000000000000000000000000000000000000</Hash>
+  <CodiceDestinatario>JKKZDGR</CodiceDestinatario>
+  <Formato>FPR12</Formato>
+  <TentativiInvio>1</TentativiInvio>
+  <MessageId>99999</MessageId>
+</ns2:FileMetadati>
