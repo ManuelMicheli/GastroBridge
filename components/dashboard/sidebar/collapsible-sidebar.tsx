@@ -123,7 +123,7 @@ export function CollapsibleSidebar({ navItems, role }: Props) {
       )}
 
       {/* Navigation */}
-      <nav ref={navRef} className="f-scroll flex-1 overflow-y-auto overflow-x-hidden px-3 pb-3" aria-label="Navigazione">
+      <nav ref={navRef} className="f-scroll min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 pb-3" aria-label="Navigazione">
         {Object.entries(sections).map(([section, items], sIdx) => (
           <div key={section} className={cn(sIdx > 0 && "mt-5")}>
             {isCollapsed ? (
@@ -156,7 +156,9 @@ export function CollapsibleSidebar({ navItems, role }: Props) {
         ))}
       </nav>
 
-      <div className={cn("p-3", isCollapsed && "pb-4")}>
+      {/* min-h-0 above lets the nav scroll instead of sliding under this card;
+          on short viewports the expanded promo is hidden so nav items always fit. */}
+      <div className={cn("shrink-0 p-3", isCollapsed ? "pb-4" : "[@media(max-height:820px)]:hidden")}>
         <InstallPromo collapsed={isCollapsed} />
       </div>
 
