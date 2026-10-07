@@ -12,17 +12,17 @@ type Props = {
 
 export function CalendarClient({ view, prevHref, nextHref, todayHref }: Props) {
   return (
-    <div className="inline-flex items-center gap-1">
+    <div className="inline-flex items-center gap-1.5">
       <Link
         href={prevHref}
         aria-label={view === "week" ? "Settimana precedente" : "Mese precedente"}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border-subtle bg-surface-card text-text-secondary hover:text-text-primary hover:border-accent-green/40 transition-colors"
+        className="f-icon-btn !h-9 !w-9"
       >
         <ChevronLeft className="h-4 w-4" />
       </Link>
       <Link
         href={todayHref}
-        className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-border-subtle bg-surface-card text-sm text-text-secondary hover:text-text-primary hover:border-accent-green/40 transition-colors"
+        className="f-btn f-btn-sm f-btn-outline"
       >
         <CalendarDays className="h-3.5 w-3.5" />
         Oggi
@@ -30,7 +30,7 @@ export function CalendarClient({ view, prevHref, nextHref, todayHref }: Props) {
       <Link
         href={nextHref}
         aria-label={view === "week" ? "Settimana successiva" : "Mese successivo"}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border-subtle bg-surface-card text-text-secondary hover:text-text-primary hover:border-accent-green/40 transition-colors"
+        className="f-icon-btn !h-9 !w-9"
       >
         <ChevronRight className="h-4 w-4" />
       </Link>
