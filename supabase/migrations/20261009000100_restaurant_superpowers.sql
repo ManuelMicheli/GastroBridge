@@ -8,8 +8,11 @@
 --                                   with delete+insert re-imports: the memory is
 --                                   keyed by catalog + normalized name + unit)
 --   kitchen_requests                shared kitchen list (chef → who can order)
---   delivery_checks(+_lines)        goods receiving check-in, with photos in the
+--   delivery_checks(+_lines)        goods receiving check-in + HACCP traceability
+--                                   (lot, expiry, temperature, DDT); photos in the
 --                                   private bucket `delivery-checks`
+--   restaurant_haccp_settings       traced categories + temperature ranges
+--   restaurant_received_lines       view (security_invoker) of received lines
 --   restaurant_notification_log     de-duplication of cron reminders / digests
 --
 -- Purely ADDITIVE: CREATE … IF NOT EXISTS, CREATE OR REPLACE, policies created
@@ -277,6 +280,9 @@ CREATE TABLE IF NOT EXISTS public.delivery_checks (
   issue_count     integer NOT NULL DEFAULT 0 CHECK (issue_count >= 0),
   notes           text NULL CHECK (notes IS NULL OR char_length(notes) <= 1000),
   message_sent    boolean NOT NULL DEFAULT false,
+  -- DDT (documento di trasporto) of the delivery: number + optional photo.
+  ddt_number      text NULL CHECK (ddt_number IS NULL OR char_length(ddt_number) <= 60),
+  ddt_photo_path  text NULL CHECK (ddt_photo_path IS NULL OR char_length(ddt_photo_path) <= 300),
   checked_by      uuid NOT NULL DEFAULT auth.uid() REFERENCES public.profiles(id) ON DELETE CASCADE,
   checked_at      timestamptz NOT NULL DEFAULT now()
 );
@@ -287,6 +293,9 @@ CREATE INDEX IF NOT EXISTS idx_delivery_checks_restaurant ON public.delivery_che
 CREATE TABLE IF NOT EXISTS public.delivery_check_lines (
   id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   check_id      uuid NOT NULL REFERENCES public.delivery_checks(id) ON DELETE CASCADE,
+  -- Denormalized from the check (registry search + RLS without joins).
+  restaurant_id uuid NOT NULL REFERENCES public.restaurants(id) ON DELETE CASCADE,
+  received_at   timestamptz NOT NULL DEFAULT now(),
   -- order_items.id for marketplace lines, "catalog:<block>:<line>" otherwise.
   line_ref      text NOT NULL CHECK (char_length(line_ref) <= 120),
   product_name  text NOT NULL CHECK (char_length(product_name) BETWEEN 1 AND 300),
@@ -297,10 +306,79 @@ CREATE TABLE IF NOT EXISTS public.delivery_check_lines (
                 CHECK (issue IN ('ok', 'missing', 'short', 'damaged', 'wrong_item', 'quality')),
   note          text NULL CHECK (note IS NULL OR char_length(note) <= 500),
   photo_paths   text[] NOT NULL DEFAULT '{}'::text[],
+  -- HACCP traceability (Reg. CE 178/2002): macro category, lot, expiry and
+  -- temperature at reception for the categories the restaurant traces.
+  category      text NULL CHECK (category IS NULL OR char_length(category) <= 30),
+  lot_number    text NULL CHECK (lot_number IS NULL OR char_length(lot_number) <= 80),
+  expiry_date   date NULL,
+  temperature_c numeric(5,2) NULL CHECK (temperature_c IS NULL OR temperature_c BETWEEN -40 AND 40),
+  -- NULL = no rule for the category; false = out of the configured range.
+  temperature_ok boolean NULL,
   created_at    timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS idx_delivery_check_lines_check ON public.delivery_check_lines (check_id);
+CREATE INDEX IF NOT EXISTS idx_delivery_check_lines_registry
+  ON public.delivery_check_lines (restaurant_id, received_at DESC);
+CREATE INDEX IF NOT EXISTS idx_delivery_check_lines_lot
+  ON public.delivery_check_lines (restaurant_id, lower(lot_number))
+  WHERE lot_number IS NOT NULL;
+
+-- HACCP settings per restaurant: which categories need lot/expiry/temperature
+-- and the accepted temperature range per category (°C).
+CREATE TABLE IF NOT EXISTS public.restaurant_haccp_settings (
+  restaurant_id      uuid PRIMARY KEY REFERENCES public.restaurants(id) ON DELETE CASCADE,
+  traced_categories  text[] NOT NULL DEFAULT ARRAY['carne', 'pesce', 'latticini', 'surgelati']::text[],
+  -- Extra name keywords that are always traced (e.g. "uova", "molluschi").
+  traced_keywords    text[] NOT NULL DEFAULT ARRAY['uova', 'uovo']::text[],
+  -- {"carne": {"min": 0, "max": 4}, "surgelati": {"max": -18}, ...}
+  temperature_rules  jsonb NOT NULL DEFAULT '{"carne": {"min": 0, "max": 4}, "pesce": {"min": 0, "max": 2}, "latticini": {"min": 0, "max": 4}, "surgelati": {"max": -18}}'::jsonb,
+  require_ddt_photo  boolean NOT NULL DEFAULT false,
+  updated_by         uuid NULL REFERENCES public.profiles(id) ON DELETE SET NULL,
+  updated_at         timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE OR REPLACE TRIGGER trg_restaurant_haccp_settings_touch
+  BEFORE UPDATE ON public.restaurant_haccp_settings
+  FOR EACH ROW EXECUTE FUNCTION private.touch_updated_at();
+
+ALTER TABLE public.restaurant_haccp_settings ENABLE ROW LEVEL SECURITY;
+
+-- Received lines with their delivery context, for the traceability registry
+-- and for other modules (e.g. invoice reconciliation, food cost) that need
+-- "what was actually received". security_invoker: the caller's RLS applies.
+CREATE OR REPLACE VIEW public.restaurant_received_lines
+WITH (security_invoker = true) AS
+SELECT
+  l.id               AS line_id,
+  l.restaurant_id,
+  c.id               AS check_id,
+  c.order_id,
+  c.order_split_id,
+  c.supplier_id,
+  c.supplier_label,
+  c.ddt_number,
+  c.ddt_photo_path,
+  -- order_items.id for marketplace lines (NULL for private-catalog lines)
+  CASE WHEN l.line_ref ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+       THEN l.line_ref::uuid END AS order_item_id,
+  l.line_ref,
+  l.product_name,
+  l.unit,
+  l.category,
+  l.ordered_qty,
+  l.received_qty,
+  l.issue,
+  l.note,
+  l.lot_number,
+  l.expiry_date,
+  l.temperature_c,
+  l.temperature_ok,
+  l.photo_paths,
+  l.received_at,
+  c.checked_by
+FROM public.delivery_check_lines l
+JOIN public.delivery_checks c ON c.id = l.check_id;
 
 ALTER TABLE public.delivery_checks      ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.delivery_check_lines ENABLE ROW LEVEL SECURITY;
@@ -434,18 +512,32 @@ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public'
                  AND tablename = 'delivery_check_lines' AND policyname = 'delivery check lines team read') THEN
     CREATE POLICY "delivery check lines team read" ON public.delivery_check_lines
-      FOR SELECT USING (EXISTS (
-        SELECT 1 FROM public.delivery_checks dc
-        WHERE dc.id = check_id AND private.restaurant_can_read(dc.restaurant_id)
-      ));
+      FOR SELECT USING (private.restaurant_can_read(restaurant_id));
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public'
                  AND tablename = 'delivery_check_lines' AND policyname = 'delivery check lines team create') THEN
     CREATE POLICY "delivery check lines team create" ON public.delivery_check_lines
-      FOR INSERT WITH CHECK (EXISTS (
-        SELECT 1 FROM public.delivery_checks dc
-        WHERE dc.id = check_id AND private.restaurant_can(dc.restaurant_id, 'order.receive')
-      ));
+      FOR INSERT WITH CHECK (
+        private.restaurant_can(restaurant_id, 'order.receive')
+        AND EXISTS (
+          SELECT 1 FROM public.delivery_checks dc
+          WHERE dc.id = check_id AND dc.restaurant_id = delivery_check_lines.restaurant_id
+        )
+      );
+  END IF;
+
+  -- HACCP settings: read any member; manage with settings.manage.
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public'
+                 AND tablename = 'restaurant_haccp_settings' AND policyname = 'haccp settings team read') THEN
+    CREATE POLICY "haccp settings team read" ON public.restaurant_haccp_settings
+      FOR SELECT USING (private.restaurant_can_read(restaurant_id));
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public'
+                 AND tablename = 'restaurant_haccp_settings' AND policyname = 'haccp settings team manage') THEN
+    CREATE POLICY "haccp settings team manage" ON public.restaurant_haccp_settings
+      FOR ALL
+      USING (private.restaurant_can(restaurant_id, 'settings.manage'))
+      WITH CHECK (private.restaurant_can(restaurant_id, 'settings.manage'));
   END IF;
 END $$;
 
