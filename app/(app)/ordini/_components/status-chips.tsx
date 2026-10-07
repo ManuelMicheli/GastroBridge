@@ -48,7 +48,7 @@ export function StatusChips({
   if (present.length === 0) return null;
 
   return (
-    <div className="f-chips flex-wrap !rounded-[22px]" role="group" aria-label="Filtra per stato">
+    <div className="f-chips min-w-0 max-w-full" role="group" aria-label="Filtra per stato">
       <button
         type="button"
         onClick={onClear}

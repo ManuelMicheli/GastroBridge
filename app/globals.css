@@ -1921,6 +1921,9 @@ html[data-accent="ambra"] [data-area="supplier"] {
 @keyframes f-grow-y { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 @keyframes f-grow-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 @keyframes f-type { from { clip-path: inset(-10% 100% -10% 0); } to { clip-path: inset(-10% -2% -10% 0); } }
+@keyframes f-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+.f-draw { stroke-dasharray: 1; stroke-dashoffset: 0; animation: f-draw 1000ms cubic-bezier(0.22, 1, 0.36, 1) both; animation-delay: var(--d, 150ms); }
+@media (prefers-reduced-motion: reduce) { .f-draw { animation: none; } }
 @layer components {
 .f-rise { animation: f-rise 480ms var(--f-ease) both; animation-delay: calc(var(--i, 0) * 70ms + var(--d, 0ms)); }
 .f-fade { animation: f-fade 360ms var(--f-ease) both; animation-delay: calc(var(--i, 0) * 60ms + var(--d, 0ms)); }

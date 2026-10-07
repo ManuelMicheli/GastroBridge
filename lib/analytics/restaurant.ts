@@ -61,6 +61,21 @@ export type RecentOrderRow = {
   item_count: number;
 };
 
+/** One day of the selected period, aligned with the same day-offset of the
+ *  previous period (for the "vs periodo precedente" chart). */
+export type DailyPoint = {
+  date: string; // YYYY-MM-DD (current period)
+  spend: number;
+  orders: number;
+  suppliers: number; // distinct suppliers ordered from that day
+  prevSpend: number | null; // null when the previous period is shorter
+};
+
+export type ActivityDay = {
+  date: string; // YYYY-MM-DD
+  orders: number;
+};
+
 export type BudgetState = {
   amount: number | null;
   spent: number;
@@ -92,6 +107,12 @@ export type RestaurantAnalytics = {
   yearOverYear: YoyPoint[];
   weekdayPattern: WeekdayCell[];
   recentOrders: RecentOrderRow[];
+  /** Day-by-day series of the period (up to today) vs the previous period. */
+  daily: DailyPoint[];
+  /** Orders per day over the last 20 weeks (activity heatmap). */
+  activity: ActivityDay[];
+  previousAvgTicket: number;
+  previousSupplierCount: number;
 };
 
 // -------------------------- Internal types -------------------------------
@@ -150,7 +171,15 @@ function emptyAnalytics(periodRange: PeriodRange): RestaurantAnalytics {
     yearOverYear: [],
     weekdayPattern: [],
     recentOrders: [],
+    daily: [],
+    activity: [],
+    previousAvgTicket: 0,
+    previousSupplierCount: 0,
   };
+}
+
+function localDayKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 // -------------------------- Helpers --------------------------------------
@@ -470,6 +499,70 @@ export async function getRestaurantAnalytics(
 
   const delta = currentSpending - previousSpending;
 
+  // ----- Daily series (current period up to today, vs previous period) -----
+  const dayMs = 86_400_000;
+  const startDay = new Date(periodRange.from);
+  startDay.setHours(0, 0, 0, 0);
+  const endExclusive = new Date(Math.min(periodRange.to.getTime(), now.getTime() + 1));
+  const prevStart = new Date(periodRange.previous.from);
+  prevStart.setHours(0, 0, 0, 0);
+  const prevDays = Math.round((periodRange.previous.to.getTime() - prevStart.getTime()) / dayMs);
+
+  const curByDay = new Map<string, { spend: number; orders: number; suppliers: Set<string> }>();
+  for (const o of currentOrders) {
+    const k = localDayKey(new Date(o.created_at));
+    const cell = curByDay.get(k) ?? { spend: 0, orders: 0, suppliers: new Set<string>() };
+    cell.spend += o.total;
+    cell.orders += 1;
+    for (const sh of suppliersFromOrder(o)) cell.suppliers.add(sh.name);
+    curByDay.set(k, cell);
+  }
+  const prevByDay = new Map<string, number>();
+  for (const o of previousOrders) {
+    const k = localDayKey(new Date(o.created_at));
+    prevByDay.set(k, (prevByDay.get(k) ?? 0) + o.total);
+  }
+  const daily: DailyPoint[] = [];
+  for (let i = 0; ; i++) {
+    const d = new Date(startDay);
+    d.setDate(startDay.getDate() + i);
+    if (d.getTime() >= endExclusive.getTime()) break;
+    const k = localDayKey(d);
+    const cell = curByDay.get(k);
+    let prevSpend: number | null = null;
+    if (i < prevDays) {
+      const pd = new Date(prevStart);
+      pd.setDate(prevStart.getDate() + i);
+      prevSpend = prevByDay.get(localDayKey(pd)) ?? 0;
+    }
+    daily.push({
+      date: k,
+      spend: cell?.spend ?? 0,
+      orders: cell?.orders ?? 0,
+      suppliers: cell?.suppliers.size ?? 0,
+      prevSpend,
+    });
+  }
+
+  // ----- Activity: orders per day over the last 20 weeks -----
+  const activityByDay = new Map<string, number>();
+  for (const o of allOrders) {
+    const k = localDayKey(new Date(o.created_at));
+    activityByDay.set(k, (activityByDay.get(k) ?? 0) + 1);
+  }
+  const activity: ActivityDay[] = [];
+  const today0 = new Date(now);
+  today0.setHours(0, 0, 0, 0);
+  for (let i = 139; i >= 0; i--) {
+    const d = new Date(today0);
+    d.setDate(today0.getDate() - i);
+    const k = localDayKey(d);
+    activity.push({ date: k, orders: activityByDay.get(k) ?? 0 });
+  }
+
+  const previousAvgTicket = previousOrderCount > 0 ? previousSpending / previousOrderCount : 0;
+  const previousSupplierCount = supplierPrev.size;
+
   return {
     period: {
       key: periodRange.key,
@@ -497,5 +590,9 @@ export async function getRestaurantAnalytics(
     yearOverYear,
     weekdayPattern,
     recentOrders,
+    daily,
+    activity,
+    previousAvgTicket,
+    previousSupplierCount,
   };
 }

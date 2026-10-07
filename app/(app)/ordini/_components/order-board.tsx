@@ -156,11 +156,11 @@ function BoardCard({
         <span className="inline-flex items-center gap-1">
           <Clock className="h-3.5 w-3.5" /> {relDay(row.createdAt)}
         </span>
-        <span className="inline-flex items-center gap-0.5">
+        <span className="hidden items-center gap-0.5 2xl:inline-flex">
           <Hash className="h-3.5 w-3.5" />
           {row.id.slice(0, 6).toUpperCase()}
         </span>
-        <span className="ml-auto flex items-center gap-2">
+        <span className="ml-auto flex min-w-0 items-center gap-2">
           <b className="font-semibold text-[var(--f-ink)] tabular-nums">{formatCurrency(row.total)}</b>
           <span className="flex -space-x-2">
             <Avatar name={name} size={26} ring />

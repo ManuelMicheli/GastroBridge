@@ -296,14 +296,16 @@ export function OrdersClient({
         ) : (
           <>
             {/* Filters: status chips · search · count */}
-            <div className="f-fade mb-5 flex flex-wrap items-center justify-between gap-3" style={{ ["--d" as string]: "100ms" }}>
-              <StatusChips
-                counts={stats.statusCounts}
-                selected={statuses}
-                onToggle={toggleStatus}
-                onClear={clearStatuses}
-              />
-              <div className="flex items-center gap-3">
+            <div className="f-fade mb-5 flex items-center justify-between gap-3" style={{ ["--d" as string]: "100ms" }}>
+              <div className="min-w-0 flex-1">
+                <StatusChips
+                  counts={stats.statusCounts}
+                  selected={statuses}
+                  onToggle={toggleStatus}
+                  onClear={clearStatuses}
+                />
+              </div>
+              <div className="flex shrink-0 items-center gap-3">
                 <span className="text-[12.5px] text-[var(--f-muted)] tabular-nums">
                   {filtered.length} ordini mostrati
                 </span>
