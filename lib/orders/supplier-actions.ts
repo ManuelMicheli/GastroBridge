@@ -729,8 +729,13 @@ export async function markPacked(splitId: string): Promise<SimpleResult> {
 // -----------------------------------------------------------------------------
 
 /**
- * Transizione da `packed` a `shipping`. `shipping` e' un valore enum valido di
- * `order_status`, quindi non usiamo il tag workflow (lo rimuoviamo se presente).
+ * Transizione da `packed` a `shipping`.
+ *
+ * Stesso percorso della pagina Consegne: ogni consegna `planned`/`loaded`
+ * dello split passa per `startTransit` (consegna → in_transit, split →
+ * shipping, un solo evento `shipped`). Permesso: `delivery.execute`, come
+ * startTransit. Solo gli split legacy senza alcuna consegna (imballati prima
+ * del flusso picking) usano ancora l'aggiornamento diretto.
  */
 export async function markShipped(splitId: string): Promise<SimpleResult> {
   if (!splitId) return { ok: false, error: "splitId mancante" };
@@ -742,7 +747,7 @@ export async function markShipped(splitId: string): Promise<SimpleResult> {
     if (!splitRes.ok) return splitRes;
     const split = splitRes.split;
 
-    await requirePermission(split.supplier_id, "order.accept_line");
+    await requirePermission(split.supplier_id, "delivery.execute");
     const member = (await getActiveSupplierMember(split.supplier_id)) as
       | { id: string; role: string; supplier_id: string }
       | null;
@@ -756,6 +761,33 @@ export async function markShipped(splitId: string): Promise<SimpleResult> {
       };
     }
 
+    const { data: deliveryRows } = (await (supabase as any)
+      .from("deliveries")
+      .select("id, status")
+      .eq("order_split_id", splitId)) as {
+      data: { id: string; status: string }[] | null;
+    };
+    const deliveries = deliveryRows ?? [];
+    if (deliveries.length > 0) {
+      const startable = deliveries.filter(
+        (d) => d.status === "planned" || d.status === "loaded",
+      );
+      if (startable.length === 0) {
+        return {
+          ok: false,
+          error: "Nessuna consegna da avviare per questo ordine: controlla in Consegne",
+        };
+      }
+      const { startTransit } = await import("@/lib/supplier/delivery/actions");
+      for (const d of startable) {
+        const res = await startTransit(d.id);
+        if (!res.ok) return { ok: false, error: res.error };
+      }
+      revalidateSupplierOrders(splitId);
+      return { ok: true, data: { splitStatus: "shipping" as unknown as WorkflowState } };
+    }
+
+    // Legacy: split senza consegne collegate.
     const newNotes = stripWorkflowTag(split.supplier_notes) || null;
     const { error: upErr } = await (supabase as any)
       .from("order_splits")
@@ -802,15 +834,18 @@ export type TransitionSplitStatusResult =
   | { ok: false; error: string };
 
 /**
- * Transizioni legali permesse via drag & drop sulla kanban:
- *  - `confirmed → preparing`
- *  - `preparing → packed`
- *  - `packed → shipped`
- *  - `shipped → delivered`
+ * Transizioni via drag & drop sulla kanban. Ogni passaggio delega alla stessa
+ * azione del flusso reale (e quindi ai suoi permessi):
+ *  - `confirmed → preparing` → transitionToPreparing (`order.prepare`)
+ *  - `preparing → packed`    → markPacked: finalize_split_packing_tx, scarico
+ *                              stock, consegna `loaded`, DDT (`order.prepare`);
+ *                              fallisce finché il picking non è completo
+ *  - `packed → shipped`      → markShipped → startTransit (`delivery.execute`)
+ *  - `shipped → delivered`   → non consentito: serve la firma/POD da Consegne
  *
  * Le transizioni `pending*` / `stock_conflict` / `rejected` / `cancelled`
  * richiedono sempre il dettaglio ordine (accettazione per riga): in quei casi
- * l'azione ritorna un errore informativo cosi' il client puo' mostrare un toast.
+ * l'azione ritorna un errore informativo così il client può mostrare un toast.
  */
 export async function transitionSplitStatus(
   input: TransitionSplitStatusInput,
@@ -833,12 +868,6 @@ export async function transitionSplitStatus(
     if (!splitRes.ok) return splitRes;
     const split = splitRes.split;
 
-    await requirePermission(split.supplier_id, "order.accept_line");
-    const member = (await getActiveSupplierMember(split.supplier_id)) as
-      | { id: string; role: string; supplier_id: string }
-      | null;
-    if (!member) return { ok: false, error: "Membro fornitore non trovato" };
-
     const currentState = getWorkflowState(split.status, split.supplier_notes);
     const allowed = LEGAL[targetStatus];
     if (!allowed || !allowed.includes(currentState)) {
@@ -849,55 +878,31 @@ export async function transitionSplitStatus(
       };
     }
 
-    const nowIso = new Date().toISOString();
-
-    if (targetStatus === "packed") {
-      const wf = await setSplitWorkflow(supabase, splitId, "packed");
-      if (!wf.ok) return wf;
-      await emitSplitEvent(supabase, {
-        splitId,
-        eventType: "packed",
-        memberId: member.id,
-      });
-    } else {
-      const enumStatus =
-        targetStatus === "shipped" ? "shipping" : targetStatus;
-      const patch: Record<string, unknown> = {
-        status: enumStatus,
-        supplier_notes: stripWorkflowTag(split.supplier_notes) || null,
-      };
-      if (targetStatus === "shipped") patch.shipped_at = nowIso;
-      if (targetStatus === "delivered") patch.delivered_at = nowIso;
-      const { error } = await (supabase as any)
-        .from("order_splits")
-        .update(patch)
-        .eq("id", splitId);
-      if (error) return { ok: false, error: error.message };
-
-      if (targetStatus === "shipped" || targetStatus === "delivered") {
-        const restaurantProfileId = await resolveRestaurantProfileId(
-          supabase,
-          split.order_id,
-        );
-        await emitOrderEvent(supabase, {
-          splitId,
-          eventType: targetStatus,
-          memberId: member.id,
-          supplierId: split.supplier_id,
-          restaurantProfileIds: restaurantProfileId ? [restaurantProfileId] : undefined,
-        });
-      } else {
-        await emitSplitEvent(supabase, {
-          splitId,
-          eventType: "preparing",
-          memberId: member.id,
-        });
+    // Each step runs the same action as the real workflow, with its own
+    // permission check (order.prepare / delivery.execute).
+    let res: SimpleResult;
+    if (targetStatus === "preparing") {
+      res = await transitionToPreparing(splitId);
+    } else if (targetStatus === "packed") {
+      res = await markPacked(splitId);
+      if (!res.ok && !res.error.startsWith("Permesso mancante")) {
+        return {
+          ok: false,
+          error: `Completa prima il picking dalla pagina Preparazione dell'ordine (${res.error})`,
+        };
       }
+    } else if (targetStatus === "shipped") {
+      res = await markShipped(splitId);
+    } else {
+      return {
+        ok: false,
+        error:
+          "La consegna si chiude con la firma del cliente: registrala da Consegne",
+      };
     }
+    if (!res.ok) return res;
 
-    revalidateSupplierOrders(splitId);
     revalidatePath("/supplier/ordini/kanban");
-
     return { ok: true, data: { splitStatus: targetStatus } };
   } catch (err) {
     return { ok: false, error: errMsg(err, "Errore aggiornamento stato") };

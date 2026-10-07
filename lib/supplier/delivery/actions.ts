@@ -8,6 +8,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/supplier/context";
 import { emitOrderEvent } from "@/lib/orders/events";
 import { dispatchEvent } from "@/lib/notifications/dispatcher";
+import { stripWorkflowTag } from "@/lib/orders/workflow-state";
 import type { DeliveryStatus } from "@/types/database";
 import {
   MarkDeliveredSchema,
@@ -122,6 +123,66 @@ async function assertDriverAuthorized(ctx: DeliveryCtx): Promise<void> {
 }
 
 /**
+ * Tiene `order_splits.status` allineato alle sue consegne. È l'unico punto in
+ * cui le transizioni `shipping` / `delivered` dello split avvengono: lo usano
+ * startTransit e markDelivered, e (tramite startTransit) anche "Segna
+ * spedito" nel dettaglio ordine e la kanban.
+ *
+ * L'autorizzazione è verificata dai chiamanti (requirePermission +
+ * assertDriverAuthorized); si usa il client admin perché i ruoli operativi
+ * (driver/magazzino) non sono coperti dalle policy legacy owner-only su
+ * order_splits.
+ *
+ * Ritorna true se lo split ha effettivamente cambiato stato.
+ */
+async function syncSplitWithDeliveries(
+  splitId: string,
+  target: "shipping" | "delivered",
+): Promise<boolean> {
+  const admin = createAdminClient() as any;
+  const { data: split } = (await admin
+    .from("order_splits")
+    .select("id, status, supplier_notes")
+    .eq("id", splitId)
+    .maybeSingle()) as {
+    data: { id: string; status: string; supplier_notes: string | null } | null;
+  };
+  if (!split) return false;
+  if (split.status === "delivered" || split.status === "cancelled") return false;
+  if (target === "shipping" && split.status === "shipping") return false;
+
+  if (target === "delivered") {
+    // Lo split si chiude solo quando nessuna consegna è ancora aperta.
+    const { data: rows } = (await admin
+      .from("deliveries")
+      .select("status")
+      .eq("order_split_id", splitId)) as { data: { status: DeliveryStatus }[] | null };
+    const open = (rows ?? []).filter(
+      (r) => r.status !== "delivered" && r.status !== "failed",
+    );
+    if (open.length > 0) return false;
+  }
+
+  const nowIso = new Date().toISOString();
+  const patch: Record<string, unknown> = {
+    status: target,
+    supplier_notes: stripWorkflowTag(split.supplier_notes) || null,
+  };
+  if (target === "shipping") patch.shipped_at = nowIso;
+  if (target === "delivered") patch.delivered_at = nowIso;
+
+  const { error } = await admin.from("order_splits").update(patch).eq("id", splitId);
+  if (error) {
+    console.error("[delivery:syncSplit] update failed", splitId, error);
+    return false;
+  }
+  revalidatePath("/supplier/ordini");
+  revalidatePath("/supplier/ordini/kanban");
+  revalidatePath(`/supplier/ordini/${splitId}`);
+  return true;
+}
+
+/**
  * Assegna (o rimuove) il driver di una consegna. Richiede `delivery.plan`.
  */
 export async function assignDriver(input: {
@@ -183,16 +244,21 @@ export async function startTransit(deliveryId: string): Promise<Result> {
       .eq("id", parsed.data);
     if (error) return { ok: false, error: error.message };
 
-    await emitOrderEvent(supabase as any, {
-      splitId: d.order_split_id,
-      eventType: "shipped",
-      supplierId: d.supplier_id,
-      driverMemberId: d.driver_member_id ?? null,
-      restaurantProfileIds: d.restaurant_profile_id
-        ? [d.restaurant_profile_id]
-        : undefined,
-      notificationPayload: { deliveryId: d.id },
-    });
+    // Split → shipping (shipped_at) and a single `shipped` event per split,
+    // even when the split has more than one delivery.
+    const splitShipped = await syncSplitWithDeliveries(d.order_split_id, "shipping");
+    if (splitShipped) {
+      await emitOrderEvent(supabase as any, {
+        splitId: d.order_split_id,
+        eventType: "shipped",
+        supplierId: d.supplier_id,
+        driverMemberId: d.driver_member_id ?? null,
+        restaurantProfileIds: d.restaurant_profile_id
+          ? [d.restaurant_profile_id]
+          : undefined,
+        notificationPayload: { deliveryId: d.id },
+      });
+    }
 
     revalidateAll(parsed.data);
     return { ok: true, data: undefined };
@@ -334,6 +400,9 @@ export async function markDelivered(
         signaturePath: sigPath,
       },
     });
+
+    // Split → delivered once all of its deliveries are closed.
+    await syncSplitWithDeliveries(d.order_split_id, "delivered");
 
     revalidateAll(v.delivery_id);
     return {
