@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { contextCan, getRestaurantContext } from "@/lib/restaurants/context";
 import { loadOrderableOffers, loadSchedules } from "@/lib/restaurants/ordering/server";
 import { nextDeadline, romeToday } from "@/lib/restaurants/ordering/schedule";
+import { loadCatalogContacts } from "@/lib/restaurants/channels/server";
 import { DeliveriesClient, type SupplierScheduleRow, type UpcomingDelivery } from "./deliveries-client";
 
 export const metadata: Metadata = { title: "Consegne e orari limite" };
@@ -18,9 +19,13 @@ export default async function DeliveriesPage() {
   const catalog = await loadOrderableOffers(ctx.scopeIds);
   const schedules = await loadSchedules(ctx, catalog.suppliers);
 
+  const contacts = await loadCatalogContacts(
+    catalog.suppliers.filter((s) => s.kind === "catalog").map((s) => s.key),
+  );
   const rows: SupplierScheduleRow[] = catalog.suppliers.map((s) => {
     const sch = schedules.get(s.key) ?? null;
     const next = sch ? nextDeadline(sch, nowMs) : null;
+    const c = contacts.get(s.key) ?? null;
     return {
       key: s.key,
       kind: s.kind,
@@ -29,6 +34,15 @@ export default async function DeliveriesPage() {
       schedule: sch,
       deadlineMs: next?.deadlineMs ?? null,
       deliveryDate: next?.deliveryDate ?? null,
+      contact: c
+        ? {
+            preferredChannel: c.preferredChannel,
+            contactName: c.contactName,
+            whatsappPhone: c.whatsappPhone,
+            email: c.email,
+            notes: c.notes,
+          }
+        : null,
     };
   });
 

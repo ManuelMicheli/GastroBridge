@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { BellRing, CalendarClock, PackageCheck, Pencil, RotateCcw, Store, Truck } from "lucide-react";
+import { BellRing, CalendarClock, PackageCheck, Pencil, RotateCcw, Send, Store, Truck } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { Modal, ModalActions } from "@/components/ui/modal";
 import { toast } from "@/components/ui/toast";
@@ -20,6 +20,8 @@ import {
 } from "@/lib/restaurants/ordering/schedule";
 import { deleteSupplierSchedule, saveSupplierSchedule } from "@/lib/restaurants/ordering/actions";
 import type { ScheduleInfo } from "@/lib/restaurants/ordering/types";
+import { CHANNEL_LABELS, type OrderChannel } from "@/lib/restaurants/channels/text";
+import { ContactModal, type ContactValue } from "@/components/restaurant/ordering/contact-modal";
 
 export type SupplierScheduleRow = {
   key: string;
@@ -29,6 +31,14 @@ export type SupplierScheduleRow = {
   schedule: ScheduleInfo | null;
   deadlineMs: number | null;
   deliveryDate: string | null;
+  /** How to send orders to an off-platform supplier (private catalogs only). */
+  contact: {
+    preferredChannel: OrderChannel;
+    contactName: string | null;
+    whatsappPhone: string | null;
+    email: string | null;
+    notes: string | null;
+  } | null;
 };
 
 export type UpcomingDelivery = {
@@ -63,6 +73,7 @@ export function DeliveriesClient({
 }) {
   const now = useNow(30_000);
   const [editing, setEditing] = useState<SupplierScheduleRow | null>(null);
+  const [contact, setContact] = useState<ContactValue | null>(null);
 
   const deadlines = useMemo(
     () =>
@@ -222,7 +233,27 @@ export function DeliveriesClient({
                   {r.schedule && <CutoffChip deadlineMs={r.deadlineMs} deliveryDate={r.deliveryDate} compact />}
                   {canEdit && (
                     <button type="button" className="f-btn f-btn-xs f-btn-outline" onClick={() => setEditing(r)}>
-                      <Pencil className="h-3 w-3" /> {r.schedule ? "Modifica" : "Imposta"}
+                      <Pencil className="h-3 w-3" /> {r.schedule ? "Consegne" : "Imposta consegne"}
+                    </button>
+                  )}
+                  {canEdit && r.kind === "catalog" && (
+                    <button
+                      type="button"
+                      className="f-btn f-btn-xs f-btn-outline"
+                      onClick={() =>
+                        setContact({
+                          catalogId: r.key,
+                          supplierName: r.name,
+                          preferredChannel: r.contact?.preferredChannel ?? "whatsapp",
+                          contactName: r.contact?.contactName ?? null,
+                          whatsappPhone: r.contact?.whatsappPhone ?? null,
+                          email: r.contact?.email ?? null,
+                          notes: r.contact?.notes ?? null,
+                        })
+                      }
+                    >
+                      <Send className="h-3 w-3" />{" "}
+                      {r.contact ? `Ordini via ${CHANNEL_LABELS[r.contact.preferredChannel]}` : "Come ordinare"}
                     </button>
                   )}
                 </div>
@@ -262,6 +293,7 @@ export function DeliveriesClient({
       )}
 
       <ScheduleModal row={editing} onClose={() => setEditing(null)} />
+      <ContactModal value={contact} onClose={() => setContact(null)} />
     </div>
   );
 }
