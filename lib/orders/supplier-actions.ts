@@ -318,12 +318,12 @@ export async function acceptOrderLines(
         const ln = linesById.get(d.lineId);
         if (!ln) return { ok: false, error: `Riga ${d.lineId} non trovata` };
         if (!(d.quantityAccepted > 0)) {
-          return { ok: false, error: "La quantita' modificata deve essere positiva" };
+          return { ok: false, error: "La quantità modificata deve essere positiva" };
         }
         if (d.quantityAccepted > ln.quantity_requested * 2) {
           return {
             ok: false,
-            error: "Quantita' modificata troppo elevata rispetto alla richiesta",
+            error: "Quantità modificata troppo elevata rispetto alla richiesta",
           };
         }
       }
@@ -564,7 +564,7 @@ export async function pickItem(input: PickItemInput): Promise<PickItemResult> {
   const { splitItemId, lotId, quantityBase } = input;
   if (!splitItemId || !lotId) return { ok: false, error: "Parametri mancanti" };
   if (!Number.isFinite(quantityBase) || quantityBase <= 0) {
-    return { ok: false, error: "Quantita' non valida" };
+    return { ok: false, error: "Quantità non valida" };
   }
 
   try {

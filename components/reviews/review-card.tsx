@@ -31,7 +31,7 @@ export function ReviewCard({ review }: ReviewCardProps) {
 
       {(review.quality_rating || review.delivery_rating || review.service_rating) && (
         <div className="flex gap-4 text-xs text-sage mb-3">
-          {review.quality_rating && <span>Qualita: {review.quality_rating}/5</span>}
+          {review.quality_rating && <span>Qualità: {review.quality_rating}/5</span>}
           {review.delivery_rating && <span>Consegna: {review.delivery_rating}/5</span>}
           {review.service_rating && <span>Servizio: {review.service_rating}/5</span>}
         </div>
