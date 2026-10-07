@@ -26,12 +26,13 @@ export default async function ProductDetailPage({
   const { data: comparisons } = await supabase
     .from("products")
     .select(`
-      id, name, price, min_quantity, unit, certifications, is_available,
+      id, name, price, min_quantity, unit, certifications, is_available, lead_time_days,
       suppliers!inner(id, company_name, rating_avg, rating_count, is_verified, city, min_order_amount)
     `)
     .eq("category_id", product.category_id)
     .ilike("name", product.name)
-    .eq("is_available", true);
+    .eq("is_available", true)
+    .order("price", { ascending: true });
 
   return (
     <ProductDetailClient
