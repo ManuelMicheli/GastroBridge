@@ -91,51 +91,85 @@ export function learnAbbreviations(original: string, corrected: string): Record<
  * Build the hints to store after an import, from what was extracted and what
  * the user finally confirmed. Only actual corrections are remembered.
  */
+/** One product as extracted (before) and as confirmed by the user (after). */
+export type Correction = {
+  sourceKey: string;
+  original: string;
+  before: { name: string; priceUnit: SaleUnit; category: ImportCategory };
+  after: { name: string; priceUnit: SaleUnit; category: ImportCategory };
+  removed?: boolean;
+};
+
+export type LearnExtra = {
+  supplier?: Partial<SupplierInfo>;
+  layouts?: Array<{ signature: string; roles: Record<number, ColumnRole> }>;
+};
+
 export function learnFromReview(
   previous: ImportHints | null,
   extracted: ExtractedProduct[],
   reviewed: ReviewedProduct[],
-  extra: {
-    supplier?: Partial<SupplierInfo>;
-    layouts?: Array<{ signature: string; roles: Record<number, ColumnRole> }>;
-  } = {},
+  extra: LearnExtra = {},
 ): { hints: ImportHints; learnedCount: number } {
-  const hints = mergeHints(previous);
   const byId = new Map(extracted.map((p) => [p.id, p]));
-  let learnedCount = 0;
-
+  const corrections: Correction[] = [];
   for (const r of reviewed) {
     const p = byId.get(r.id);
     if (!p) continue;
-    const hint: ProductHint = { ...(hints.products[p.sourceKey] ?? {}) };
+    corrections.push({
+      sourceKey: p.sourceKey,
+      original: p.original,
+      before: { name: p.name, priceUnit: p.priceUnit, category: p.category },
+      after: { name: r.name, priceUnit: r.priceUnit, category: r.category },
+      removed: r.removed,
+    });
+  }
+  return learnFromCorrections(previous, corrections, extra);
+}
+
+/**
+ * Build the hints to store after an import. Only actual corrections are
+ * remembered; untouched products leave no trace.
+ */
+export function learnFromCorrections(
+  previous: ImportHints | null,
+  corrections: Correction[],
+  extra: LearnExtra = {},
+): { hints: ImportHints; learnedCount: number } {
+  const hints = mergeHints(previous);
+  let learnedCount = 0;
+
+  for (const c of corrections) {
+    if (!c.sourceKey) continue;
+    const hint: ProductHint = { ...(hints.products[c.sourceKey] ?? {}) };
     let changed = false;
-    if (r.removed) {
-      hint.ignore = true;
-      changed = true;
+    if (c.removed) {
+      if (!hint.ignore) {
+        hint.ignore = true;
+        changed = true;
+      }
     } else {
       if (hint.ignore) {
         delete hint.ignore;
         changed = true;
       }
-      if (nameKey(r.name) !== nameKey(p.name)) {
-        hint.name = r.name.trim();
+      if (nameKey(c.after.name) !== nameKey(c.before.name)) {
+        hint.name = c.after.name.trim();
         changed = true;
-        const ab = learnAbbreviations(p.original, r.name);
-        for (const [k, v] of Object.entries(ab)) {
-          hints.abbreviations[k] = v;
-        }
+        const ab = learnAbbreviations(c.original, c.after.name);
+        for (const [k, v] of Object.entries(ab)) hints.abbreviations[k] = v;
       }
-      if (r.priceUnit !== p.priceUnit) {
-        hint.priceUnit = r.priceUnit;
+      if (c.after.priceUnit !== c.before.priceUnit) {
+        hint.priceUnit = c.after.priceUnit;
         changed = true;
       }
-      if (r.category !== p.category) {
-        hint.category = r.category;
+      if (c.after.category !== c.before.category) {
+        hint.category = c.after.category;
         changed = true;
       }
     }
     if (changed) {
-      hints.products[p.sourceKey] = hint;
+      hints.products[c.sourceKey] = hint;
       learnedCount++;
     }
   }
