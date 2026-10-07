@@ -35,9 +35,15 @@ export async function replyToReview(input: {
 
     await requirePermission(review.supplier_id, "reviews.reply");
 
+    // Only the reply columns: a DB trigger (20261008010000_reviews_reply_only)
+    // rejects supplier-side updates touching anything else.
+    const reply = parsed.data.reply || null;
     const { data: updated, error } = await supabase
       .from("reviews")
-      .update({ supplier_reply: parsed.data.reply || null } as never)
+      .update({
+        supplier_reply: reply,
+        supplier_replied_at: reply ? new Date().toISOString() : null,
+      } as never)
       .eq("id", review.id)
       .select("id");
     if (error) return { ok: false, error: error.message };

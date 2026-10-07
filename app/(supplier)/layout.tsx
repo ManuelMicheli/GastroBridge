@@ -28,7 +28,13 @@ const BASE_NAV: GatedNavItem[] = [
   { href: "/supplier/ordini", label: "Ordini", iconName: "ClipboardList" },
   { href: "/supplier/clienti", label: "Clienti", iconName: "Users" },
   { href: "/supplier/messaggi", label: "Messaggi", iconName: "MessageCircle" },
-  { href: "/supplier/analytics", label: "Analytics", iconName: "BarChart3", section: "Insights" },
+  {
+    href: "/supplier/analytics",
+    label: "Analytics",
+    iconName: "BarChart3",
+    section: "Insights",
+    roles: ["admin", "sales"],
+  },
   { href: "/supplier/recensioni", label: "Recensioni", iconName: "Star", section: "Insights" },
   {
     href: "/supplier/magazzino",

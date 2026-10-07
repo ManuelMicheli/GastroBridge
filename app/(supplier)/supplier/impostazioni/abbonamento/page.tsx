@@ -1,68 +1,18 @@
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import type { Metadata } from "next";
+import { getCachedUser } from "@/lib/supabase/cached-user";
 import { SUPPLIER_PLANS } from "@/lib/utils/constants";
-import { Check } from "lucide-react";
-import { LargeTitle } from "@/components/ui/large-title";
+import { SubscriptionOverview } from "@/components/settings/subscription-overview";
 
-export default function SupplierSubscriptionPage() {
+export const metadata: Metadata = { title: "Abbonamento" };
+
+export default async function SupplierSubscriptionPage() {
+  const user = await getCachedUser();
+  const plan: unknown = user?.user_metadata?.plan;
   return (
-    <div>
-      {/* Mobile hero */}
-      <div className="lg:hidden">
-        <LargeTitle
-          eyebrow="Account fornitore"
-          title="Abbonamento"
-          subtitle="Piano e fatturazione"
-        />
-      </div>
-
-      {/* Desktop header */}
-      <h1 className="hidden lg:block text-2xl font-bold text-charcoal mb-6">
-        Abbonamento
-      </h1>
-
-      <div className="px-3 lg:px-0 mt-3 lg:mt-0">
-        <Card className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-sage">Piano attuale</p>
-              <p className="text-2xl font-bold text-charcoal">Base</p>
-            </div>
-            <Badge variant="success">Attivo</Badge>
-          </div>
-        </Card>
-
-        <div
-          className="cq-section grid gap-6"
-          style={{
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(min(280px, 100%), 1fr))",
-          }}
-        >
-          {SUPPLIER_PLANS.map((plan) => (
-            <Card key={plan.id} className={plan.highlighted ? "ring-2 ring-forest" : ""}>
-              {plan.highlighted && <Badge variant="success" className="mb-3">Consigliato</Badge>}
-              <h3 className="text-xl font-bold">{plan.name}</h3>
-              <div className="flex items-baseline gap-1 mb-4 mt-1">
-                <span className="text-3xl font-mono font-bold">€{plan.price}</span>
-                <span className="text-sage">/{plan.period}</span>
-              </div>
-              <ul className="space-y-2 mb-6">
-                {plan.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm">
-                    <Check className="h-4 w-4 text-forest mt-0.5 shrink-0" />
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <Button variant={plan.highlighted ? "primary" : "secondary"} className="w-full">
-                {plan.id === "base" ? "Piano attuale" : "Upgrade"}
-              </Button>
-            </Card>
-          ))}
-        </div>
-      </div>
-    </div>
+    <SubscriptionOverview
+      plans={SUPPLIER_PLANS}
+      chosenPlanId={typeof plan === "string" ? plan : null}
+      eyebrow="Account fornitore"
+    />
   );
 }

@@ -325,58 +325,126 @@ export async function getRevenueChart30Days(
   }
 }
 
+// Split statuses that count as revenue (same filter as mv_supplier_kpi_daily).
+export const REVENUE_SPLIT_STATUSES = ["confirmed", "preparing", "shipping", "delivered"] as const;
+
+export type DateRange = { from: Date; to: Date }; // `to` exclusive
+
+export type RevenueSplitRow = {
+  id: string;
+  subtotal: number;
+  restaurant_id: string;
+  created_at: string; // orders.created_at (ISO)
+};
+
+const PAGE_SIZE = 1000; // PostgREST default max-rows
+const MAX_PAGES = 50; // hard stop: 50k rows
+const IN_CHUNK = 100; // ids per `.in()` filter, keeps the URL short
+
+/** Run a range-paginated query until a short page comes back. */
+async function fetchAllPages<T>(
+  page: (from: number, to: number) => PromiseLike<{ data: unknown; error: unknown }>,
+): Promise<T[]> {
+  const out: T[] = [];
+  for (let i = 0; i < MAX_PAGES; i++) {
+    const { data, error } = await page(i * PAGE_SIZE, (i + 1) * PAGE_SIZE - 1);
+    if (error || !Array.isArray(data)) break;
+    out.push(...(data as T[]));
+    if (data.length < PAGE_SIZE) break;
+  }
+  return out;
+}
+
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+function monthRange(month?: Date): DateRange {
+  const now = month ?? new Date();
+  return {
+    from: new Date(now.getFullYear(), now.getMonth(), 1),
+    to: new Date(now.getFullYear(), now.getMonth() + 1, 1),
+  };
+}
+
 /**
- * Top 5 ristoranti per revenue nel mese corrente (o in `month` = YYYY-MM-01).
+ * Revenue-relevant splits of the supplier whose order was placed in `range`
+ * (orders.created_at), read with the user client (RLS = membership).
+ */
+export async function getRevenueSplits(
+  supplierId: string,
+  range: DateRange,
+): Promise<RevenueSplitRow[]> {
+  try {
+    const supabase = await createClient();
+    const rows = await fetchAllPages<{
+      id: string;
+      subtotal: number | null;
+      orders: { restaurant_id: string; created_at: string } | null;
+    }>((from, to) =>
+      (supabase as any)
+        .from("order_splits")
+        .select("id, subtotal, orders!inner(restaurant_id, created_at)")
+        .eq("supplier_id", supplierId)
+        .in("status", REVENUE_SPLIT_STATUSES as unknown as string[])
+        .gte("orders.created_at", range.from.toISOString())
+        .lt("orders.created_at", range.to.toISOString())
+        .order("id", { ascending: true })
+        .range(from, to),
+    );
+    return rows
+      .filter((r) => r.orders?.restaurant_id && r.orders.created_at)
+      .map((r) => ({
+        id: r.id,
+        subtotal: Number(r.subtotal ?? 0),
+        restaurant_id: r.orders!.restaurant_id,
+        created_at: r.orders!.created_at,
+      }));
+  } catch {
+    return [];
+  }
+}
+
+/** id → name for the given table, chunked `.in()` lookups. */
+async function namesById(table: "restaurants" | "products", ids: string[]): Promise<Map<string, string>> {
+  const supabase = await createClient();
+  const nameById = new Map<string, string>();
+  const results = await Promise.all(
+    chunk(ids, IN_CHUNK).map((part) =>
+      (supabase as any).from(table).select("id, name").in("id", part),
+    ),
+  );
+  for (const { data } of results as Array<{ data: Array<{ id: string; name: string }> | null }>) {
+    for (const r of data ?? []) nameById.set(r.id, r.name);
+  }
+  return nameById;
+}
+
+/**
+ * Top ristoranti per revenue nel mese corrente (o in `month`, o in `range`).
+ * Default: top 5.
  */
 export async function getTopClients(
   supplierId: string,
-  opts: { month?: Date } = {},
+  opts: { month?: Date; range?: DateRange; limit?: number } = {},
 ): Promise<TopClientRow[]> {
   try {
-    const supabase = await createClient();
-    const now = opts.month ?? new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-
-    // Pull all splits joined to orders for this supplier in current month
-    const { data, error } = await (supabase as any)
-      .from("order_splits")
-      .select("id, subtotal, status, orders!inner(id, restaurant_id, created_at)")
-      .eq("supplier_id", supplierId)
-      .in("status", ["confirmed", "preparing", "shipping", "delivered"])
-      .gte("orders.created_at", startOfMonth.toISOString())
-      .lt("orders.created_at", startOfNextMonth.toISOString());
-
-    if (error || !Array.isArray(data)) return [];
-
-    const rows = data as Array<{
-      id: string;
-      subtotal: number | null;
-      orders: { id: string; restaurant_id: string; created_at: string } | null;
-    }>;
+    const splits = await getRevenueSplits(supplierId, opts.range ?? monthRange(opts.month));
 
     const byRestaurant = new Map<string, { orders: number; revenue: number }>();
-    for (const r of rows) {
-      const rid = r.orders?.restaurant_id;
-      if (!rid) continue;
-      const curr = byRestaurant.get(rid) ?? { orders: 0, revenue: 0 };
+    for (const r of splits) {
+      const curr = byRestaurant.get(r.restaurant_id) ?? { orders: 0, revenue: 0 };
       curr.orders += 1;
-      curr.revenue += Number(r.subtotal ?? 0);
-      byRestaurant.set(rid, curr);
+      curr.revenue += r.subtotal;
+      byRestaurant.set(r.restaurant_id, curr);
     }
 
     const restaurantIds = [...byRestaurant.keys()];
     if (restaurantIds.length === 0) return [];
 
-    const { data: rests } = await (supabase as any)
-      .from("restaurants")
-      .select("id, name")
-      .in("id", restaurantIds);
-
-    const nameById = new Map<string, string>();
-    for (const r of (rests ?? []) as Array<{ id: string; name: string }>) {
-      nameById.set(r.id, r.name);
-    }
+    const nameById = await namesById("restaurants", restaurantIds);
 
     return [...byRestaurant.entries()]
       .map(([restaurant_id, v]) => ({
@@ -386,54 +454,50 @@ export async function getTopClients(
         revenue: v.revenue,
       }))
       .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5);
+      .slice(0, opts.limit ?? 5);
   } catch {
     return [];
   }
 }
 
 /**
- * Top 5 prodotti per revenue nel mese corrente, via order_split_items.
+ * Top prodotti per revenue nel mese corrente (o in `month`, o in `range`),
+ * via order_split_items. Default: top 5.
  */
 export async function getTopProducts(
   supplierId: string,
-  opts: { month?: Date } = {},
+  opts: { month?: Date; range?: DateRange; limit?: number } = {},
 ): Promise<TopProductRow[]> {
   try {
     const supabase = await createClient();
-    const now = opts.month ?? new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-    // 1. Get relevant split IDs for this supplier in the month.
-    const { data: splits } = await (supabase as any)
-      .from("order_splits")
-      .select("id, orders!inner(created_at)")
-      .eq("supplier_id", supplierId)
-      .in("status", ["confirmed", "preparing", "shipping", "delivered"])
-      .gte("orders.created_at", startOfMonth.toISOString())
-      .lt("orders.created_at", startOfNextMonth.toISOString());
-
-    const splitIds = Array.isArray(splits)
-      ? (splits as Array<{ id: string }>).map((s) => s.id)
-      : [];
-
+    // 1. Relevant split IDs for this supplier in the range.
+    const splits = await getRevenueSplits(supplierId, opts.range ?? monthRange(opts.month));
+    const splitIds = splits.map((s) => s.id);
     if (splitIds.length === 0) return [];
 
-    const { data: items } = await (supabase as any)
-      .from("order_split_items")
-      .select("product_id, quantity_requested, quantity_accepted, unit_price")
-      .in("order_split_id", splitIds);
-
-    if (!Array.isArray(items)) return [];
-
-    const byProduct = new Map<string, { quantity: number; revenue: number }>();
-    for (const it of items as Array<{
+    // 2. Their lines, chunked by split id and paginated per chunk.
+    type ItemRow = {
       product_id: string;
       quantity_requested: number | null;
       quantity_accepted: number | null;
       unit_price: number | null;
-    }>) {
+    };
+    const itemPages = await Promise.all(
+      chunk(splitIds, IN_CHUNK).map((part) =>
+        fetchAllPages<ItemRow>((from, to) =>
+          (supabase as any)
+            .from("order_split_items")
+            .select("id, product_id, quantity_requested, quantity_accepted, unit_price")
+            .in("order_split_id", part)
+            .order("id", { ascending: true })
+            .range(from, to),
+        ),
+      ),
+    );
+
+    const byProduct = new Map<string, { quantity: number; revenue: number }>();
+    for (const it of itemPages.flat()) {
       const qty = Number(it.quantity_accepted ?? it.quantity_requested ?? 0);
       const price = Number(it.unit_price ?? 0);
       const curr = byProduct.get(it.product_id) ?? { quantity: 0, revenue: 0 };
@@ -445,15 +509,7 @@ export async function getTopProducts(
     const productIds = [...byProduct.keys()];
     if (productIds.length === 0) return [];
 
-    const { data: prods } = await (supabase as any)
-      .from("products")
-      .select("id, name")
-      .in("id", productIds);
-
-    const nameById = new Map<string, string>();
-    for (const p of (prods ?? []) as Array<{ id: string; name: string }>) {
-      nameById.set(p.id, p.name);
-    }
+    const nameById = await namesById("products", productIds);
 
     return [...byProduct.entries()]
       .map(([product_id, v]) => ({
@@ -463,7 +519,7 @@ export async function getTopProducts(
         revenue: v.revenue,
       }))
       .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5);
+      .slice(0, opts.limit ?? 5);
   } catch {
     return [];
   }
