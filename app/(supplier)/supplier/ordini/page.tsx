@@ -8,7 +8,7 @@ import {
   SupplierOrdersClient,
   type SupplierOrderRow,
 } from "./orders-client";
-import { getCurrentSupplierMember } from "@/lib/supplier/current-member";
+import { getCurrentSupplierMember, memberCan } from "@/lib/supplier/current-member";
 
 export const metadata: Metadata = { title: "Ordini Fornitore" };
 
@@ -182,6 +182,7 @@ export default async function SupplierOrdersPage({
           to: filterTo,
         }}
         total={rows.length}
+        canCreate={memberCan(member, "order.accept_line")}
       />
 
       {hasMore && (
