@@ -25,7 +25,7 @@ export default async function AcceptSupplierInvitePage() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect("/auth/login?redirect=/supplier/invito/accetta");
+    redirect("/login?redirect=/supplier/invito/accetta");
   }
 
   const meta = (user.user_metadata ?? {}) as {

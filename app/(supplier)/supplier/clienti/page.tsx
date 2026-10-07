@@ -250,16 +250,9 @@ export default async function ClientsPage() {
           </SectionFrame>
 
           {/* Ongoing clients */}
+          {/* No "invita" CTA: only restaurants can invite suppliers. */}
           <SectionFrame
             label={`Clienti collegati · ${ongoing.length}`}
-            trailing={
-              <Link
-                href="/supplier/invito"
-                className="text-accent-green hover:text-text-primary transition-colors"
-              >
-                invita nuovo →
-              </Link>
-            }
             padded={false}
           >
             {ongoing.length === 0 ? (
