@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getRestaurantContext } from "@/lib/restaurants/context";
 import { listConversationsForCurrentUser } from "@/lib/messages/queries";
 import { markSectionSeen } from "@/lib/nav/section-seen";
 import { ConversationList } from "@/components/shared/chat/ConversationList";
@@ -13,7 +14,8 @@ export default async function MessagesIndexPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const conversations = await listConversationsForCurrentUser();
+  const ctx = await getRestaurantContext();
+  const conversations = await listConversationsForCurrentUser({ restaurantIds: ctx?.scopeIds ?? [] });
   await markSectionSeen("restaurant_messages");
 
   return (

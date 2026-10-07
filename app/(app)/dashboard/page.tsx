@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { getRestaurantContext } from "@/lib/restaurants/context";
 import { RestaurantDashboard } from "@/components/dashboard/restaurant/restaurant-dashboard";
 import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
 import type { SpendTrendPoint } from "@/components/dashboard/restaurant/spend-trend-chart/types";
@@ -148,15 +149,23 @@ export default async function DashboardPage() {
     .eq("id", userId)
     .single<{ company_name: string }>();
 
-  // Fetch restaurant IDs for this user
+  // Restaurants in scope: owned (multi-sede) or the one the user is a team
+  // member of (lib/restaurants/context.ts). Active restaurant first.
+  const ctx = await getRestaurantContext();
+  const restaurantIds = ctx
+    ? [ctx.restaurantId, ...ctx.scopeIds.filter((id) => id !== ctx.restaurantId)]
+    : [];
   const { data: restaurants } = (await supabase
     .from("restaurants")
     .select("id, monthly_budget_eur")
-    .eq("profile_id", userId)) as {
+    .in("id", restaurantIds.length > 0 ? restaurantIds : ["00000000-0000-0000-0000-000000000000"])) as {
     data: { id: string; monthly_budget_eur: number | null }[] | null;
   };
-
-  const restaurantIds = restaurants?.map((r) => r.id) || [];
+  const activeBudget =
+    restaurants?.find((r) => r.id === ctx?.restaurantId)?.monthly_budget_eur ?? null;
+  // Team members see the restaurant they work for, not their profile label.
+  const companyName =
+    (ctx && !ctx.isOwner ? ctx.restaurantName : profile?.company_name) || "Ristoratore";
 
   // If no restaurants, return empty dashboard
   if (restaurantIds.length === 0) {
@@ -175,7 +184,7 @@ export default async function DashboardPage() {
           ]}
         />
         <RestaurantDashboard
-          companyName={profile?.company_name || "Ristoratore"}
+          companyName={companyName}
           kpi={{
             ordersThisMonth: 0,
             prevMonthOrders: 0,
@@ -543,7 +552,7 @@ export default async function DashboardPage() {
         ]}
       />
       <RestaurantDashboard
-        companyName={profile?.company_name || "Ristoratore"}
+        companyName={companyName}
         kpi={{
           ordersThisMonth: currentOrderCount,
           prevMonthOrders: prevOrderCount,
@@ -560,7 +569,7 @@ export default async function DashboardPage() {
         spendPointsGross={spendPointsGross}
         transactionsByDate={transactionsByDate}
         recentOrders={recentOrders}
-        monthlyBudget={restaurants?.[0]?.monthly_budget_eur ?? null}
+        monthlyBudget={activeBudget}
         statusMix={statusMix}
         nextDelivery={nextDelivery}
         upcomingCount={upcoming.length}

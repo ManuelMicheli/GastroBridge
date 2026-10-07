@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { contextCan, getRestaurantContext } from "@/lib/restaurants/context";
+import { RESTAURANT_ROLE_LABELS } from "@/lib/restaurants/permissions";
+import { RestrictedSettings } from "../_components/restricted-settings";
 import { BudgetForm } from "./budget-form";
 import { LargeTitle } from "@/components/ui/large-title";
 
@@ -17,11 +20,21 @@ export default async function BudgetSettingsPage() {
     return <div className="p-6 text-sage">Devi accedere per gestire il budget.</div>;
   }
 
+  // Active restaurant (owner or team member with settings.manage).
+  const ctx = await getRestaurantContext();
+  if (ctx && !contextCan(ctx, "settings.manage")) {
+    return (
+      <RestrictedSettings
+        title="Budget mensile"
+        body={`Il budget di ${ctx.restaurantName} è gestito dal titolare o da un manager (il tuo ruolo: ${RESTAURANT_ROLE_LABELS[ctx.role]}).`}
+      />
+    );
+  }
+
   const { data: restaurant } = (await supabase
     .from("restaurants")
     .select("id, name, monthly_budget_eur")
-    .eq("profile_id", user.id)
-    .limit(1)
+    .eq("id", ctx?.restaurantId ?? "00000000-0000-0000-0000-000000000000")
     .maybeSingle()) as {
     data: { id: string; name: string; monthly_budget_eur: number | null } | null;
   };

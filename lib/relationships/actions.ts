@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { InviteSupplierSchema, UpdateNotesSchema, type InviteSupplierInput, type UpdateNotesInput } from "./schemas";
 import type { RestaurantSupplierRow, Result } from "./types";
 import { getCurrentSupplierMember } from "@/lib/supplier/current-member";
+import { contextCan, getRestaurantContext } from "@/lib/restaurants/context";
 
 async function currentUserId(): Promise<string | null> {
   const supabase = await createClient();
@@ -13,17 +14,12 @@ async function currentUserId(): Promise<string | null> {
   return user?.id ?? null;
 }
 
+// Active restaurant of the caller (owner, or a team member whose role has
+// partnership.manage — managing suppliers is not open to chef/viewer).
 async function getRestaurantId(): Promise<string | null> {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-  const { data } = await supabase
-    .from("restaurants")
-    .select("id")
-    .eq("profile_id", user.id)
-    .limit(1)
-    .maybeSingle<{ id: string }>();
-  return data?.id ?? null;
+  const ctx = await getRestaurantContext();
+  if (!ctx || !contextCan(ctx, "partnership.manage")) return null;
+  return ctx.restaurantId;
 }
 
 // Resolved via supplier_members so staff work too (not only the owner).

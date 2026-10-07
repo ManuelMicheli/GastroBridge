@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createClient } from "@/lib/supabase/server";
+import { contextCan, getRestaurantContext } from "@/lib/restaurants/context";
 import { loadConnectedSupplierCatalogs } from "@/lib/catalogs/connected-suppliers";
 import { CatalogsClient, type EnrichedCatalog } from "./catalogs-client";
 import { computeAggregates, type CatalogItemLite } from "./_lib/aggregates";
@@ -7,11 +8,9 @@ import { computeAggregates, type CatalogItemLite } from "./_lib/aggregates";
 export default async function CatalogsPage() {
   const supabase = await createClient();
 
-  // Auth
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const userId = user?.id ?? "";
+  // Active restaurant (owner or team member) and its scope (multi-sede).
+  const ctx = await getRestaurantContext();
+  const restaurantIds = ctx?.scopeIds ?? [];
 
   // Fetch manual catalogs + items in a single join. Volume is low (<50 catalogs,
   // a few thousand items max), so server-side in-memory aggregation is fine.
@@ -21,8 +20,9 @@ export default async function CatalogsPage() {
       .select(
         "id, restaurant_id, supplier_name, delivery_days, min_order_amount, notes, created_at, updated_at, items:restaurant_catalog_items(product_name, unit, price)",
       )
+      .in("restaurant_id", restaurantIds)
       .order("updated_at", { ascending: false }),
-    loadConnectedSupplierCatalogs(userId),
+    loadConnectedSupplierCatalogs(restaurantIds),
   ]);
 
   const manual: EnrichedCatalog[] = (catalogs ?? []).map((c: any) => {
@@ -101,5 +101,10 @@ export default async function CatalogsPage() {
       new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
   );
 
-  return <CatalogsClient initialCatalogs={combined} />;
+  return (
+    <CatalogsClient
+      initialCatalogs={combined}
+      canManage={contextCan(ctx, "partnership.manage")}
+    />
+  );
 }

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getRestaurantContext } from "@/lib/restaurants/context";
 import {
   listConversationsForCurrentUser,
   getMessagesForRelationship,
@@ -25,8 +26,9 @@ export default async function MessagesThreadPage({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const ctx = await getRestaurantContext();
   const [conversations, context, messages] = await Promise.all([
-    listConversationsForCurrentUser(),
+    listConversationsForCurrentUser({ restaurantIds: ctx?.scopeIds ?? [] }),
     loadPairContext(relationshipId),
     getMessagesForRelationship(relationshipId, null),
   ]);

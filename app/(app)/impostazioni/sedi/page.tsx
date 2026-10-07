@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { getRestaurantContext } from "@/lib/restaurants/context";
+import { RESTAURANT_ROLE_LABELS } from "@/lib/restaurants/permissions";
+import { RestrictedSettings } from "../_components/restricted-settings";
 import { SediClient } from "./sedi-client";
 import type { RestaurantRow } from "@/lib/restaurants/types";
 
@@ -10,6 +13,17 @@ export default async function LocationsPage() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // Locations belong to the account owner; team members work on one of them.
+  const ctx = await getRestaurantContext();
+  if (ctx && !ctx.isOwner) {
+    return (
+      <RestrictedSettings
+        title="Sedi"
+        body={`Fai parte del team di ${ctx.restaurantName} come ${RESTAURANT_ROLE_LABELS[ctx.role]}: le sedi sono gestite dal titolare.`}
+      />
+    );
+  }
 
   const { data } = await supabase
     .from("restaurants")

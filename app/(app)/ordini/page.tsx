@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { getRestaurantContext } from "@/lib/restaurants/context";
 import { OrdersClient } from "./orders-client";
 import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
 import { deriveOrderStatus } from "@/lib/orders/derive-order-status";
@@ -24,17 +25,9 @@ type SplitSupplierRow = {
 
 export default async function OrdersPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: restaurants } = await supabase
-    .from("restaurants")
-    .select("id")
-    .eq("profile_id", user?.id ?? "")
-    .returns<Array<{ id: string }>>();
-
-  const restaurantIds = (restaurants ?? []).map((r) => r.id);
+  // Owned restaurants (multi-sede) or the one the user is a team member of.
+  const ctx = await getRestaurantContext();
+  const restaurantIds = ctx?.scopeIds ?? [];
 
   const { data: orders } = await supabase
     .from("orders")

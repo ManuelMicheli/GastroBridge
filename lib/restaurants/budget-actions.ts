@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { accessCan, getRestaurantAccess } from "@/lib/restaurants/context";
 
 const inputSchema = z.object({
   restaurantId: z.string().uuid({ message: "restaurantId non valido" }),
@@ -28,16 +29,12 @@ export async function updateMonthlyBudget(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Non autenticato" };
 
-  // RLS enforces that only the restaurant owner can update; we still verify
-  // to return a clean error before hitting the DB.
-  const { data: restaurant } = (await supabase
-    .from("restaurants")
-    .select("id, profile_id")
-    .eq("id", parsed.data.restaurantId)
-    .maybeSingle()) as { data: { id: string; profile_id: string } | null };
-
-  if (!restaurant) return { ok: false, error: "Ristorante non trovato" };
-  if (restaurant.profile_id !== user.id) {
+  // Owner, or a team member with settings.manage (RLS enforces the same once
+  // 20261008000000_restaurant_team_rls.sql is applied); checked here to
+  // return a clean error before hitting the DB.
+  const access = await getRestaurantAccess(parsed.data.restaurantId);
+  if (!access) return { ok: false, error: "Ristorante non trovato" };
+  if (!accessCan(access, "settings.manage")) {
     return { ok: false, error: "Non hai permesso di modificare questo ristorante" };
   }
 

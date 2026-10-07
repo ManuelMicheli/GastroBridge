@@ -105,7 +105,10 @@ export type ConversationSummary = {
  * global thread scope). For restaurants: one entry per connected supplier;
  * for suppliers: one entry per connected restaurant.
  */
-export async function listConversationsForCurrentUser(): Promise<ConversationSummary[]> {
+export async function listConversationsForCurrentUser(opts?: {
+  /** Restaurant area: only conversations of these restaurants (active scope). */
+  restaurantIds?: string[];
+}): Promise<ConversationSummary[]> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
@@ -120,14 +123,19 @@ export async function listConversationsForCurrentUser(): Promise<ConversationSum
   };
 
   // Find relationships the user participates in (any side).
-  const { data: rels } = (await (supabase as any)
+  let relQuery = (supabase as any)
     .from("restaurant_suppliers")
     .select(
       `id, status, restaurant_id, supplier_id,
        restaurants:restaurant_id ( id, name ),
        suppliers:supplier_id ( id, company_name )`,
     )
-    .in("status", ["active", "paused", "pending"])) as { data: RelRow[] | null };
+    .in("status", ["active", "paused", "pending"]);
+  if (opts?.restaurantIds) {
+    if (opts.restaurantIds.length === 0) return [];
+    relQuery = relQuery.in("restaurant_id", opts.restaurantIds);
+  }
+  const { data: rels } = (await relQuery) as { data: RelRow[] | null };
 
   const list = rels ?? [];
   if (list.length === 0) return [];

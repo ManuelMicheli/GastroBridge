@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { contextCan, getRestaurantContext } from "@/lib/restaurants/context";
 import { SuppliersClient } from "./suppliers-client";
 import type { RelationshipRow } from "./_lib/types";
 import {
@@ -15,16 +16,9 @@ export const metadata: Metadata = { title: "Fornitori" };
 
 export default async function SuppliersPage() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: restaurant } = await supabase
-    .from("restaurants")
-    .select("id")
-    .eq("profile_id", user?.id ?? "")
-    .limit(1)
-    .maybeSingle<{ id: string }>();
+  // Active restaurant: owned, or the one the user is a team member of.
+  const ctx = await getRestaurantContext();
+  const restaurant = ctx ? { id: ctx.restaurantId } : null;
 
   const [relationshipsRes, catalogsRes] = await Promise.all([
     restaurant
@@ -85,6 +79,7 @@ export default async function SuppliersPage() {
       relationships={relationships}
       hasRestaurant={!!restaurant}
       importedCatalogs={importedCatalogs}
+      canManage={contextCan(ctx, "partnership.manage")}
     />
   );
 }

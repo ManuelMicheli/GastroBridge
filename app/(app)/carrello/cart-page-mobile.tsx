@@ -15,6 +15,8 @@ type Props = {
   itemCount: number;
   ctaLabel: string;
   pending: boolean;
+  /** Shown instead of the CTA when the user's role cannot send orders. */
+  blockedReason?: string | null;
   onCheckout: () => void;
   onInc: (item: CartItem) => void;
   onDec: (item: CartItem) => void;
@@ -28,6 +30,7 @@ export function CartPageMobile({
   itemCount,
   ctaLabel,
   pending,
+  blockedReason,
   onCheckout,
   onInc,
   onDec,
@@ -165,6 +168,11 @@ export function CartPageMobile({
       </div>
 
       <StickyActionBar>
+        {blockedReason ? (
+          <p className="w-full rounded-xl bg-[color:var(--color-surface-card)] px-4 py-3 text-center text-[13px] text-[color:var(--color-text-secondary)]">
+            {blockedReason}
+          </p>
+        ) : (
         <button
           type="button"
           onClick={onCheckout}
@@ -180,6 +188,7 @@ export function CartPageMobile({
             {formatCurrency(totalAmount)} →
           </span>
         </button>
+        )}
       </StickyActionBar>
     </>
   );

@@ -11,6 +11,13 @@ import type { PlanType } from "@/types/database";
 export const SUPPLIER_PLATFORM_ENABLED = false;
 
 // ==========================================
+// Contacts
+// ==========================================
+
+// Support mailbox already published in the app (Finanze → Guida).
+export const SUPPORT_EMAIL = "supporto@gastrobridge.com";
+
+// ==========================================
 // Routes
 // ==========================================
 

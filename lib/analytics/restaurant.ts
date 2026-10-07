@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { contextCan, getRestaurantContext } from "@/lib/restaurants/context";
 import { parseSupplierHeaders, parseLineItems, normalizeProductKey } from "./notes-parser";
 import { inferCategory, MACRO_CATEGORY_LABELS, type MacroCategory } from "./category-keywords";
 import { computePeriodRange, type PeriodKey, type PeriodRange } from "./period";
@@ -224,21 +225,23 @@ export async function getRestaurantAnalytics(
   const supabase = await createClient();
   const periodRange = computePeriodRange(periodKey);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return emptyAnalytics(periodRange);
+  // Restaurants in scope (owned multi-sede, or the member's restaurant);
+  // financial analytics need analytics.financial (not granted to chef).
+  const ctx = await getRestaurantContext();
+  if (!ctx || !contextCan(ctx, "analytics.financial")) return emptyAnalytics(periodRange);
+  const restaurantIds = ctx.scopeIds;
+  if (restaurantIds.length === 0) return emptyAnalytics(periodRange);
 
   const { data: restaurants } = (await supabase
     .from("restaurants")
     .select("id, monthly_budget_eur")
-    .eq("profile_id", user.id)) as {
+    .in("id", restaurantIds)) as {
     data: { id: string; monthly_budget_eur: number | null }[] | null;
   };
-
-  const restaurantIds = restaurants?.map((r) => r.id) ?? [];
-  if (restaurantIds.length === 0) return emptyAnalytics(periodRange);
-  const monthlyBudget = restaurants?.[0]?.monthly_budget_eur ?? null;
+  const monthlyBudget =
+    restaurants?.find((r) => r.id === ctx.restaurantId)?.monthly_budget_eur ??
+    restaurants?.[0]?.monthly_budget_eur ??
+    null;
 
   // Fetch up to 24 months for YoY + variance + full history
   const now = new Date();

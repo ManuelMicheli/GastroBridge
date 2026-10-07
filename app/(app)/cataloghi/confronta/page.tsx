@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { getRestaurantContext } from "@/lib/restaurants/context";
 import { CompareClient } from "./compare-client";
 import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
 import type { SupplierCol } from "@/lib/catalogs/compare";
@@ -14,15 +15,15 @@ import type { Preferences } from "@/lib/scoring";
 export default async function CatalogComparePage() {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const userId = user?.id ?? "";
+  // Active restaurant (owner or team member) and its scope (multi-sede).
+  const ctx = await getRestaurantContext();
+  const scopeIds = ctx?.scopeIds ?? [];
 
   // --- 1. Cataloghi manuali del ristoratore (restaurant_catalogs)
   const { data: manualCatalogs } = await supabase
     .from("restaurant_catalogs")
     .select("id, supplier_name, delivery_days, min_order_amount")
+    .in("restaurant_id", scopeIds)
     .order("supplier_name", { ascending: true });
 
   const manualSuppliers: SupplierCol[] = (manualCatalogs ?? []).map((c: any) => ({
@@ -44,7 +45,7 @@ export default async function CatalogComparePage() {
 
   // --- 2. Fornitori reali collegati (restaurant_suppliers status='active')
   const { suppliers: connectedSuppliers, items: connectedItemsRaw } =
-    await loadConnectedSupplierCatalogs(userId);
+    await loadConnectedSupplierCatalogs(scopeIds);
   const connectedItems: (CatalogItemRow & { catalog_id: string })[] = connectedItemsRaw;
 
   const suppliers: SupplierCol[] = [...connectedSuppliers, ...manualSuppliers];
@@ -70,17 +71,8 @@ export default async function CatalogComparePage() {
   }
 
   // --- 3. Prodotti ordinati (filtro "solo i miei più ordinati")
-  const { data: userRestaurants } = (await supabase
-    .from("restaurants")
-    .select("id, is_primary, created_at")
-    .eq("profile_id", userId)
-    .order("is_primary", { ascending: false })
-    .order("created_at", { ascending: true })) as {
-    data: { id: string; is_primary: boolean | null; created_at: string | null }[] | null;
-  };
-  const userRestaurantIds = (userRestaurants ?? []).map((r) => r.id);
-
-  const primaryRestaurantId = userRestaurants?.[0]?.id;
+  const userRestaurantIds = scopeIds;
+  const primaryRestaurantId = ctx?.restaurantId;
   let preferences: Preferences | null = null;
   if (primaryRestaurantId) {
     const prefResult = await getPreferences(primaryRestaurantId);

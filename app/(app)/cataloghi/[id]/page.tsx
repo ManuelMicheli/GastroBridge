@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { contextCan, getRestaurantContext } from "@/lib/restaurants/context";
 import { CatalogDetailClient } from "./catalog-detail-client";
 import type { CatalogRow, CatalogItemRow } from "@/lib/catalogs/types";
 
@@ -15,6 +16,9 @@ export default async function CatalogDetailPage({ params }: { params: Promise<{ 
     .single<CatalogRow>();
 
   if (!catalog) notFound();
+  // Only catalogs of the active restaurant scope (owner or team member).
+  const ctx = await getRestaurantContext();
+  if (!ctx || !ctx.scopeIds.includes((catalog as { restaurant_id: string }).restaurant_id)) notFound();
 
   const { data: items } = await supabase
     .from("restaurant_catalog_items")
@@ -31,6 +35,7 @@ export default async function CatalogDetailPage({ params }: { params: Promise<{ 
     <CatalogDetailClient
       catalog={{ ...catalog, min_order_amount: catalog.min_order_amount !== null ? Number(catalog.min_order_amount) : null }}
       initialItems={rows}
+      canManage={contextCan(ctx, "partnership.manage")}
     />
   );
 }

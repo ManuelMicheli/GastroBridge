@@ -47,10 +47,13 @@ export function SuppliersClient({
   relationships,
   hasRestaurant,
   importedCatalogs,
+  canManage = true,
 }: {
   relationships: RelationshipRow[];
   hasRestaurant: boolean;
   importedCatalogs: ImportedCatalog[];
+  /** Role may manage suppliers and catalogs (partnership.manage). */
+  canManage?: boolean;
 }) {
   const router = useRouter();
   const sp = useSearchParams();
@@ -250,7 +253,7 @@ export function SuppliersClient({
           connessiCount={rows.length}
           importatiCount={importedCatalogs.length}
         />
-        <CatalogsClient initialCatalogs={importedCatalogs} />
+        <CatalogsClient initialCatalogs={importedCatalogs} canManage={canManage} />
       </div>
     );
   }

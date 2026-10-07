@@ -2,20 +2,25 @@
 
 import { useTransition } from "react";
 import { Download, Loader2 } from "lucide-react";
-import { exportOrdersCsv } from "@/lib/analytics/export-csv";
 import { toast } from "@/components/ui/toast";
 import type { PeriodKey } from "@/lib/analytics/period";
 
+export type CsvExportResult =
+  | { ok: true; filename: string; content: string }
+  | { ok: false; error: string };
+
 type Props = {
   period: PeriodKey;
+  /** Server action that builds the CSV for the period (restaurant or supplier). */
+  exportCsv: (period: PeriodKey) => Promise<CsvExportResult>;
 };
 
-export function ExportCsvButton({ period }: Props) {
+export function ExportCsvButton({ period, exportCsv }: Props) {
   const [pending, startTransition] = useTransition();
 
   function handleExport() {
     startTransition(async () => {
-      const res = await exportOrdersCsv(period);
+      const res = await exportCsv(period);
       if (!res.ok) {
         toast(`Errore export: ${res.error}`);
         return;

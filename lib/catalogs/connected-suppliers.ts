@@ -35,23 +35,17 @@ type ConnectedRel = {
  * con status='active') e i loro prodotti disponibili, in un formato compatibile
  * con `SupplierCol` / `CatalogItemRow` della compare UI.
  *
- * Usato da `/cataloghi/confronta` e `/cerca`. Se il ristoratore non ha
- * ristoranti o non ha relazioni attive, ritorna liste vuote.
+ * Usato da `/cataloghi/confronta` e `/cerca`. `restaurantIds` è lo scope del
+ * ristorante attivo (lib/restaurants/context.ts: titolare o membro del team).
+ * Senza ristoranti o relazioni attive ritorna liste vuote.
  */
-export async function loadConnectedSupplierCatalogs(userId: string): Promise<{
+export async function loadConnectedSupplierCatalogs(restaurantIds: string[]): Promise<{
   suppliers: ConnectedSupplierCol[];
   items: ConnectedCatalogItem[];
 }> {
-  if (!userId) return { suppliers: [], items: [] };
+  if (restaurantIds.length === 0) return { suppliers: [], items: [] };
 
   const supabase = await createClient();
-
-  const { data: restaurants } = (await supabase
-    .from("restaurants")
-    .select("id")
-    .eq("profile_id", userId)) as { data: { id: string }[] | null };
-  const restaurantIds = (restaurants ?? []).map((r) => r.id);
-  if (restaurantIds.length === 0) return { suppliers: [], items: [] };
 
   const { data: rels } = (await (supabase as any)
     .from("restaurant_suppliers")

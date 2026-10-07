@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { contextCan, getRestaurantContext } from "@/lib/restaurants/context";
 import { computePeriodRange, type PeriodKey } from "./period";
 import { parseSupplierHeaders, parseLineItems } from "./notes-parser";
 
@@ -34,17 +35,12 @@ function formatDateItaly(iso: string): string {
 
 export async function exportOrdersCsv(period: PeriodKey): Promise<ExportResult> {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Non autenticato" };
-
-  const { data: restaurants } = (await supabase
-    .from("restaurants")
-    .select("id")
-    .eq("profile_id", user.id)) as { data: { id: string }[] | null };
-
-  const restaurantIds = restaurants?.map((r) => r.id) ?? [];
+  const ctx = await getRestaurantContext();
+  if (!ctx) return { ok: false, error: "Nessun ristorante associato all'utente" };
+  if (!contextCan(ctx, "analytics.financial")) {
+    return { ok: false, error: "Il tuo ruolo non consente di esportare gli ordini" };
+  }
+  const restaurantIds = ctx.scopeIds;
   if (restaurantIds.length === 0) {
     return { ok: false, error: "Nessun ristorante associato all'utente" };
   }

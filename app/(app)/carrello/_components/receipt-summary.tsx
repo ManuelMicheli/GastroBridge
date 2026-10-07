@@ -8,6 +8,8 @@ type Props = {
   supplierCount: number;
   pending: boolean;
   ctaLabel: string;
+  /** Shown instead of the CTA when the user's role cannot send orders. */
+  blockedReason?: string | null;
   onCheckout: () => void;
 };
 
@@ -22,6 +24,7 @@ export function ReceiptSummary({
   supplierCount,
   pending,
   ctaLabel,
+  blockedReason,
   onCheckout,
 }: Props) {
   return (
@@ -65,6 +68,11 @@ export function ReceiptSummary({
         </span>
       </div>
 
+      {blockedReason ? (
+        <p className="mt-5 rounded-lg border border-border-subtle px-4 py-3 text-center text-[12px] text-text-secondary">
+          {blockedReason}
+        </p>
+      ) : (
       <button
         type="button"
         onClick={onCheckout}
@@ -73,6 +81,7 @@ export function ReceiptSummary({
       >
         {pending ? "Invio in corso…" : ctaLabel}
       </button>
+      )}
     </section>
   );
 }

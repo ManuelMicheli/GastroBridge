@@ -9,6 +9,9 @@ const PROTECTED_PREFIXES = [
   "/carrello",
   "/analytics",
   "/impostazioni",
+  "/fornitori",
+  "/messaggi",
+  "/finanze",
   "/supplier",
 ];
 

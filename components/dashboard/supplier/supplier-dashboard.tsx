@@ -15,16 +15,8 @@
 
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 import {
   AlertTriangle,
   Clock,
@@ -40,6 +32,18 @@ import { SectionFrame } from "./_awwwards/section-frame";
 import { SupplierKpiGrid } from "./_awwwards/kpi-grid";
 import { SupplierAlertsStrip } from "./_awwwards/alerts-strip";
 import { SupplierRecentOrdersLog } from "./_awwwards/recent-orders-log";
+
+// recharts (~100 kB gz) only ships when the chart mounts — kept out of the
+// route's first-load JS. The skeleton fills the same 240px frame (no CLS).
+const SupplierRevenueChart = dynamic(
+  () => import("./supplier-revenue-chart").then((m) => m.SupplierRevenueChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full animate-pulse rounded-lg bg-surface-hover" aria-hidden />
+    ),
+  },
+);
 
 type OrderRow = {
   id: string;
@@ -310,132 +314,9 @@ export function SupplierDashboard({
             >
               <div className="px-2 pb-3" style={{ height: 240 }}>
                 {chart30.length > 0 && hasRechartsData ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={chart30}
-                      margin={{ top: 12, right: 16, left: 0, bottom: 4 }}
-                    >
-                      <defs>
-                        <linearGradient
-                          id="supplierRevenueLine"
-                          x1="0"
-                          y1="0"
-                          x2="1"
-                          y2="0"
-                        >
-                          <stop
-                            offset="0%"
-                            stopColor="var(--color-accent-green)"
-                          />
-                          <stop
-                            offset="100%"
-                            stopColor="var(--color-accent-orange)"
-                          />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid
-                        stroke="var(--color-border-subtle)"
-                        strokeDasharray="2 4"
-                        vertical={false}
-                      />
-                      <XAxis
-                        dataKey="label"
-                        stroke="var(--color-text-tertiary)"
-                        fontSize={11}
-                        tickLine={false}
-                        axisLine={false}
-                        minTickGap={24}
-                      />
-                      <YAxis
-                        stroke="var(--color-text-tertiary)"
-                        fontSize={11}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(v: number) =>
-                          v >= 1000
-                            ? `€${Math.round(v / 1000)}k`
-                            : `€${Math.round(v)}`
-                        }
-                        width={48}
-                      />
-                      <Tooltip
-                        cursor={{
-                          stroke: "var(--color-border-default)",
-                          strokeWidth: 1,
-                        }}
-                        contentStyle={{
-                          backgroundColor: "var(--color-surface-elevated)",
-                          border: "1px solid var(--color-border-default)",
-                          borderRadius: 12,
-                          fontSize: 12,
-                          color: "var(--color-text-primary)",
-                        }}
-                        labelStyle={{
-                          color: "var(--color-text-tertiary)",
-                          fontSize: 11,
-                        }}
-                        formatter={(value) => [
-                          formatCurrency(
-                            typeof value === "number"
-                              ? value
-                              : Number(value ?? 0),
-                          ),
-                          "Fatturato",
-                        ]}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="value"
-                        stroke="url(#supplierRevenueLine)"
-                        strokeWidth={2.2}
-                        dot={false}
-                        activeDot={{
-                          r: 4,
-                          fill: "var(--color-accent-green)",
-                        }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <SupplierRevenueChart variant="rich" data={chart30} />
                 ) : chartFallback ? (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={chartData}
-                      margin={{ top: 12, right: 16, left: 0, bottom: 4 }}
-                    >
-                      <CartesianGrid
-                        stroke="var(--color-border-subtle)"
-                        strokeDasharray="2 4"
-                        vertical={false}
-                      />
-                      <XAxis
-                        dataKey="label"
-                        stroke="var(--color-text-tertiary)"
-                        fontSize={11}
-                        tickLine={false}
-                        axisLine={false}
-                        minTickGap={24}
-                      />
-                      <YAxis
-                        stroke="var(--color-text-tertiary)"
-                        fontSize={11}
-                        tickLine={false}
-                        axisLine={false}
-                        tickFormatter={(v: number) =>
-                          v >= 1000
-                            ? `€${Math.round(v / 1000)}k`
-                            : `€${Math.round(v)}`
-                        }
-                        width={48}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="value"
-                        stroke="var(--color-accent-orange)"
-                        strokeWidth={2}
-                        dot={false}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                  <SupplierRevenueChart variant="fallback" data={chartData} />
                 ) : (
                   <div className="flex h-full items-center justify-center font-mono text-[11px] uppercase tracking-[0.1em] text-text-tertiary">
                     Nessun fatturato registrato negli ultimi 30 giorni
