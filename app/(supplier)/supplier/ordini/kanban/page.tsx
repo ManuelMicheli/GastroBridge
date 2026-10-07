@@ -91,18 +91,15 @@ export default async function SupplierOrdersKanbanPage() {
 
   return (
     <div className="space-y-4">
-      <header className="flex items-center justify-between">
+      <header className="mb-2 flex flex-col gap-4 pt-3 sm:flex-row sm:items-start sm:justify-between lg:pt-0">
         <div>
-          <h1 className="text-2xl font-bold text-charcoal">Kanban Ordini</h1>
-          <p className="text-sm text-sage">
+          <h1 className="f-title f-type">Kanban ordini</h1>
+          <p className="f-subtitle mt-1 max-w-[62ch]">
             Trascina le card tra colonne per far avanzare lo stato. Le
             transizioni non consentite richiedono il dettaglio ordine.
           </p>
         </div>
-        <Link
-          href="/supplier/ordini"
-          className="text-sm text-forest underline hover:text-forest-dark"
-        >
+        <Link href="/supplier/ordini" className="f-btn f-btn-outline">
           Vista lista
         </Link>
       </header>
