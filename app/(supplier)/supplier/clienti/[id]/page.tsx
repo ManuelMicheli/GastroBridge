@@ -11,7 +11,8 @@ import { getRelationshipById } from "@/lib/relationships/queries";
 import { getMessagesForRelationship } from "@/lib/messages/queries";
 import { formatDate } from "@/lib/utils/formatters";
 import { ClientActions } from "../client-actions";
-import { getCurrentSupplierMember } from "@/lib/supplier/current-member";
+import { getCurrentSupplierMember, memberCan } from "@/lib/supplier/current-member";
+import { ClientIntel } from "./client-intel";
 
 type Params = Promise<{ id: string }>;
 
@@ -135,6 +136,17 @@ export default async function ClienteDetailPage({ params }: { params: Params }) 
           </div>
         </div>
       </Card>
+
+      {rel.status !== "pending" && memberCan(member, "analytics.financial") && (
+        <ClientIntel
+          supabase={supabase}
+          supplierId={member.supplier_id}
+          restaurantId={rel.restaurant_id}
+          relationshipId={rel.id}
+          canEditTerms={memberCan(member, "pricing.edit")}
+          canOrder={rel.status === "active" && memberCan(member, "order.accept_line")}
+        />
+      )}
 
       <div className="cq-section grid grid-cols-1 @[900px]:grid-cols-3 gap-6 mb-6">
         <Card className="@[900px]:col-span-2">
