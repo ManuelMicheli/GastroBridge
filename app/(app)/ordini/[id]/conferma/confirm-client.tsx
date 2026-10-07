@@ -67,7 +67,7 @@ function OutcomeCard({ outcome }: { outcome: Outcome }) {
           <h2 className="text-2xl font-bold text-charcoal">Ordine confermato</h2>
           <p className="text-sm text-sage max-w-md">
             Hai approvato le modifiche proposte. Il fornitore ha riservato lo
-            stock e riceverai una notifica quando l&apos;ordine sara&apos; in preparazione.
+            stock e riceverai una notifica quando l&apos;ordine sarà in preparazione.
           </p>
         </div>
       </Card>
@@ -80,8 +80,8 @@ function OutcomeCard({ outcome }: { outcome: Outcome }) {
           <PackageX className="h-12 w-12 text-terracotta" />
           <h2 className="text-2xl font-bold text-charcoal">Ordine annullato</h2>
           <p className="text-sm text-sage max-w-md">
-            Hai rifiutato le modifiche proposte. L&apos;ordine e&apos; stato annullato e
-            nessun importo verra&apos; addebitato.
+            Hai rifiutato le modifiche proposte. L&apos;ordine è stato annullato e
+            nessun importo verrà addebitato.
           </p>
         </div>
       </Card>
@@ -94,7 +94,7 @@ function OutcomeCard({ outcome }: { outcome: Outcome }) {
           <CircleSlash className="h-12 w-12 text-terracotta" />
           <h2 className="text-2xl font-bold text-charcoal">Stock non disponibile</h2>
           <p className="text-sm text-sage max-w-md">
-            Nel frattempo lo stock del fornitore non e&apos; piu&apos; sufficiente per
+            Nel frattempo lo stock del fornitore non è più sufficiente per
             riservare l&apos;intero ordine. Il fornitore ti ricontattera&apos; a breve.
           </p>
         </div>
@@ -383,7 +383,7 @@ export default function ConfirmClient({
       </div>
 
       <p className="text-xs text-sage text-center mt-6">
-        Il link e&apos; valido per 48 ore dall&apos;invio dell&apos;email.
+        Il link è valido per 48 ore dall&apos;invio dell&apos;email.
       </p>
     </div>
   );

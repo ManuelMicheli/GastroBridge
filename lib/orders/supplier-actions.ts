@@ -304,7 +304,7 @@ export async function acceptOrderLines(
       if (!pendingIds.has(d.lineId)) {
         return {
           ok: false,
-          error: `Riga ${d.lineId} non e' in stato pending`,
+          error: `Riga ${d.lineId} non è in stato pending`,
         };
       }
     }
@@ -590,7 +590,7 @@ export async function pickItem(input: PickItemInput): Promise<PickItemResult> {
 
     const currentState = getWorkflowState(split.status, split.supplier_notes);
     if (currentState !== "confirmed" && currentState !== "preparing") {
-      return { ok: false, error: "Lo split non e' in fase di preparazione" };
+      return { ok: false, error: "Lo split non è in fase di preparazione" };
     }
 
     const { data, error } = await (supabase.rpc as any)("pick_split_item_tx", {
@@ -1106,10 +1106,10 @@ export async function cancelOrderSplit(splitId: string): Promise<SimpleResult> {
 
     const currentState = getWorkflowState(split.status, split.supplier_notes);
     if (currentState === "cancelled" || currentState === "rejected") {
-      return { ok: false, error: "Lo split e' gia' cancellato" };
+      return { ok: false, error: "Lo split è già cancellato" };
     }
     if (currentState === "delivered") {
-      return { ok: false, error: "Uno split gia' consegnato non puo' essere cancellato" };
+      return { ok: false, error: "Uno split già consegnato non può essere cancellato" };
     }
 
     // Se era confermato o packed → stock era prenotato, rilascialo.
@@ -1183,7 +1183,7 @@ async function sendCustomerConfirmationEmail(
   const shortId = splitId.slice(0, 8);
 
   const title = `Conferma richiesta per l'ordine #${shortId}`;
-  const intro = `Il fornitore ha proposto modifiche alle quantita' del tuo ordine. Per completare la conferma apri il link qui sotto entro 48 ore.`;
+  const intro = `Il fornitore ha proposto modifiche alle quantità del tuo ordine. Per completare la conferma apri il link qui sotto entro 48 ore.`;
 
   const html = `<!doctype html>
 <html lang="it"><head><meta charset="utf-8"><title>${title}</title></head>
