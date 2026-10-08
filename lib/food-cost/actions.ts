@@ -13,7 +13,8 @@ import { priceKeyForCatalog, priceKeyForProduct } from "@/lib/invoices/match";
 import { productSimilarity } from "@/lib/invoices/text";
 import { basePrices } from "@/lib/invoices/units";
 import { posNameKey } from "./analysis";
-import { recomputeFoodCost } from "./server/engine";
+import type { PricePoint } from "./cost";
+import { loadPriceBook, recomputeFoodCost } from "./server/engine";
 
 type Result<T = void> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -191,6 +192,8 @@ export interface IngredientHit {
   priceLabel: string | null;
   source: "fattura" | "catalogo" | "listino" | "semilavorato";
   detail: string | null;
+  /** Best price points for the key (latest invoice first), for the live cost. */
+  points: PricePoint[];
 }
 
 const eur = (n: number) => new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR", maximumFractionDigits: 2 }).format(n);
@@ -212,11 +215,11 @@ export async function searchIngredients(query: string): Promise<Result<Ingredien
   const like = `%${q.replace(/[%_]/g, " ")}%`;
   const hits: Array<IngredientHit & { score: number }> = [];
   const seen = new Set<string>();
-  const add = (h: IngredientHit) => {
+  const add = (h: Omit<IngredientHit, "points">) => {
     const key = h.priceKey ?? `sub:${h.subRecipeId}`;
     if (seen.has(key)) return;
     seen.add(key);
-    hits.push({ ...h, score: productSimilarity(q, h.name) + (h.source === "fattura" ? 0.05 : 0) });
+    hits.push({ ...h, points: [], score: productSimilarity(q, h.name) + (h.source === "fattura" ? 0.05 : 0) });
   };
 
   // 1. What the restaurant actually bought (latest invoice price).
@@ -330,11 +333,17 @@ export async function searchIngredients(query: string): Promise<Result<Ingredien
   }
 
   hits.sort((a, b) => b.score - a.score || a.name.localeCompare(b.name));
+  const top = hits.slice(0, 25);
+  // Same price book as the server costing: latest invoice price wins.
+  const book = await loadPriceBook(
+    ctx.restaurantId,
+    top.map((h) => h.priceKey ?? "").filter(Boolean),
+  ).catch(() => new Map<string, PricePoint[]>());
   return {
     ok: true,
-    data: hits.slice(0, 25).map(({ score: _score, ...h }) => {
+    data: top.map(({ score: _score, ...h }) => {
       void _score;
-      return { ...h, name: h.name.slice(0, 200) };
+      return { ...h, name: h.name.slice(0, 200), points: h.priceKey ? book.get(h.priceKey) ?? [] : [] };
     }),
   };
 }

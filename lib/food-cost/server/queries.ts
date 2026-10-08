@@ -5,7 +5,7 @@ import "server-only";
 import { addDaysIso, isoDate, rows, type Db } from "@/lib/invoices/server/db";
 import { toBase } from "@/lib/invoices/units";
 import { menuEngineering, posNameKey, theoreticalConsumption, type MenuItemResult } from "../analysis";
-import type { RecipeCost } from "../cost";
+import type { PricePoint, RecipeCost } from "../cost";
 import { computeFoodCost, type IngredientRow, type RecipeRow } from "./engine";
 
 export interface RecipeListItem {
@@ -72,8 +72,18 @@ export interface RecipeEditorData {
   recipe: RecipeRow | null;
   ingredients: IngredientRow[];
   cost: RecipeCost | null;
-  subRecipes: Array<{ id: string; name: string; yieldUnit: string | null }>;
+  subRecipes: Array<{
+    id: string;
+    name: string;
+    yieldUnit: string | null;
+    /** € per kg / l / pz of yield (null when it cannot be costed). */
+    costPerYieldBase: { base: "kg" | "l" | "pz"; price: number } | null;
+    missingCount: number;
+  }>;
   usedIn: Array<{ id: string; name: string }>;
+  /** Price points of the ingredients in use (for the live preview). */
+  book: Record<string, PricePoint[]>;
+  categories: string[];
 }
 
 export async function getRecipeEditor(db: Db, restaurantId: string, id: string | null): Promise<RecipeEditorData> {
@@ -83,12 +93,29 @@ export async function getRecipeEditor(db: Db, restaurantId: string, id: string |
     recipe,
     ingredients: recipe ? state.ingredients.filter((i) => i.recipe_id === recipe.id) : [],
     cost: recipe ? state.costs.get(recipe.id) ?? null : null,
-    subRecipes: state.recipes.filter((r) => r.kind === "base" && r.id !== id).map((r) => ({ id: r.id, name: r.name, yieldUnit: r.yield_unit })),
+    subRecipes: state.recipes
+      .filter((r) => r.kind === "base" && r.id !== id)
+      .map((r) => {
+        const c = state.costs.get(r.id);
+        return {
+          id: r.id,
+          name: r.name,
+          yieldUnit: r.yield_unit,
+          costPerYieldBase: c?.costPerYieldBase ?? null,
+          missingCount: c?.missingCount ?? 0,
+        };
+      }),
     usedIn: recipe
       ? state.recipes
           .filter((r) => state.ingredients.some((i) => i.recipe_id === r.id && i.sub_recipe_id === recipe.id))
           .map((r) => ({ id: r.id, name: r.name }))
       : [],
+    book: Object.fromEntries(
+      [...new Set((recipe ? state.ingredients.filter((i) => i.recipe_id === recipe.id) : []).map((i) => i.price_key).filter((k): k is string => !!k))]
+        .filter((k) => state.book.has(k))
+        .map((k) => [k, state.book.get(k)!]),
+    ),
+    categories: [...new Set(state.recipes.map((r) => r.category).filter((c): c is string => !!c))].sort((a, b) => a.localeCompare(b, "it")),
   };
 }
 
