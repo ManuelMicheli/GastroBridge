@@ -1,9 +1,9 @@
 -- Food cost per ricetta (schede tecniche), sempre aggiornato.
--- Spec: docs/superpowers/specs/2026-10-09-fatture-fornitori-food-cost.md
+-- Spec: docs/superpowers/specs/2026-10-10-fatture-fornitori-food-cost.md
 --
 -- Purely ADDITIVE (CREATE … IF NOT EXISTS, CREATE OR REPLACE, guarded policies).
 -- Access: read analytics.financial, write settings.manage (owner, manager), via
--- private.fin_can() from 20261009300100_supplier_invoices.sql.
+-- private.fin_can() from 20261010010100_supplier_invoices.sql.
 
 CREATE TABLE IF NOT EXISTS public.recipes (
   id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),

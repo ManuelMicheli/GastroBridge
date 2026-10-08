@@ -1,6 +1,6 @@
 -- Fatture fornitori (FatturaPA / SDI): ingestion, 3-way reconciliation,
 -- disputes, payment due dates, purchase price history and the SDI
--- intermediary connection. Spec: docs/superpowers/specs/2026-10-09-fatture-fornitori-food-cost.md
+-- intermediary connection. Spec: docs/superpowers/specs/2026-10-10-fatture-fornitori-food-cost.md
 --
 -- Purely ADDITIVE: CREATE … IF NOT EXISTS, CREATE OR REPLACE FUNCTION and
 -- policies created in DO blocks guarded by pg_policies. No DROP statements.
@@ -120,6 +120,7 @@ CREATE TABLE IF NOT EXISTS public.supplier_invoices (
 CREATE INDEX IF NOT EXISTS idx_si_restaurant_date   ON public.supplier_invoices (restaurant_id, document_date DESC);
 CREATE INDEX IF NOT EXISTS idx_si_restaurant_status ON public.supplier_invoices (restaurant_id, status);
 CREATE INDEX IF NOT EXISTS idx_si_restaurant_vat    ON public.supplier_invoices (restaurant_id, supplier_vat);
+CREATE INDEX IF NOT EXISTS idx_si_restaurant_created ON public.supplier_invoices (restaurant_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_si_credit_note_for   ON public.supplier_invoices (credit_note_for) WHERE credit_note_for IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS idx_si_sdi_identifier
   ON public.supplier_invoices (restaurant_id, sdi_identifier, body_index) WHERE sdi_identifier IS NOT NULL;

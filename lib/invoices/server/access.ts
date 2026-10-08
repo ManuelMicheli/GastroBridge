@@ -2,7 +2,7 @@
 // Authorization for the finance features (Fatture fornitori, Food cost).
 //   read  → analytics.financial (owner, manager, viewer)
 //   write → analytics.financial + settings.manage (owner, manager)
-// RLS (20261009300100 / 20261009300200) enforces the same rules in the DB.
+// RLS (20261010010100 / 20261010010200) enforces the same rules in the DB.
 
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
