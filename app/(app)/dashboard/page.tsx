@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { getRestaurantContext } from "@/lib/restaurants/context";
+import { contextCan, getRestaurantContext } from "@/lib/restaurants/context";
+import { buildOrderGuide } from "@/lib/restaurants/ordering/guide";
+import type { DashboardToday } from "@/components/dashboard/restaurant/today-card";
 import { RestaurantDashboard } from "@/components/dashboard/restaurant/restaurant-dashboard";
 import { RealtimeRefresh } from "@/components/shared/realtime-refresh";
 import type { SpendTrendPoint } from "@/components/dashboard/restaurant/spend-trend-chart/types";
@@ -192,8 +194,6 @@ export default async function DashboardPage() {
             spendingGross: 0,
             prevSpending: 0,
             prevSpendingGross: 0,
-            savings: 0,
-            savingsGross: 0,
             activeSuppliers: 0,
           }}
           fiscal={{
@@ -526,6 +526,43 @@ export default async function DashboardPage() {
     };
   }
 
+  // "Oggi in cucina": next order cut-offs, deliveries to check in, kitchen list.
+  let today: DashboardToday | null = null;
+  if (ctx) {
+    const tomorrowIso = toISODate(new Date(Date.now() + 86_400_000));
+    const [guide, kitchenRes] = await Promise.all([
+      buildOrderGuide(ctx).catch(() => null),
+      supabase
+        .from("kitchen_requests" as never)
+        .select("id", { count: "exact", head: true })
+        .eq("restaurant_id", ctx.restaurantId)
+        .eq("status", "open") as unknown as Promise<{ count: number | null; error: unknown }>,
+    ]);
+    const withDeadline = (guide?.suppliers ?? []).filter(
+      (s): s is typeof s & { deadlineMs: number; deliveryDate: string } =>
+        s.deadlineMs !== null && s.deliveryDate !== null,
+    );
+    today = {
+      deadlines: withDeadline
+        .sort((a, b) => a.deadlineMs - b.deadlineMs)
+        .slice(0, 3)
+        .map((s) => ({ key: s.key, name: s.name, deadlineMs: s.deadlineMs, deliveryDate: s.deliveryDate })),
+      dueCount: (guide?.suppliers ?? []).reduce((n, s) => n + s.dueCount, 0),
+      receive: upcoming
+        .filter((u) => (u.expected_delivery_date ?? "") <= tomorrowIso)
+        .slice(0, 3)
+        .map((u) => ({
+          orderId: u.order_id,
+          supplierName: u.suppliers?.company_name ?? "Fornitore",
+          date: u.expected_delivery_date ?? todayIso,
+        })),
+      kitchenOpen: kitchenRes.error ? 0 : kitchenRes.count ?? 0,
+      canOrder: contextCan(ctx, "order.submit"),
+      canReceive: contextCan(ctx, "order.receive"),
+      hasSchedules: (guide?.suppliers ?? []).some((s) => s.schedule !== null),
+    };
+  }
+
   // Recent orders
   const recentOrders = (recentOrdersRes.data || []).map((o) => {
     const split = splitsByOrder.get(o.id);
@@ -560,8 +597,6 @@ export default async function DashboardPage() {
           spendingGross: currentSpendingGross,
           prevSpending,
           prevSpendingGross,
-          savings: Math.round(currentSpending * 0.08),
-          savingsGross: Math.round(currentSpendingGross * 0.08),
           activeSuppliers: uniqueSuppliers,
         }}
         fiscal={fiscal}
@@ -574,6 +609,7 @@ export default async function DashboardPage() {
         nextDelivery={nextDelivery}
         upcomingCount={upcoming.length}
         suppliers={supplierCards}
+        today={today}
       />
     </>
   );
