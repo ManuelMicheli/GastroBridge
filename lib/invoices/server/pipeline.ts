@@ -77,7 +77,9 @@ export async function ingestDocuments(
       report.errors.push({ fileName: doc.fileName, reason: errors[0] ?? "Nessuna fattura nel documento" });
       continue;
     }
-    prepared.push({ doc, xml, sha: await sha256Hex(xml), invoices });
+    // Hash the stored form (attachments stripped): the same invoice uploaded
+    // by hand (stripped in the browser) or received from the SDI dedupes.
+    prepared.push({ doc, xml, sha: await sha256Hex(stripAttachments(xml)), invoices });
   }
   if (prepared.length === 0) return report;
 
