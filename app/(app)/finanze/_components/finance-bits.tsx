@@ -26,8 +26,8 @@ export function InvoiceStatusPill({ status, className }: { status: InvoiceStatus
   );
 }
 
-const eurFmt = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
-const eur0Fmt = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
+const eurFmt = new Intl.NumberFormat("it-IT", { useGrouping: "always", style: "currency", currency: "EUR" });
+const eur0Fmt = new Intl.NumberFormat("it-IT", { useGrouping: "always", style: "currency", currency: "EUR", maximumFractionDigits: 0 });
 
 export function eurCents(cents: number, round = false): string {
   return (round ? eur0Fmt : eurFmt).format(cents / 100);
@@ -60,7 +60,7 @@ export function pctIt(n: number | null | undefined, digits = 1): string {
 
 export function qtyIt(n: number | null | undefined): string {
   if (n === null || n === undefined || !Number.isFinite(n)) return "—";
-  return new Intl.NumberFormat("it-IT", { maximumFractionDigits: 3 }).format(n);
+  return new Intl.NumberFormat("it-IT", { useGrouping: "always", maximumFractionDigits: 3 }).format(n);
 }
 
 /** Small stat card used across the Finanze pages. */

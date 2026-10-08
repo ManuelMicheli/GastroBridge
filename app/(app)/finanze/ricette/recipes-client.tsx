@@ -11,7 +11,7 @@ import { dismissFoodCostAlert } from "@/lib/food-cost/actions";
 import type { FoodCostAlertRow, RecipeListItem } from "@/lib/food-cost/server/queries";
 import { cn } from "@/lib/utils/formatters";
 
-const eur = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
+const eur = new Intl.NumberFormat("it-IT", { useGrouping: "always", style: "currency", currency: "EUR" });
 const pct = (n: number | null) => (n === null ? "—" : `${n.toFixed(1).replace(".", ",")}%`);
 
 type Tab = "dish" | "base" | "over";

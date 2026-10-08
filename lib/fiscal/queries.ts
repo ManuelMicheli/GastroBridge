@@ -5,6 +5,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getRestaurantContext } from "@/lib/restaurants/context";
 import type {
   FiscalIntegrationStatus,
   FiscalProvider,
@@ -286,4 +287,18 @@ export async function getRestaurantsForCurrentUser(): Promise<
     .order("is_primary", { ascending: false })
     .order("created_at", { ascending: true });
   return (data ?? []) as Array<{ id: string; name: string; is_primary: boolean }>;
+}
+
+/**
+ * Restaurant shown by the Finanze pages: the `?r=` one when valid, else the
+ * restaurant the user is working on (sidebar switcher), else the first owned.
+ */
+export async function pickFinanceRestaurant(
+  restaurants: Array<{ id: string }>,
+  requested?: string | null,
+): Promise<string | undefined> {
+  if (requested && restaurants.some((r) => r.id === requested)) return requested;
+  const ctx = await getRestaurantContext().catch(() => null);
+  if (ctx && restaurants.some((r) => r.id === ctx.restaurantId)) return ctx.restaurantId;
+  return restaurants[0]?.id;
 }

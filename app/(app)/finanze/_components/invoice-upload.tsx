@@ -21,7 +21,7 @@ type Summary = {
   problems: Array<{ fileName: string; reason: string }>;
 };
 
-const eur = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
+const eur = new Intl.NumberFormat("it-IT", { useGrouping: "always", style: "currency", currency: "EUR" });
 
 function batches(docs: Array<{ fileName: string; xml: string; sourceKind: ExtractedDocument["sourceKind"] }>) {
   const out: (typeof docs)[] = [];

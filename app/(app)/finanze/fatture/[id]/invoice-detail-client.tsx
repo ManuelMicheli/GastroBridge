@@ -24,7 +24,7 @@ import type { InvoiceDetail } from "@/lib/invoices/server/queries";
 import { DisputeModal } from "./dispute-modal";
 import { LinesCompare } from "./lines-compare";
 
-const eur = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
+const eur = new Intl.NumberFormat("it-IT", { useGrouping: "always", style: "currency", currency: "EUR" });
 const dateFmt = new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Europe/Rome" });
 const dt = (iso: string | null | undefined) => (iso ? dateFmt.format(new Date(iso.length === 10 ? `${iso}T12:00:00Z` : iso)) : "—");
 const SEVERITY_TONE: Record<string, FTone> = { high: "danger", medium: "warning", low: "neutral" };

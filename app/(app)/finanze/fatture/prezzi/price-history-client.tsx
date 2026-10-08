@@ -9,7 +9,7 @@ import { Sparkline } from "@/components/fernly/sparkline";
 import type { PriceSeries } from "@/lib/invoices/price-history";
 import { cn } from "@/lib/utils/formatters";
 
-const eur = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 3 });
+const eur = new Intl.NumberFormat("it-IT", { useGrouping: "always", style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 3 });
 const dateFmt = new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "2-digit", year: "2-digit", timeZone: "Europe/Rome" });
 const d = (iso: string | null) => (iso ? dateFmt.format(new Date(`${iso}T12:00:00Z`)) : "—");
 const pct = (n: number | null) => (n === null ? "—" : `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n).toFixed(1).replace(".", ",")}%`);
@@ -145,7 +145,7 @@ export function PriceHistoryClient({ series, initialKey }: { series: PriceSeries
                       </Link>
                     </td>
                     <td className="py-1.5 text-right tabular-nums text-[var(--f-muted)]">
-                      {p.quantity !== null ? new Intl.NumberFormat("it-IT", { maximumFractionDigits: 2 }).format(p.quantity) : "—"}
+                      {p.quantity !== null ? new Intl.NumberFormat("it-IT", { useGrouping: "always", maximumFractionDigits: 2 }).format(p.quantity) : "—"}
                     </td>
                     <td className="py-1.5 text-right font-medium tabular-nums">{eur.format(p.price)}</td>
                   </tr>

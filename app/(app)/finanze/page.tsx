@@ -1,282 +1,389 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Plug, BookOpen } from "lucide-react";
+import { ArrowRight, ChefHat, FileText, Store, TrendingUp } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
+import { KpiCard } from "@/components/fernly/kpi-card";
+import { CardEmpty, FCard, StatusPill, type FTone } from "@/components/fernly/primitives";
+import { getFiscalOverview, getRestaurantsForCurrentUser } from "@/lib/fiscal/queries";
+import { formatCents, formatDateTime, paymentLabel } from "@/lib/fiscal/format";
+import { getConnectionsState } from "@/lib/finance/server";
+import type { Health } from "@/lib/finance/connections";
+import { getFoodCostOverview } from "@/lib/food-cost/server/queries";
+import { getFinanceAccess } from "@/lib/invoices/server/access";
 import {
-  getFiscalOverview,
-  getRestaurantsForCurrentUser,
-} from "@/lib/fiscal/queries";
-import {
-  formatCents,
-  formatDateTime,
-  paymentLabel,
-  providerLabel,
-} from "@/lib/fiscal/format";
+  getAttentionInvoices,
+  getInvoiceKpis,
+  getPriceIncreases,
+  getUpcomingPayments,
+} from "@/lib/invoices/server/queries";
 import { FoodCostChart } from "./_components/food-cost-chart";
-import { FinanzeEmpty } from "./_components/finanze-empty";
 import { FinanzeKpis } from "./_components/finanze-kpis";
-import { SectionFrame } from "@/components/dashboard/restaurant/_awwwards/section-frame";
+import { ConnectionsPanel } from "./_components/connections-panel";
+import { InvoiceStatusPill, NoFinanceAccess, dateShort, eurCents, pctIt } from "./_components/finance-bits";
+import { PaymentsList } from "./_components/payments-list";
+import { SedeSwitcher } from "./_components/sede-switcher";
 
 export const metadata: Metadata = { title: "Finanze" };
+
+const OVERALL: Record<Health, { tone: FTone; label: string }> = {
+  ok: { tone: "success", label: "Collegamenti ok" },
+  waiting: { tone: "warning", label: "In attesa di dati" },
+  warning: { tone: "warning", label: "Collegamenti da controllare" },
+  error: { tone: "danger", label: "Collegamento da sistemare" },
+  off: { tone: "neutral", label: "Niente collegato" },
+};
 
 function sum(nums: number[]): number {
   return nums.reduce((s, n) => s + n, 0);
 }
 
-export default async function FinanzePage({
-  searchParams,
-}: {
-  searchParams: Promise<{ r?: string }>;
-}) {
-  const restaurants = await getRestaurantsForCurrentUser();
-  if (restaurants.length === 0) {
-    return (
-      <div className="p-6">
-        <FinanzeEmpty
-          heading="Nessun ristorante collegato"
-          body="Aggiungi una sede dalle impostazioni prima di attivare il Cassetto Fiscale."
-          ctaLabel="Vai alle sedi"
-          ctaHref="/impostazioni/sedi"
-        />
-      </div>
-    );
-  }
+export default async function FinanzePage() {
+  // The restaurant the user works on (sidebar / switcher below). Owners also
+  // see their cash-register data; team members with analytics.financial see
+  // invoices, payments and food cost.
+  const access = await getFinanceAccess("read");
+  if (!access.ok) return <NoFinanceAccess message={access.error} />;
+  const owned = await getRestaurantsForCurrentUser();
+  const { db, ctx, canWrite } = access;
+  const rid = ctx.restaurantId;
+  const isOwner = owned.some((r) => r.id === rid);
 
-  const params = await searchParams;
-  const selectedId =
-    params.r && restaurants.find((r) => r.id === params.r)
-      ? params.r
-      : restaurants[0]!.id;
+  const [kpis, attention, payments, increases, food, connections, pos] = await Promise.all([
+    getInvoiceKpis(db, rid),
+    getAttentionInvoices(db, rid, 6),
+    getUpcomingPayments(db, rid, 30),
+    getPriceIncreases(db, rid, 5).catch(() => []),
+    getFoodCostOverview(db, rid).catch(() => null),
+    getConnectionsState(db, rid),
+    isOwner ? getFiscalOverview(rid) : Promise.resolve(null),
+  ]);
 
-  const overview = await getFiscalOverview(selectedId);
-
-  if (!overview.enabled) {
-    return (
-      <div className="p-4 lg:p-6 space-y-6">
-        <Header
-          restaurants={restaurants}
-          selectedId={selectedId}
-          showActions={false}
-        />
-        <FinanzeEmpty
-          heading="Cassetto Fiscale non attivo"
-          body="Attiva la feature per vedere food cost %, incasso vs ordini e alert su scorte in esaurimento basati sui tuoi scontrini."
-          ctaLabel="Attiva e collega POS"
-          ctaHref={`/finanze/integrazioni?r=${selectedId}`}
-        />
-      </div>
-    );
-  }
-
-  if (overview.integrations.length === 0) {
-    return (
-      <div className="p-4 lg:p-6 space-y-6">
-        <Header
-          restaurants={restaurants}
-          selectedId={selectedId}
-          showActions={false}
-        />
-        <FinanzeEmpty
-          heading="Nessuna cassa collegata"
-          body="Collega un POS supportato (Tilby, Cassa in Cloud, Lightspeed, Scloby) o attiva l'ingresso webhook generico per iniziare a ricevere scontrini."
-          ctaLabel="Collega POS"
-          ctaHref={`/finanze/integrazioni?r=${selectedId}`}
-          secondaryCtaLabel="Guida collegamento"
-          secondaryCtaHref={`/finanze/guida?r=${selectedId}`}
-        />
-      </div>
-    );
-  }
-
-  const last30 = overview.daily;
-
-  const revenueLast30 = sum(last30.map((d) => d.revenue_cents));
-  const receiptsLast30 = sum(last30.map((d) => d.receipts_count));
-  const coversLast30 = sum(last30.map((d) => d.covers));
-  const latestFoodCost =
-    overview.foodCost.length > 0
-      ? (overview.foodCost[overview.foodCost.length - 1]?.food_cost_pct ?? null)
-      : null;
-  const spendLast30 = sum(overview.foodCost.map((d) => d.spend_cents));
+  const posActive = !!pos && pos.enabled && pos.integrations.length > 0;
+  const dishesOver = food ? food.items.filter((i) => i.kind === "dish" && i.overTarget) : [];
+  const latestPosFoodCost = posActive && pos!.foodCost.length > 0 ? (pos!.foodCost[pos!.foodCost.length - 1]?.food_cost_pct ?? null) : null;
+  const foodCostValue = food?.avgPct ?? latestPosFoodCost;
+  const nothingYet = kpis.invoicesCount === 0 && !posActive && (food?.items.length ?? 0) === 0;
+  const overall = OVERALL[connections.overall];
+  const monthLabel = new Intl.DateTimeFormat("it-IT", { month: "long", timeZone: "Europe/Rome" }).format(new Date());
 
   return (
-    <div className="p-4 lg:p-6 space-y-6">
-      <Header restaurants={restaurants} selectedId={selectedId} />
-
-      <FinanzeKpis
-        revenueCents={revenueLast30}
-        foodCostPct={latestFoodCost}
-        receipts={receiptsLast30}
-        covers={coversLast30}
-      />
-
-
-      <SectionFrame
-        label="Food cost · Ultimi 30 giorni"
-        trailing={`Spesa · ${formatCents(spendLast30)}`}
-      >
-        <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.08em] text-text-tertiary">
-          Acquisti materia prima ÷ incasso POS
-        </p>
-        <FoodCostChart data={overview.foodCost} />
-      </SectionFrame>
-
-      <SectionFrame
-        label="Ultimi scontrini"
-        trailing={
-          <Link
-            href={`/finanze/scontrini?r=${selectedId}`}
-            className="text-accent-green hover:text-text-primary transition-colors"
-          >
-            vedi tutti →
+    <div className="px-1 lg:px-0">
+      <PageHeader
+        title="Finanze"
+        subtitle="Soldi recuperati dalle fatture, scadenze, food cost e incassi: tutto in un posto, aggiornato da solo."
+        meta={
+          <Link href="/finanze/collegamenti" aria-label="Stato collegamenti">
+            <StatusPill tone={overall.tone} dot>
+              {overall.label}
+            </StatusPill>
           </Link>
         }
-        padded={false}
-      >
-        {overview.latestReceipts.length === 0 ? (
-          <div className="px-6 py-10 text-center font-mono text-[11px] uppercase tracking-[0.1em] text-text-tertiary">
-            Nessuno scontrino ricevuto nelle ultime 24h
-          </div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead className="text-[10px] uppercase tracking-[0.08em] text-text-tertiary font-mono">
-              <tr>
-                <th className="text-left px-4 py-2.5 font-normal">Data</th>
-                <th className="text-left px-4 py-2.5 font-normal">Tot.</th>
-                <th className="text-left px-4 py-2.5 font-normal">Pagamento</th>
-                <th className="text-left px-4 py-2.5 font-normal">Coperti</th>
-                <th className="text-left px-4 py-2.5 font-normal">Operatore</th>
-                <th className="px-4 py-2.5" aria-hidden />
-              </tr>
-            </thead>
-            <tbody>
-              {overview.latestReceipts.map((r) => (
-                <tr
-                  key={r.id}
-                  className="border-t border-border-subtle hover:bg-surface-hover/60 transition-colors"
-                >
-                  <td className="px-4 py-2.5 font-mono text-xs text-text-secondary">
-                    {formatDateTime(r.issued_at)}
-                  </td>
-                  <td className="px-4 py-2.5 font-mono tabular-nums text-text-primary">
-                    {formatCents(r.total_cents)}
-                  </td>
-                  <td className="px-4 py-2.5 text-text-secondary">
-                    {paymentLabel(r.payment_method)}
-                  </td>
-                  <td className="px-4 py-2.5 font-mono tabular-nums text-text-secondary">
-                    {r.covers ?? "—"}
-                  </td>
-                  <td className="px-4 py-2.5 text-text-secondary">
-                    {r.operator_name ?? "—"}
-                  </td>
-                  <td className="px-4 py-2.5 text-right">
-                    <Link
-                      href={`/finanze/scontrini/${r.id}?r=${selectedId}`}
-                      className="font-mono text-[11px] uppercase tracking-[0.08em] text-accent-green hover:text-text-primary transition-colors"
-                    >
-                      Dettagli
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </SectionFrame>
+        actions={
+          ctx.restaurants.length > 1 ? (
+            <SedeSwitcher activeId={rid} restaurants={ctx.restaurants.map((r) => ({ id: r.restaurantId, name: r.name }))} />
+          ) : null
+        }
+      />
 
-      {overview.integrations.length > 0 && (
-        <div className="flex flex-wrap gap-3 text-xs text-text-tertiary">
-          {overview.integrations.map((i) => (
-            <span
-              key={i.id}
-              className="inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface-card px-3 py-1.5"
+      {nothingYet && (
+        <FCard index={0} className="mb-3 lg:mb-4" title="Inizia da qui">
+          <ol className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <FirstStep
+              n={1}
+              icon={<FileText className="h-5 w-5" aria-hidden />}
+              title="Collega le fatture elettroniche"
+              body="2 minuti: ogni fattura viene confrontata con ordini e consegne e ti diciamo quanto recuperare."
+              href="/finanze/fatture/collega"
+              cta="Collega"
+            />
+            <FirstStep
+              n={2}
+              icon={<Store className="h-5 w-5" aria-hidden />}
+              title="Collega la cassa"
+              body="Incassi, food cost reale e i piatti che rendono di più, dagli scontrini."
+              href="/finanze/integrazioni"
+              cta="Collega la cassa"
+            />
+            <FirstStep
+              n={3}
+              icon={<ChefHat className="h-5 w-5" aria-hidden />}
+              title="Crea le schede tecniche"
+              body="Il costo dei piatti si aggiorna con l'ultimo prezzo pagato."
+              href="/finanze/ricette/nuova"
+              cta="Nuova ricetta"
+            />
+          </ol>
+        </FCard>
+      )}
+
+      <section aria-label="Indicatori" className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:mb-4 lg:gap-4 xl:grid-cols-4">
+        <KpiCard
+          index={1}
+          hero
+          title="Soldi recuperati"
+          value={kpis.recoveredCents / 100}
+          format="currency"
+          href="/finanze/fatture?stato=risolta"
+          caption={kpis.disputedCents > 0 ? `${eurCents(kpis.disputedCents)} in contestazione` : "Con note di credito dei fornitori"}
+        />
+        <KpiCard
+          index={2}
+          title="Da recuperare"
+          value={kpis.toRecoverCents / 100}
+          format="currency"
+          href="/finanze/fatture?stato=anomalie"
+          caption={kpis.toRecoverCents > 0 ? "Differenze trovate in fattura: contestale" : "Nessuna differenza aperta"}
+        />
+        <KpiCard
+          index={3}
+          title={`Spesa fornitori · ${monthLabel}`}
+          value={kpis.monthSpendCents / 100}
+          format="currency0"
+          href="/finanze/fatture"
+          caption={`${kpis.invoicesCount} fatture negli ultimi 12 mesi`}
+        />
+        <KpiCard
+          index={4}
+          title="Food cost"
+          value={foodCostValue ?? 0}
+          format="decimal1"
+          href="/finanze/ricette"
+          valueOverride={foodCostValue === null ? "—" : `${pctIt(foodCostValue)}`}
+          caption={
+            food?.avgPct !== null && food?.avgPct !== undefined
+              ? dishesOver.length > 0
+                ? `${dishesOver.length} piatti sopra obiettivo`
+                : "Teorico, dalle schede tecniche"
+              : latestPosFoodCost !== null
+                ? "Acquisti ÷ incasso cassa"
+                : "Crea le schede tecniche"
+          }
+        />
+      </section>
+
+      <div className="mb-3 grid grid-cols-1 gap-3 lg:mb-4 lg:gap-4 xl:grid-cols-2">
+        <FCard
+          index={5}
+          title="Fatture da guardare"
+          action={
+            <Link href="/finanze/fatture" className="text-[12.5px] font-medium text-[var(--acc-ink)] hover:underline">
+              Tutte
+            </Link>
+          }
+        >
+          {attention.length === 0 ? (
+            <CardEmpty
+              action={
+                kpis.invoicesCount === 0 ? (
+                  <Link href="/finanze/fatture" className="f-btn f-btn-sm f-btn-soft">
+                    Carica fatture
+                  </Link>
+                ) : undefined
+              }
             >
-              <span
-                className={`h-1.5 w-1.5 rounded-full ${
-                  i.status === "active"
-                    ? "bg-accent-green"
-                    : i.status === "error"
-                      ? "bg-accent-orange"
-                      : "bg-text-tertiary"
-                }`}
-                aria-hidden
-              />
-              {providerLabel(i.provider)}
-              {i.last_synced_at && (
-                <span className="text-text-tertiary/80">
-                  · sync {formatDateTime(i.last_synced_at)}
-                </span>
-              )}
-            </span>
-          ))}
-        </div>
+              {kpis.invoicesCount === 0 ? "Ancora nessuna fattura." : "Niente da controllare: le fatture corrispondono a ordini e consegne."}
+            </CardEmpty>
+          ) : (
+            <ul className="divide-y divide-[var(--f-line)]">
+              {attention.map((i) => (
+                <li key={i.id}>
+                  <Link href={`/finanze/fatture/${i.id}`} className="-mx-2 flex items-center gap-3 rounded-[12px] px-2 py-2.5 hover:bg-[var(--f-fill)]">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[14px] font-medium text-[var(--f-ink)]">{i.supplier_name ?? "Fornitore"}</p>
+                      <p className="truncate text-[12px] text-[var(--f-muted)]">
+                        n. {i.document_number} · {dateShort(i.document_date)}
+                      </p>
+                    </div>
+                    {i.open_cents > 0 && (
+                      <span className="shrink-0 text-[14px] font-semibold tabular-nums text-[var(--f-danger)]">{eurCents(i.open_cents)}</span>
+                    )}
+                    <InvoiceStatusPill status={i.status} className="shrink-0" />
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </FCard>
+        <FCard index={6} title="Prossime scadenze">
+          <PaymentsList items={payments} canWrite={canWrite} limit={6} />
+        </FCard>
+      </div>
+
+      <div className="mb-3 grid grid-cols-1 gap-3 lg:mb-4 lg:gap-4 xl:grid-cols-3">
+        <FCard
+          index={7}
+          title="Stato collegamenti"
+          action={
+            <Link href="/finanze/collegamenti" className="text-[12.5px] font-medium text-[var(--acc-ink)] hover:underline">
+              Dettagli
+            </Link>
+          }
+        >
+          <ConnectionsPanel cards={connections.cards} canWrite={canWrite} compact />
+        </FCard>
+        <FCard
+          index={8}
+          title="Food cost"
+          action={
+            <Link href="/finanze/ricette" className="text-[12.5px] font-medium text-[var(--acc-ink)] hover:underline">
+              Ricette
+            </Link>
+          }
+        >
+          {!food || food.items.length === 0 ? (
+            <CardEmpty
+              action={
+                canWrite ? (
+                  <Link href="/finanze/ricette/nuova" className="f-btn f-btn-sm f-btn-soft">
+                    Nuova ricetta
+                  </Link>
+                ) : undefined
+              }
+            >
+              Nessuna scheda tecnica ancora.
+            </CardEmpty>
+          ) : dishesOver.length === 0 && food.alerts.length === 0 ? (
+            <CardEmpty>Tutti i piatti sono nell&apos;obiettivo di food cost.</CardEmpty>
+          ) : (
+            <ul className="space-y-2">
+              {food.alerts.slice(0, 3).map((a) => (
+                <li key={a.id} className="rounded-[12px] bg-[var(--f-danger-bg)] px-3 py-2 text-[13px]">
+                  <Link href={`/finanze/ricette/${a.recipe_id}`} className="text-[var(--f-ink)] hover:underline">
+                    {a.message}
+                  </Link>
+                </li>
+              ))}
+              {dishesOver
+                .filter((d) => !food.alerts.some((a) => a.recipe_id === d.id))
+                .slice(0, 4)
+                .map((d) => (
+                  <li key={d.id} className="flex items-center justify-between gap-2 text-[13.5px]">
+                    <Link href={`/finanze/ricette/${d.id}`} className="truncate text-[var(--f-ink)] hover:underline">
+                      {d.name}
+                    </Link>
+                    <StatusPill tone="danger">
+                      {pctIt(d.foodCostPct)} / {pctIt(d.targetPct, 0)}
+                    </StatusPill>
+                  </li>
+                ))}
+            </ul>
+          )}
+        </FCard>
+        <FCard
+          index={9}
+          title="Prezzi in aumento"
+          action={
+            <Link href="/finanze/fatture/prezzi" className="text-[12.5px] font-medium text-[var(--acc-ink)] hover:underline">
+              Storico
+            </Link>
+          }
+        >
+          {increases.length === 0 ? (
+            <CardEmpty>Nessun aumento sugli ultimi acquisti in fattura.</CardEmpty>
+          ) : (
+            <ul className="divide-y divide-[var(--f-line)]">
+              {increases.slice(0, 5).map((p) => (
+                <li key={p.priceKey}>
+                  <Link
+                    href={`/finanze/fatture/prezzi?p=${encodeURIComponent(p.priceKey)}`}
+                    className="flex items-center gap-2 py-2 text-[13.5px] hover:underline"
+                  >
+                    <TrendingUp className="h-4 w-4 shrink-0 text-[var(--f-danger)]" aria-hidden />
+                    <span className="min-w-0 flex-1 truncate text-[var(--f-ink)]">{p.description}</span>
+                    <span className="shrink-0 tabular-nums text-[var(--f-danger)]">+{p.pct.toFixed(1).replace(".", ",")}%</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </FCard>
+      </div>
+
+      {posActive && pos && (
+        <section aria-label="Cassa" className="space-y-3 lg:space-y-4">
+          <FinanzeKpis
+            revenueCents={sum(pos.daily.map((d) => d.revenue_cents))}
+            foodCostPct={latestPosFoodCost}
+            receipts={sum(pos.daily.map((d) => d.receipts_count))}
+            covers={sum(pos.daily.map((d) => d.covers))}
+          />
+          <FCard title="Food cost dalla cassa · ultimi 30 giorni" action={<span className="text-[12.5px] text-[var(--f-muted)]">Spesa {formatCents(sum(pos.foodCost.map((d) => d.spend_cents)))}</span>}>
+            <p className="mb-3 text-[12.5px] text-[var(--f-muted)]">Acquisti di materia prima ÷ incasso della cassa, giorno per giorno.</p>
+            <FoodCostChart data={pos.foodCost} />
+          </FCard>
+          <FCard
+            title="Ultimi scontrini"
+            action={
+              <Link href={`/finanze/scontrini?r=${rid}`} className="text-[12.5px] font-medium text-[var(--acc-ink)] hover:underline">
+                Tutti
+              </Link>
+            }
+          >
+            {pos.latestReceipts.length === 0 ? (
+              <CardEmpty>Nessuno scontrino nelle ultime 24 ore.</CardEmpty>
+            ) : (
+              <div className="-mx-2 overflow-x-auto">
+                <table className="w-full min-w-[520px] text-[13px]">
+                  <thead>
+                    <tr className="text-left text-[11.5px] text-[var(--f-muted)]">
+                      <th className="px-2 py-2 font-medium">Data</th>
+                      <th className="px-2 py-2 font-medium">Totale</th>
+                      <th className="px-2 py-2 font-medium">Pagamento</th>
+                      <th className="px-2 py-2 font-medium">Coperti</th>
+                      <th className="px-2 py-2" />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--f-line)]">
+                    {pos.latestReceipts.map((r) => (
+                      <tr key={r.id}>
+                        <td className="px-2 py-2 text-[var(--f-muted)]">{formatDateTime(r.issued_at)}</td>
+                        <td className="px-2 py-2 font-medium tabular-nums">{formatCents(r.total_cents)}</td>
+                        <td className="px-2 py-2">{paymentLabel(r.payment_method)}</td>
+                        <td className="px-2 py-2 tabular-nums">{r.covers ?? "—"}</td>
+                        <td className="px-2 py-2 text-right">
+                          <Link href={`/finanze/scontrini/${r.id}?r=${rid}`} className="inline-flex items-center gap-1 text-[var(--acc-ink)] hover:underline">
+                            Dettagli <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </FCard>
+        </section>
       )}
     </div>
   );
 }
 
-function Header({
-  restaurants,
-  selectedId,
-  showActions = true,
+function FirstStep({
+  n,
+  icon,
+  title,
+  body,
+  href,
+  cta,
 }: {
-  restaurants: Array<{ id: string; name: string; is_primary: boolean }>;
-  selectedId: string;
-  showActions?: boolean;
+  n: number;
+  icon: React.ReactNode;
+  title: string;
+  body: string;
+  href: string;
+  cta: string;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 flex-wrap">
-      <div>
-        <p className="text-[10px] uppercase tracking-widest text-text-tertiary font-bold mb-1">
-          Area ristorante · Finanze
-        </p>
-        <h1 className="text-2xl font-semibold text-text-primary">
-          Cassetto Fiscale
-        </h1>
+    <li className="flex flex-col gap-2 rounded-[16px] bg-[var(--f-fill)] p-4">
+      <div className="flex items-center gap-2 text-[var(--acc-700)]">
+        {icon}
+        <span className="text-[12px] font-semibold uppercase tracking-[0.08em]">Passo {n}</span>
       </div>
-      <div className="flex items-center gap-2 flex-wrap">
-        {showActions && (
-          <>
-            <Link
-              href={`/finanze/integrazioni?r=${selectedId}`}
-              className="inline-flex items-center gap-2 rounded-lg bg-accent-green px-3 py-1.5 text-xs font-medium text-surface-base hover:bg-accent-green/90"
-            >
-              <Plug className="h-3.5 w-3.5" />
-              Integrazioni POS
-            </Link>
-            <Link
-              href={`/finanze/guida?r=${selectedId}`}
-              className="inline-flex items-center gap-2 rounded-lg border border-border-subtle px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-text-primary hover:border-border-accent"
-            >
-              <BookOpen className="h-3.5 w-3.5" />
-              Guida
-            </Link>
-          </>
-        )}
-        {restaurants.length > 1 && (
-          <form className="flex items-center gap-2">
-            <label className="text-xs text-text-tertiary">Sede</label>
-            <select
-              name="r"
-              defaultValue={selectedId}
-              className="bg-surface-card border border-border-subtle rounded-lg px-3 py-1.5 text-sm text-text-primary"
-            >
-              {restaurants.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                  {r.is_primary ? " (principale)" : ""}
-                </option>
-              ))}
-            </select>
-            <button
-              type="submit"
-              className="text-xs text-accent-green hover:underline"
-            >
-              Cambia
-            </button>
-          </form>
-        )}
-      </div>
-    </div>
+      <p className="text-[15px] font-semibold text-[var(--f-ink)]">{title}</p>
+      <p className="flex-1 text-[13px] text-[var(--f-muted)]">{body}</p>
+      <Link href={href} className="f-btn f-btn-sm f-btn-primary self-start">
+        {cta}
+      </Link>
+    </li>
   );
 }

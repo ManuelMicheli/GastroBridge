@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import {
   getFiscalEnabled,
   getRestaurantsForCurrentUser,
+  pickFinanceRestaurant,
 } from "@/lib/fiscal/queries";
 import { listReorderSuggestions } from "@/lib/fiscal/reorder";
 import { FinanzeEmpty } from "../_components/finanze-empty";
@@ -30,10 +31,7 @@ export default async function OrdiniConsigliatiPage({
     );
   }
   const qs = await searchParams;
-  const selectedId =
-    qs.r && restaurants.find((r) => r.id === qs.r)
-      ? qs.r
-      : restaurants[0]!.id;
+  const selectedId = (await pickFinanceRestaurant(restaurants, qs.r))!;
 
   const enabled = await getFiscalEnabled(selectedId);
   if (!enabled) {

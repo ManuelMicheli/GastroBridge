@@ -5,6 +5,7 @@ import {
   getFiscalEnabled,
   getLatestReceipts,
   getRestaurantsForCurrentUser,
+  pickFinanceRestaurant,
   listIntegrations,
 } from "@/lib/fiscal/queries";
 import {
@@ -44,10 +45,7 @@ export default async function ScontriniPage({
     );
   }
   const params = await searchParams;
-  const selectedId =
-    params.r && restaurants.find((r) => r.id === params.r)
-      ? params.r
-      : restaurants[0]!.id;
+  const selectedId = (await pickFinanceRestaurant(restaurants, params.r))!;
 
   const enabled = await getFiscalEnabled(selectedId);
   if (!enabled) {

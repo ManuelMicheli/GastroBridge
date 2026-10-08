@@ -16,6 +16,19 @@ import {
 import type { IntegrationRow } from "@/lib/fiscal/queries";
 import { providerLabel } from "@/lib/fiscal/format";
 import type { FiscalProvider } from "@/lib/fiscal/types";
+import { posHelpFor } from "@/lib/fiscal/pos-help";
+import { Help, Steps } from "../_components/help";
+
+function PosHelpBlock({ provider, title, defaultOpen = false }: { provider: string; title?: string; defaultOpen?: boolean }) {
+  const h = posHelpFor(provider);
+  if (!h) return null;
+  return (
+    <Help title={title ?? `Come si collega ${h.title}?`} defaultOpen={defaultOpen} className="mt-2">
+      <Steps items={h.steps.map((s) => ({ title: s }))} />
+      {h.note ? <p className="text-[12.5px] text-[var(--f-muted)]">{h.note}</p> : null}
+    </Help>
+  );
+}
 
 const API_KEY_PROVIDERS: FiscalProvider[] = ["cassa_in_cloud", "scloby"];
 
@@ -275,6 +288,7 @@ export function IntegrazioniClient({
                   <p className="text-xs text-text-tertiary mt-1 font-mono">
                     {i.id}
                   </p>
+                  {(i.status === "pending_auth" || i.status === "error") && <PosHelpBlock provider={i.provider} />}
                 </div>
                 <div className="flex items-center gap-2">
                   {API_KEY_PROVIDERS.includes(i.provider) && (
@@ -368,6 +382,7 @@ export function IntegrazioniClient({
                   ))}
                 </select>
               </div>
+              <PosHelpBlock provider={connectProvider} title="Cosa ti servirà" />
               <div>
                 <label className="block text-[10px] uppercase tracking-wider text-text-tertiary mb-1">
                   Nome
@@ -422,6 +437,7 @@ export function IntegrazioniClient({
               Incolla la chiave copiata dal pannello admin del POS. Viene
               cifrata AES-256 lato server.
             </p>
+            <PosHelpBlock provider={apiKeyTarget.provider} title="Dove trovo la chiave?" />
             <div className="space-y-3">
               <div>
                 <label className="block text-[10px] uppercase tracking-wider text-text-tertiary mb-1">

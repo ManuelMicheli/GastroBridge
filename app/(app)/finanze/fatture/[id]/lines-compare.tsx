@@ -4,9 +4,9 @@ import { compareLine, type LineComparison } from "@/lib/invoices/compare";
 import type { InvoiceDetail } from "@/lib/invoices/server/queries";
 import { cn } from "@/lib/utils/formatters";
 
-const eur = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 4 });
-const eur2 = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
-const qty = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 3 });
+const eur = new Intl.NumberFormat("it-IT", { useGrouping: "always", style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 4 });
+const eur2 = new Intl.NumberFormat("it-IT", { useGrouping: "always", style: "currency", currency: "EUR" });
+const qty = new Intl.NumberFormat("it-IT", { useGrouping: "always", maximumFractionDigits: 3 });
 
 const SOURCE_LABEL: Record<string, string> = { order: "ordine", catalog: "tuo catalogo", listino: "listino" };
 

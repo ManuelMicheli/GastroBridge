@@ -30,7 +30,7 @@ type Filter = "tutte" | InvoiceStatus;
 
 const ORDER: Filter[] = ["tutte", "anomalie", "da_verificare", "contestata", "risolta", "ok"];
 
-const eur = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
+const eur = new Intl.NumberFormat("it-IT", { useGrouping: "always", style: "currency", currency: "EUR" });
 const dateFmt = new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "2-digit", year: "2-digit", timeZone: "Europe/Rome" });
 
 function norm(s: string): string {

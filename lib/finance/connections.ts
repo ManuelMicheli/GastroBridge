@@ -118,6 +118,35 @@ export function posCard(i: PosIntegrationInput, now = new Date()): ConnectionCar
   return { ...base, health: "ok", status: `Collegata ✓, ultimo dato ${relativeDayIt(i.last_synced_at, now)}`, detail: null, fix: null };
 }
 
+/** Placeholder card when no POS is connected (or the module is off). */
+export function posPlaceholderCard(fiscalEnabled: boolean, hasIntegrations: boolean): ConnectionCard | null {
+  if (hasIntegrations && fiscalEnabled) return null;
+  if (hasIntegrations && !fiscalEnabled) {
+    return {
+      key: "pos:disabled",
+      kind: "pos",
+      title: "Casse (POS)",
+      subtitle: "Scontrini",
+      health: "off",
+      status: "Ricezione scontrini disattivata",
+      lastSync: null,
+      detail: "Le casse sono configurate ma la ricezione è spenta.",
+      fix: { label: "Riattiva", href: "/finanze/integrazioni" },
+    };
+  }
+  return {
+    key: "pos:none",
+    kind: "pos",
+    title: "Casse (POS)",
+    subtitle: "Scontrini",
+    health: "off",
+    status: "Nessuna cassa collegata",
+    lastSync: null,
+    detail: "Con la cassa collegata vedi incasso, food cost reale e quali piatti rendono di più.",
+    fix: { label: "Collega la cassa", href: "/finanze/integrazioni" },
+  };
+}
+
 export interface SdiInput {
   providerConfigured: boolean;
   connection: {

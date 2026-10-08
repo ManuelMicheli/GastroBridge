@@ -12,8 +12,8 @@ import { costRecipes, type PriceBook, type PricePoint, type RecipeInput } from "
 import type { RecipeEditorData } from "@/lib/food-cost/server/queries";
 import { cn } from "@/lib/utils/formatters";
 
-const eur = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
-const eur4 = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 4 });
+const eur = new Intl.NumberFormat("it-IT", { useGrouping: "always", style: "currency", currency: "EUR" });
+const eur4 = new Intl.NumberFormat("it-IT", { useGrouping: "always", style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 4 });
 const dateFmt = new Intl.DateTimeFormat("it-IT", { day: "2-digit", month: "2-digit", year: "2-digit", timeZone: "Europe/Rome" });
 const UNITS = ["g", "kg", "ml", "cl", "l", "pz"];
 const SOURCE_LABEL: Record<string, string> = {

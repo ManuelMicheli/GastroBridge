@@ -9,7 +9,7 @@ import { createDispute } from "@/lib/invoices/actions";
 import { buildDisputeMessage, disputeSubject, requestedCreditCents } from "@/lib/invoices/dispute";
 import type { InvoiceDetail } from "@/lib/invoices/server/queries";
 
-const eur = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
+const eur = new Intl.NumberFormat("it-IT", { useGrouping: "always", style: "currency", currency: "EUR" });
 
 /**
  * One-click "Contesta": a polite Italian message asking for a nota di
