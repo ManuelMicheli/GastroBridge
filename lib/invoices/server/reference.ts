@@ -80,8 +80,11 @@ type ReceivedRow = {
   order_id: string;
   order_item_id: string | null;
   product_name: string;
+  ordered_qty: number | null;
   received_qty: number | null;
+  issue: string | null;
   ddt_number: string | null;
+  received_at: string | null;
 };
 
 export async function loadReferenceData(
@@ -161,8 +164,9 @@ export async function loadReferenceData(
     // Delivery check-in (restaurant receiving). The view may not exist yet.
     const rec = await admin
       .from("restaurant_received_lines")
-      .select("order_id, order_item_id, product_name, received_qty, ddt_number")
-      .in("order_id", part);
+      .select("order_id, order_item_id, product_name, ordered_qty, received_qty, issue, ddt_number, received_at")
+      .in("order_id", part)
+      .order("received_at", { ascending: true });
     if (!rec.error) {
       receivingAvailable = true;
       received.push(...((rec.data ?? []) as ReceivedRow[]));
@@ -207,11 +211,19 @@ export async function loadReferenceData(
   const receivedByItem = new Map<string, number>();
   const receivedByOrderName = new Map<string, number>();
   const ddtByOrder = new Map<string, string[]>();
+  // Oldest → newest: a later check-in of the same line wins. A line checked
+  // "ok" without a typed quantity was received as ordered.
   for (const r of received) {
     if (r.ddt_number) ddtByOrder.set(r.order_id, [...(ddtByOrder.get(r.order_id) ?? []), r.ddt_number]);
-    if (r.received_qty === null || r.received_qty === undefined) continue;
-    if (r.order_item_id) receivedByItem.set(r.order_item_id, Number(r.received_qty));
-    else receivedByOrderName.set(`${r.order_id}|${normalizeText(r.product_name)}`, Number(r.received_qty));
+    const qty =
+      r.received_qty !== null && r.received_qty !== undefined
+        ? Number(r.received_qty)
+        : r.issue === "ok" && r.ordered_qty !== null && r.ordered_qty !== undefined
+          ? Number(r.ordered_qty)
+          : null;
+    if (qty === null) continue;
+    if (r.order_item_id) receivedByItem.set(r.order_item_id, qty);
+    else receivedByOrderName.set(`${r.order_id}|${normalizeText(r.product_name)}`, qty);
   }
 
   const orderById = new Map(orders.map((o) => [o.id, o]));

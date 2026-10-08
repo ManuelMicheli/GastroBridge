@@ -12,6 +12,7 @@ import { normalizeVat } from "./fatturapa.ts";
 import { getFinanceAccess } from "./server/access";
 import { rows } from "./server/db";
 import { ingestDocuments, refreshInvoiceStatus, reprocessInvoice, type IngestReport } from "./server/pipeline";
+import { notifyAfterIngest } from "./server/notify";
 import { companyDefaults, getConnection, registerRestaurant, syncConnection } from "./server/sdi";
 
 type Result<T = void> = { ok: true; data: T } | { ok: false; error: string };
@@ -21,6 +22,7 @@ function revalidateFinance(id?: string) {
   revalidatePath("/finanze/fatture");
   if (id) revalidatePath(`/finanze/fatture/${id}`);
   revalidatePath("/finanze/ricette");
+  revalidatePath("/finanze/collegamenti");
 }
 
 /* ------------------------------------------------------------------ */
@@ -50,7 +52,12 @@ export async function uploadInvoiceDocuments(input: unknown): Promise<Result<Ing
   if (!access.ok) return { ok: false, error: access.error };
   try {
     const report = await ingestDocuments(access.db, access.ctx.restaurantId, parsed.data, { source: "upload" });
-    if (report.imported.length > 0) await recomputeFoodCost(access.db, access.ctx.restaurantId).catch(() => []);
+    if (report.imported.length > 0) {
+      const alerts = await recomputeFoodCost(access.db, access.ctx.restaurantId).catch(() => []);
+      // The uploader sees the result on screen; the rest of the team is told
+      // about high-severity anomalies, settled disputes and food cost jumps.
+      await notifyAfterIngest(access.ctx.restaurantId, report, alerts, { excludeProfileIds: [access.ctx.userId] });
+    }
     revalidateFinance();
     return { ok: true, data: report };
   } catch (err) {

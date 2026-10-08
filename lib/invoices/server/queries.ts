@@ -5,7 +5,8 @@
 import "server-only";
 import { CREDIT_NOTE_GRACE_DAYS, monthlySummary, type InvoiceKpiRow, type MonthlyRow } from "../status.ts";
 import type { FindingKind, FindingSeverity, FindingStatus, InvoiceStatus } from "../types.ts";
-import { addDaysIso, isoDate, rows, type Db } from "./db";
+import { buildPriceSeries, type PriceHistoryRow, type PriceSeries } from "../price-history.ts";
+import { addDaysIso, chunks, isoDate, rows, type Db } from "./db";
 
 export interface InboxRow {
   id: string;
@@ -291,6 +292,10 @@ export interface InvoiceDetail {
   creditNotes: Array<{ id: string; document_number: string; document_date: string | null; taxable_amount: number }>;
   orders: Array<{ id: string; created_at: string; status: string }>;
   supplier: { email: string | null; phone: string | null; chatAvailable: boolean };
+  /** order_line_ref → name of the ordered product / received lot numbers. */
+  lineContext: Record<string, { orderedName: string | null; lots: string[] }>;
+  /** Invoice this credit note settles. */
+  creditNoteOf: { id: string; document_number: string } | null;
 }
 
 export async function getInvoiceDetail(db: Db, restaurantId: string, id: string): Promise<InvoiceDetail | null> {
@@ -353,7 +358,110 @@ export async function getInvoiceDetail(db: Db, restaurantId: string, id: string)
   const parsedSupplier = (invoice.parsed as { supplier?: { email?: string | null; phone?: string | null } })?.supplier;
   supplier.email = supplier.email ?? parsedSupplier?.email ?? null;
   supplier.phone = supplier.phone ?? parsedSupplier?.phone ?? null;
-  return { invoice: invoice as InvoiceDetail["invoice"], lines, findings, payments, disputes, creditNotes, orders, supplier };
+
+  // Ordered product names (marketplace order lines) + received lots.
+  const lineContext: InvoiceDetail["lineContext"] = {};
+  const refs = [...new Set(lines.map((l) => l.order_line_ref).filter((r): r is string => !!r))];
+  const uuidRefs = refs.filter((r) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(r));
+  for (const part of chunks(uuidRefs)) {
+    const items = await rows<{ id: string; product: { name: string } | null }>(
+      db.from("order_items").select("id, product:products!product_id (name)").in("id", part),
+      "detail order items",
+    );
+    for (const it of items) lineContext[it.id] = { orderedName: it.product?.name ?? null, lots: [] };
+  }
+  const orderIds = (invoice.matched_order_ids as string[]) ?? [];
+  if (orderIds.length > 0) {
+    const rec = await db
+      .from("restaurant_received_lines")
+      .select("order_id, order_item_id, line_ref, lot_number")
+      .in("order_id", orderIds.slice(0, 50))
+      .not("lot_number", "is", null);
+    if (!rec.error) {
+      for (const r of (rec.data ?? []) as Array<{ order_item_id: string | null; line_ref: string; lot_number: string | null }>) {
+        const key = r.order_item_id ?? r.line_ref;
+        if (!key || !r.lot_number) continue;
+        const cur = lineContext[key] ?? { orderedName: null, lots: [] };
+        if (!cur.lots.includes(r.lot_number)) cur.lots.push(r.lot_number);
+        lineContext[key] = cur;
+      }
+    }
+  }
+
+  let creditNoteOf: InvoiceDetail["creditNoteOf"] = null;
+  if (invoice.credit_note_for) {
+    const { data: target } = await db
+      .from("supplier_invoices")
+      .select("id, document_number")
+      .eq("id", invoice.credit_note_for)
+      .maybeSingle();
+    if (target) creditNoteOf = { id: target.id as string, document_number: String(target.document_number) };
+  }
+
+  return {
+    invoice: invoice as InvoiceDetail["invoice"],
+    lines,
+    findings,
+    payments,
+    disputes,
+    creditNotes,
+    orders,
+    supplier,
+    lineContext,
+    creditNoteOf,
+  };
+}
+
+/** Purchase price history per product (last `days`). */
+export async function getPriceSeries(db: Db, restaurantId: string, days = 365, priceKey?: string): Promise<PriceSeries[]> {
+  const since = addDaysIso(isoDate(new Date()), -days);
+  let q = db
+    .from("purchase_price_history")
+    .select("price_key, description, supplier_name, unit, quantity, unit_price, price_kg, price_l, price_pz, document_date, invoice_id")
+    .eq("restaurant_id", restaurantId)
+    .gte("document_date", since);
+  if (priceKey) q = q.eq("price_key", priceKey);
+  const hist = await rows<PriceHistoryRow>(q.order("document_date", { ascending: false }).limit(priceKey ? 500 : 8000), "price series");
+  return buildPriceSeries(hist);
+}
+
+/** Latest manual upload (for the connections panel). */
+export async function getLastUploadAt(db: Db, restaurantId: string): Promise<string | null> {
+  const { data } = await db
+    .from("supplier_invoice_files")
+    .select("created_at")
+    .eq("restaurant_id", restaurantId)
+    .eq("source", "upload")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return (data?.created_at as string | undefined) ?? null;
+}
+
+export interface AttentionItem {
+  id: string;
+  supplier_name: string | null;
+  document_number: string;
+  document_date: string | null;
+  status: InvoiceStatus;
+  open_cents: number;
+  disputed_cents: number;
+  findings_count: number;
+}
+
+/** Invoices that need a look (anomalies first, by € impact). */
+export async function getAttentionInvoices(db: Db, restaurantId: string, limit = 6): Promise<AttentionItem[]> {
+  return rows<AttentionItem>(
+    db
+      .from("supplier_invoices")
+      .select("id, supplier_name, document_number, document_date, status, open_cents, disputed_cents, findings_count")
+      .eq("restaurant_id", restaurantId)
+      .in("status", ["anomalie", "da_verificare"])
+      .order("open_cents", { ascending: false })
+      .order("document_date", { ascending: false })
+      .limit(limit),
+    "attention",
+  );
 }
 
 /** Connected suppliers and catalogs, to link an unknown P.IVA by hand. */

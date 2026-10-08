@@ -35,6 +35,8 @@ export interface IngestedInvoice {
   findings: number;
   openCents: number;
   highSeverity: number;
+  /** Credit note that settled (part of) a disputed invoice. */
+  settled?: { invoiceId: string; invoiceNumber: string; recoveredCents: number } | null;
 }
 
 export interface IngestReport {
@@ -362,9 +364,9 @@ export async function reconcileAndStore(
   }
 
   // Credit note → disputed / referenced invoice.
-  if (isCredit) await settleWithCreditNote(db, restaurantId, invoiceId, inv);
+  const settled = isCredit ? await settleWithCreditNote(db, restaurantId, invoiceId, inv) : null;
 
-  return refreshInvoiceStatus(db, invoiceId, {
+  const out = await refreshInvoiceStatus(db, invoiceId, {
     isCreditNote: isCredit,
     supplierKnown: supplier.known,
     matchedOrders: result.orderIds.length,
@@ -376,6 +378,7 @@ export async function reconcileAndStore(
     number: inv.number,
     documentType: inv.documentType,
   });
+  return { ...out, settled };
 }
 
 interface StatusContext {
@@ -450,7 +453,12 @@ export async function refreshInvoiceStatus(db: Db, invoiceId: string, c: StatusC
 }
 
 /** Auto-match a credit note to an open dispute (or the referenced invoice). */
-async function settleWithCreditNote(db: Db, restaurantId: string, creditNoteId: string, note: ParsedInvoice): Promise<void> {
+async function settleWithCreditNote(
+  db: Db,
+  restaurantId: string,
+  creditNoteId: string,
+  note: ParsedInvoice,
+): Promise<IngestedInvoice["settled"]> {
   const vat = normalizeVat(note.supplier.vatNumber);
   const disputes = await rows<{
     id: string;
@@ -499,7 +507,7 @@ async function settleWithCreditNote(db: Db, restaurantId: string, creditNoteId: 
       }
     }
   }
-  if (!targetInvoiceId) return;
+  if (!targetInvoiceId) return null;
 
   await db.from("supplier_invoices").update({ credit_note_for: targetInvoiceId }).eq("id", creditNoteId);
   const { data: target } = await db
@@ -507,7 +515,7 @@ async function settleWithCreditNote(db: Db, restaurantId: string, creditNoteId: 
     .select("id, recovered_cents, open_cents, supplier_name, document_number, document_type, supplier_id, catalog_id")
     .eq("id", targetInvoiceId)
     .maybeSingle();
-  if (!target) return;
+  if (!target) return null;
 
   const open = disputes.filter((d) => d.invoice_id === targetInvoiceId);
   const requested = open.reduce((s, d) => s + Number(d.requested_cents), 0);
@@ -534,6 +542,7 @@ async function settleWithCreditNote(db: Db, restaurantId: string, creditNoteId: 
     number: String(target.document_number),
     documentType: String(target.document_type),
   });
+  return { invoiceId: targetInvoiceId, invoiceNumber: String(target.document_number), recoveredCents: recovered };
 }
 
 /** Re-run reconciliation of a stored invoice (after linking a supplier). */
