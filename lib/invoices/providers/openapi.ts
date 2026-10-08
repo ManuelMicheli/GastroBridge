@@ -17,6 +17,10 @@
 //     (older format without "payload")
 //   * GET /invoices (list), GET /invoices/{uuid}, GET /invoices_download/{uuid}
 //   * codice destinatario to register at the Agenzia delle Entrate: JKKZDGR
+//     (CONFLICT: an Openapi FAQ of the "invoice" product mentions PIC7CPS for
+//     supplier_invoice. Verify in the console which code applies to the SDI
+//     API account and set OPENAPI_SDI_RECIPIENT_CODE accordingly — the wizard
+//     shows whatever is configured / stored at registration.)
 //
 // ASSUMPTIONS (marked TODO(openapi) below, verify on the sandbox before go-live):
 //   * auth header "Authorization: Bearer <token>" (token from console.openapi.com)
