@@ -355,14 +355,15 @@ export async function commitSupplierImport(input: SupplierCommitInput): Promise<
       sku: c.sku ?? null,
       unit: c.unit,
       price: c.price,
-      tax_rate: c.tax_rate ?? 10,
+      // VAT from the document; otherwise the column default applies
+      ...(c.tax_rate != null ? { tax_rate: c.tax_rate } : {}),
       min_quantity: c.min_quantity ?? 1,
       packaging_size: c.packaging_size ?? null,
       packaging_unit: c.packaging_unit ?? null,
       origin: c.origin ?? null,
       is_available: c.is_available,
     }));
-    const { data: ins, error } = await (supabase as any).from("products").insert(rows).select("id");
+    const { data: ins, error } = await (supabase as any).from("products").insert(rows, { defaultToNull: false }).select("id");
     if (error) return { ok: false, error: `Errore creazione prodotti: ${error.message}` };
     ((ins ?? []) as Array<{ id: string }>).forEach((r, k) => createdIds.push({ id: r.id, price: slice[k]!.price, idx: i + k }));
   }

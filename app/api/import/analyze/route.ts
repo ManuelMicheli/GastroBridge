@@ -14,7 +14,7 @@ import { applyLimit, importLimiter } from "@/lib/utils/rate-limit";
 import { localExtractor } from "@/lib/import/engine";
 import type { AnalyzeEvent, AnalyzeRequest, RestaurantContextPayload } from "@/lib/import/api-types";
 import { IMPORT_LIMITS } from "@/lib/import/api-types";
-import type { ColumnRole, Extractor, ImportHints, SupplierInfo } from "@/lib/import/types";
+import type { ColumnRole, ExtractionResult, Extractor, ImportHints, SupplierInfo } from "@/lib/import/types";
 import { supplierMemoryKeys } from "@/lib/import/memory";
 import { matchSupplierToCatalogs } from "@/lib/import/match/supplier-match";
 import {
@@ -68,6 +68,27 @@ const BodySchema = z.object({
   targetCatalogId: z.string().uuid().nullish(),
   columnOverrides: z.record(z.string(), z.record(z.string(), ROLE)).optional(),
 });
+
+/**
+ * Keep big results well under the platform response limits: for long lists
+ * drop the explanation of fields that are certain and shorten the original
+ * text (the review shows reasons only where attention is needed).
+ */
+function compactResult(result: ExtractionResult): ExtractionResult {
+  if (result.products.length < 800) return result;
+  return {
+    ...result,
+    products: result.products.map((p) => {
+      const c = p.confidence;
+      const slim = (f: typeof c.name) => (f.score >= 0.85 ? { score: f.score, reason: "" } : f);
+      return {
+        ...p,
+        original: p.original.length > 160 ? `${p.original.slice(0, 157)}…` : p.original,
+        confidence: { overall: c.overall, name: slim(c.name), price: slim(c.price), unit: c.unit, category: slim(c.category) },
+      };
+    }),
+  };
+}
 
 /** Strategy selection: only the local, deterministic extractor exists. */
 function getExtractor(): Extractor {
@@ -172,7 +193,7 @@ async function analyze(actor: ImportActor, body: AnalyzeRequest, send: (e: Analy
       platformEnabled: SUPPLIER_PLATFORM_ENABLED,
       canManage: actor.canManage,
     };
-    send({ type: "result", result, context, memoryUsed });
+    send({ type: "result", result: compactResult(result), context, memoryUsed });
     return;
   }
 
@@ -188,5 +209,5 @@ async function analyze(actor: ImportActor, body: AnalyzeRequest, send: (e: Analy
       return h;
     },
   });
-  send({ type: "result", result, context: supplierCtx, memoryUsed });
+  send({ type: "result", result: compactResult(result), context: supplierCtx, memoryUsed });
 }

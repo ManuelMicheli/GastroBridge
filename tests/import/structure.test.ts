@@ -10,6 +10,8 @@ import { similarity, NameIndex } from "../../lib/import/match/similarity.ts";
 import { learnAbbreviations, learnFromReview, supplierMemoryKeys } from "../../lib/import/memory.ts";
 import { localExtractor } from "../../lib/import/engine.ts";
 import { emptyHints, type ExtractedProduct } from "../../lib/import/types.ts";
+import { matchSupplierToCatalogs } from "../../lib/import/match/supplier-match.ts";
+import { supplierNotes, toCatalogItem, toProductUnit } from "../../lib/import/catalog-mapping.ts";
 import { buildPdf, loadPdfJs } from "./helpers.ts";
 
 test("reconstructRows: columns aligned across lines, right-aligned prices", () => {
@@ -187,6 +189,34 @@ test("memory: learn corrections and re-apply them on the next import", async () 
   assert.equal(second.products.find((p) => /basilico/i.test(p.name))!.priceUnit, "mazzo");
   assert.equal(second.products.some((p) => /mis/i.test(p.name)), false);
   assert.ok(second.warnings.some((w) => /ignorate/.test(w)));
+});
+
+test("supplier ↔ existing catalogs and table mapping", () => {
+  const cands = matchSupplierToCatalogs({ name: "Rossi Ortofrutta S.r.l.", vatNumber: null }, [
+    { id: "a", supplier_name: "ROSSI ORTOFRUTTA", notes: null },
+    { id: "b", supplier_name: "Caseificio Valle", notes: "P.IVA 01234567897" },
+    { id: "c", supplier_name: "Bianchi carni", notes: null },
+  ]);
+  assert.equal(cands[0]?.catalogId, "a");
+  assert.equal(cands.length, 1);
+  const byVat = matchSupplierToCatalogs({ name: "Altro nome", vatNumber: "01234567897" }, [
+    { id: "b", supplier_name: "Caseificio Valle", notes: "P.IVA 01234567897 · Tel 0828 123456" },
+  ]);
+  assert.deepEqual(byVat.map((c) => [c.catalogId, c.reason]), [["b", "Stessa partita IVA"]]);
+
+  assert.deepEqual(toProductUnit("hg", 2.5), { unit: "kg", price: 25 });
+  assert.deepEqual(toProductUnit("cassa", 18), { unit: "cartone", price: 18 });
+  assert.deepEqual(toProductUnit("vaschetta", 2.5), { unit: "confezione", price: 2.5 });
+  const item = toCatalogItem({
+    name: "Olio extravergine di oliva", format: "6 × 1 l", price: 39, priceUnit: "cartone",
+    unitPrice: { value: 6.5, base: "l" }, availability: null, vatRate: 4,
+  });
+  assert.deepEqual(item, { product_name: "Olio extravergine di oliva 6 × 1 l", unit: "cartone", price: 39, notes: "6,50 €/l · IVA 4%" });
+  const notes = supplierNotes({
+    vatNumber: "01234567897", phones: ["0828 123456"], emails: ["a@b.it"], pec: null, address: "Via Roma 1",
+    zip: "84047", city: "Capaccio", province: "SA", deliveryDays: [1, 3, 5], orderCutoff: "18:00", freeDeliveryOver: null, notes: [],
+  });
+  assert.equal(notes, "P.IVA 01234567897 · Tel 0828 123456 · a@b.it · Via Roma 1 84047 Capaccio (SA) · Consegna: Lun, Mer, Ven · Ordini entro 18:00");
 });
 
 test("engine never drops rows silently over the limit", async () => {
