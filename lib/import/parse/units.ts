@@ -28,7 +28,7 @@ const CONTAINER_WORDS: Record<string, ContainerUnit> = {
   pacchi: "confezione", pack: "confezione", pk: "confezione", scatola: "confezione", scatole: "confezione",
   sc: "confezione", fardello: "confezione", fardelli: "confezione", fard: "confezione", vaso: "confezione",
   vasetto: "confezione", vasetti: "confezione", barattolo: "latta", barattoli: "latta", vasi: "confezione",
-  sacco: "sacco", sacchi: "sacco", sacchetto: "sacco", sacchetti: "sacco", sac: "sacco",
+  sacco: "sacco", sacchi: "sacco", sacchetto: "busta", sacchetti: "busta", sac: "sacco",
   busta: "busta", buste: "busta", bustina: "busta",
   vaschetta: "vaschetta", vaschette: "vaschetta", vasch: "vaschetta", vasc: "vaschetta", vsc: "vaschetta",
   secchio: "secchio", secchi: "secchio", secchiello: "secchio", secchielli: "secchio",
@@ -37,7 +37,7 @@ const CONTAINER_WORDS: Record<string, ContainerUnit> = {
   bot: "bottiglia", bottiglietta: "bottiglia",
   fusto: "fusto", fusti: "fusto", tanica: "fusto", taniche: "fusto", bidone: "fusto", bidoni: "fusto", keg: "fusto",
   vassoio: "vassoio", vassoi: "vassoio",
-  mazzo: "mazzo", mazzi: "mazzo", mazzetto: "mazzo", mazzetti: "mazzo",
+  mazzo: "mazzo", mazzi: "mazzo", mazzetto: "mazzo", mazzetti: "mazzo", mz: "mazzo", maz: "mazzo",
   pallet: "pallet", bancale: "pallet", bancali: "pallet",
   rotolo: "rotolo", rotoli: "rotolo",
 };
@@ -76,17 +76,19 @@ const PIECE_ALT = "pezzi|pezzo|pzz|pz|pcs|pc|cadauno|cadauna|cad|nr";
 const NUMS = String.raw`\d+(?:[.,]\d+)?`;
 
 // "6x1L", "6 x 1,5 lt", "24x50cl", "6 bott. x 0,75 l"
-const RE_N_X_SIZE = new RegExp(String.raw`(?<![\d.,])(\d{1,3})\s*(?:(?:${PIECE_ALT}|${CONTAINER_ALT})\.?\s*)?[x]\s*(${NUMS})\s*(${MEASURE_ALT})\b\.?`, "gi");
+const RE_N_X_SIZE = new RegExp(String.raw`(?<![\d.,])(\d{1,4})\s*(?:(?:${PIECE_ALT}|${CONTAINER_ALT})\.?\s*)?[x]\s*(${NUMS})\s*(${MEASURE_ALT})\b\.?`, "gi");
 // "125g x 8", "50 cl x 24 pz", "1 kg x 10"
 const RE_SIZE_X_N = new RegExp(String.raw`(?<![\d.,])(${NUMS})\s*(${MEASURE_ALT})\.?\s*[x]\s*(\d{1,3})(?![\d.,])\s*(?:(${PIECE_ALT})\b\.?)?`, "gi");
 // "cassa da 5 kg", "crt 12 pz", "CT 6", "sacco 25kg", "conf. 500 g", "cartone x 6", "CF10PZ"
-const RE_CONTAINER_QTY = new RegExp(String.raw`\b(${CONTAINER_ALT})\b\.?\s*(da|di|x|:)?\s*(${NUMS})\s*(${MEASURE_ALT}|${PIECE_ALT})?\b\.?`, "gi");
+const RE_CONTAINER_QTY = new RegExp(String.raw`\b(${CONTAINER_ALT})\b\.?\s*(da|di|x|:)?\s*(${NUMS})\s*(${MEASURE_ALT}|${PIECE_ALT}|${CONTAINER_ALT})?\b\.?`, "gi");
 // "12 bottiglie per cartone", "6 pz a cartone", "5 kg a cassa", "10 kg/cassa"
 const RE_QTY_PER_CONTAINER = new RegExp(String.raw`(?<![\d.,])(${NUMS})\s*(${MEASURE_ALT}|${PIECE_ALT}|${CONTAINER_ALT})?\.?\s*(?:per|a|al|x|/)\s*(${CONTAINER_ALT})\b\.?`, "gi");
 // "x6", "x 12 pz"
 const RE_X_N = new RegExp(String.raw`(?<![a-z\d])x\s*(\d{1,3})(?![\d.,])\s*(?:(${PIECE_ALT})\b\.?)?`, "gi");
 // "500g", "1 kg", "0,75 l"
 const RE_SIZE = new RegExp(String.raw`(?<![\d.,])(${NUMS})\s*(${MEASURE_ALT})\b\.?`, "gi");
+// "LT.5", "KG.1", "GR.500", "LT. 1,5" (unit first, dot-separated — ALL CAPS lists)
+const RE_UNIT_DOT_SIZE = /\b(lt|ltr|kg|kgr|gr|ml|cl)\.\s?(\d+(?:,\d)?)(?![\d.,])(?!\s*(?:€|eur))/gi;
 // "30 pz", "12 pezzi"
 const RE_PIECES = new RegExp(String.raw`(?<![\d.,])(\d{1,4})\s*(${PIECE_ALT})\b\.?`, "gi");
 // lone container word ("cartone", "a cassa", "CRT")
@@ -237,6 +239,15 @@ export function parsePack(text: string): PackParse {
     const n = Number(m[1]);
     if (!n || pack.pieces) return false;
     pack.pieces = n;
+    return true;
+  });
+
+  take(RE_UNIT_DOT_SIZE, (m) => {
+    const v = parseNumber(m[2]!);
+    const unit = measureOf(m[1]!);
+    if (v === null || !unit || v === 0 || pack.pieceSize) return false;
+    pack.pieceSize = toBase(v, unit);
+    sizeDisplay = pack.pieces && pack.pieces > 1 ? `${pack.pieces} × ${fmtNum(v)} ${unit}` : `${fmtNum(v)} ${unit}`;
     return true;
   });
 

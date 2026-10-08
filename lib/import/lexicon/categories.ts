@@ -82,7 +82,7 @@ const LEXICON: Record<ImportCategory, W[]> = {
     ["cetriol", 3], ["ravanell", 3], ["barbabietol", 3], ["rapa", 2], ["cime di rapa", 3], ["friarielli", 3], ["bietol", 3],
     ["valerian", 3], ["songino", 3], ["germogli", 2], ["misticanza", 3], ["patate dolci", 3], ["topinambur", 3], ["scalogn", 3],
     ["zenzero", 2], ["peperoncin", 2], ["verdur", 3], ["ortaggi", 3], ["friggitell", 3], ["cavolo nero", 3], ["catalogna", 3],
-    ["puntarell", 3], ["mais", 1], ["pannocchi", 3], ["avocado", 2],
+    ["puntarell", 3], ["mais", 1], ["pannocchi", 3],
   ],
   frutta: [
     ["limon", 3], ["arance", 3], ["arancia", 3], ["arancie", 3], ["mandarin", 3], ["clementin", 3], ["pompelm", 3], ["lime", 3],
@@ -91,14 +91,14 @@ const LEXICON: Record<ImportCategory, W[]> = {
     ["nettarin", 3], ["albicocc", 3], ["susin", 3], ["prugn", 3], ["ciliegie", 3], ["kiwi", 3], ["ananas", 3], ["mango", 3],
     ["papaya", 3], ["melograno", 3], ["fichi", 3], ["fico", 2], ["cachi", 3], ["kaki", 3], ["castagn", 3], ["noci", 2],
     ["nocciol", 2], ["mandorl", 2], ["pistacchi", 2], ["frutta", 3], ["frutti di bosco", 3], ["passion fruit", 3], ["maracuja", 3],
-    ["cedro", 2], ["bergamott", 3],
+    ["cedro", 2], ["bergamott", 3], ["avocado", 3], ["papaia", 3], ["litchi", 3], ["physalis", 3],
   ],
   carne: [
     ["pollo", 3], ["polli", 3], ["manzo", 3], ["vitell", 3], ["vitellone", 3], ["scottona", 3], ["maiale", 3], ["suino", 3],
     ["agnell", 3], ["capretto", 3], ["tacchin", 3], ["coniglio", 3], ["anatra", 3], ["faraona", 3], ["cavallo", 3], ["bovino", 3],
     ["prosciutt", 3], ["salame", 3], ["salami", 3], ["salsicc", 3], ["bresaola", 3], ["speck", 3], ["pancetta", 3], ["guancial", 3],
     ["mortadell", 3], ["coppa", 3], ["capocollo", 3], ["lardo", 3], ["culatell", 3], ["wurstel", 3], ["cotechino", 3],
-    ["zampone", 3], ["nduja", 3], ["porchetta", 3], ["hamburger", 3], ["burger", 2], ["macinat", 3], ["bistecc", 3], ["costat", 3],
+    ["zampone", 3], ["nduja", 3], ["polpett", 3], ["cotolett", 3], ["involtin", 2], ["scaloppin", 3], ["lombata", 3], ["porchetta", 3], ["hamburger", 3], ["burger", 2], ["macinat", 3], ["bistecc", 3], ["costat", 3],
     ["fiorentina", 3], ["tagliata", 2], ["filetto", 1], ["controfiletto", 3], ["entrecote", 3], ["roastbeef", 3], ["roast beef", 3],
     ["spezzatino", 3], ["ossobuco", 3], ["fesa", 3], ["noce di", 1], ["girello", 3], ["lombo", 3], ["lonza", 3], ["arista", 3],
     ["costine", 3], ["ribs", 3], ["petto", 1], ["cosce", 2], ["coscia", 2], ["sovracosc", 3], ["ali di pollo", 3], ["fegat", 2],
@@ -108,7 +108,7 @@ const LEXICON: Record<ImportCategory, W[]> = {
   pesce: [
     ["salmon", 3], ["merluzz", 3], ["baccal", 3], ["stoccafisso", 3], ["tonno", 3], ["branzin", 3], ["spigola", 3], ["orata", 3],
     ["sgombr", 3], ["sardin", 3], ["sarde", 3], ["acciug", 3], ["alici", 3], ["gamber", 3], ["mazzancoll", 3], ["scampi", 3],
-    ["calamar", 3], ["totani", 3], ["seppi", 3], ["polp", 3], ["moscardin", 3], ["vongol", 3], ["cozze", 3], ["cozza", 3],
+    ["calamar", 3], ["totani", 3], ["seppi", 3], ["polpo", 3], ["polpi", 3], ["polipo", 3], ["polipi", 3], ["moscardin", 3], ["vongol", 3], ["cozze", 3], ["cozza", 3],
     ["ostrich", 3], ["capesant", 3], ["telline", 3], ["fasolari", 3], ["granchi", 3], ["astice", 3], ["aragost", 3], ["pesce", 3],
     ["rombo", 3], ["sogliola", 3], ["platessa", 3], ["pesce spada", 3], ["spada", 2], ["ricciola", 3], ["dentice", 3], ["pagello", 3],
     ["triglia", 3], ["trota", 3], ["cernia", 3], ["nasello", 3], ["halibut", 3], ["frutti di mare", 3], ["bottarga", 3], ["crostace", 3],
@@ -129,6 +129,8 @@ const LEXICON: Record<ImportCategory, W[]> = {
     ["friselle", 3], ["ciabatta", 3], ["rosetta", 3], ["pan carre", 3], ["pancarre", 3], ["tramezzin", 3], ["bun", 2],
     ["pane grattugiato", 3], ["pangrattato", 3], ["torta", 2], ["torte", 2], ["crostat", 2], ["pasticceria", 3], ["dolci", 2],
     ["biscott", 2], ["muffin", 3], ["plumcake", 3], ["cannoli", 2], ["sfogliatell", 3], ["bigne", 2], ["tiramis", 2],
+    ["filone", 3], ["filoncin", 3], ["pagnott", 3], ["michett", 3], ["sfilatin", 3], ["pan di spagna", 3], ["pan brioche", 3],
+    ["pan bauletto", 3], ["pane carasau", 3], ["schiacciat", 2],
   ],
   secco: [
     ["farina", 3], ["semola", 3], ["pasta", 3], ["spaghett", 3], ["penne", 3], ["rigaton", 3], ["linguin", 3], ["tagliatell", 2],
@@ -155,6 +157,13 @@ const LEXICON: Record<ImportCategory, W[]> = {
     ["pinot", 3], ["chardonnay", 3], ["sauvignon", 3], ["merlot", 3], ["cabernet", 3], ["sangiovese", 3], ["falanghina", 3],
     ["igt", 1], ["docg", 2], ["doc", 1], ["sciroppo per", 2], ["caffe in grani", 3], ["caffe macinato", 3], ["capsule", 2],
     ["cialde", 2], ["te freddo", 3], ["estathe", 3], ["kombucha", 3], ["sidro", 3], ["bevand", 3], ["drink", 2], ["tè", 1],
+    ["soave", 3], ["amarone", 3], ["ripasso", 3], ["valpolicella", 3], ["lugana", 3], ["bardolino", 3], ["valdobbiadene", 3],
+    ["nebbiolo", 3], ["barbera", 3], ["dolcetto", 3], ["barbaresco", 3], ["gewurztraminer", 3], ["traminer", 3], ["muller", 2],
+    ["ribolla", 3], ["verdicchio", 3], ["greco di tufo", 3], ["fiano", 3], ["aglianico", 3], ["taurasi", 3], ["cannonau", 3],
+    ["negroamaro", 3], ["morellino", 3], ["bolgheri", 3], ["trebbiano", 3], ["passito", 3], ["moscato", 3], ["malvasia", 3],
+    ["refosco", 3], ["teroldego", 3], ["lagrein", 3], ["inzolia", 3], ["sagrantino", 3], ["cerasuolo", 3],
+    ["rosato", 2], ["brut", 3], ["extra dry", 3], ["metodo classico", 3], ["magnum", 2], ["lager", 3], ["weiss", 3],
+    ["cedrata", 3], ["sprite", 3], ["fanta", 3], ["pepsi", 3], ["red bull", 3], ["schweppes", 3],
   ],
   packaging: [
     ["vaschett", 3], ["contenitor", 3], ["alluminio", 2], ["pellicola", 3], ["carta forno", 3], ["carta da forno", 3], ["tovaglio", 3],
@@ -168,7 +177,8 @@ const LEXICON: Record<ImportCategory, W[]> = {
     ["candeggin", 3], ["ammoniaca", 3], ["brillantant", 3], ["anticalcare", 3], ["lavastoviglie", 3], ["lavapavimenti", 3],
     ["sapone", 3], ["spugn", 3], ["panno", 3], ["panni", 3], ["guanti", 3], ["nitrile", 3], ["lattice", 2], ["carta igienica", 3],
     ["asciugaman", 2], ["bobina", 3], ["sacchi neri", 3], ["sacchi spazzatura", 3], ["mocio", 3], ["scopa", 3], ["alcool", 2],
-    ["pulizia", 3], ["pulitor", 3], ["cloro", 3], ["deodorant", 2], ["deterg", 3],
+    ["pulizia", 3], ["pulitor", 3], ["cloro", 3], ["deodorant", 2], ["deterg", 3], ["deters", 3], ["lavamani", 3],
+    ["sanitizz", 3], ["decalcific", 3], ["lucidant", 3], ["ammorbident", 3],
   ],
   attrezzature: [
     ["pentol", 3], ["padell", 3], ["tegame", 3], ["teglia", 3], ["teglie", 3], ["coltelli", 3], ["tagliere", 3], ["mestol", 3],
@@ -179,11 +189,21 @@ const LEXICON: Record<ImportCategory, W[]> = {
   altro: [],
 };
 
-// Pre-fold the lexicon once.
+// Pre-fold the lexicon once (longest stems first, so the head-noun bonus goes
+// to "pan di spagna" rather than "pan").
 const FOLDED: Array<[ImportCategory, string, number]> = [];
 for (const [cat, list] of Object.entries(LEXICON) as Array<[ImportCategory, W[]]>) {
   for (const [stem, w] of list) FOLDED.push([cat, fold(stem), w]);
 }
+FOLDED.sort((a, b) => b[1].length - a[1].length);
+
+/** The first word of an Italian product name is usually its head noun. */
+const HEAD_BONUS = 2;
+
+/** Qualifiers that must not count as keywords ("pane senza sale" is not salt). */
+const NEUTRALIZE = /\bsenza\s+(?:sale|zucchero|glutine|lattosio|uova|latte)\b/g;
+/** "Panini al latte", "cornetti alla crema": the bakery noun wins over the filling. */
+const BAKERY_HEAD = /^ (?:pan|pane|panin[oi]|panett\w*|brioche|cornett[oi]|croissant|biscott[oi]|focacc\w*|tort[ae]|crostat\w*|muffin)\b/;
 
 export type CategoryGuess = {
   category: ImportCategory;
@@ -195,8 +215,10 @@ export type CategoryGuess = {
 /** Words that flip a fresh product to frozen/dry regardless of the noun. */
 const CONTEXT_OVERRIDES: Array<[RegExp, ImportCategory, number]> = [
   [/\b(surgelat|congelat|frozen|iqf)/, "surgelati", 6],
-  [/\b(in scatola|sott'?olio|sottolio|all'olio|al naturale|in salamoia|essiccat|secchi\b|disidratat|liofilizzat|in vasetto|in barattolo|in latta|in vetro|conserv)/, "secco", 4],
+  [/\b(in scatola|sott'?olio|sottolio|all'olio|al naturale|in salamoia|essiccat|secchi\b|disidratat|liofilizzat|in vasetto|in barattolo|in latta|in vetro|conserv)/, "secco", 6],
   [/\b(succo|nettare|spremut)/, "bevande", 3],
+  // preserved vegetables are pantry goods ("pomodori pelati", "funghi trifolati", "ceci lessati")
+  [/\b(pelati|passata|polpa di pomodoro|sottaceto|sott'aceto|in agrodolce|trifolat|lessat)/, "secco", 4],
 ];
 
 /**
@@ -205,13 +227,17 @@ const CONTEXT_OVERRIDES: Array<[RegExp, ImportCategory, number]> = [
  * ("FRUTTA", sheet named "Latticini", …) and weighs as a strong signal.
  */
 export function classifyCategory(name: string, sectionHint?: ImportCategory | null): CategoryGuess {
-  const f = ` ${fold(name).replace(/[^a-z0-9' ]+/g, " ")} `;
+  let f = ` ${fold(name).replace(/[^a-z0-9' ]+/g, " ")} `.replace(NEUTRALIZE, " ");
+  if (BAKERY_HEAD.test(f)) f = f.replace(/\b(?:al|alla|alle|allo)\s+(?:latte|crema|burro|cioccolato|marmellata)\b/g, " ");
   const scores = new Map<ImportCategory, number>();
   const hits = new Map<ImportCategory, string[]>();
+  let headTaken = false;
   for (const [cat, stem, w] of FOLDED) {
     const needle = ` ${stem}`;
     if (f.includes(needle)) {
-      scores.set(cat, (scores.get(cat) ?? 0) + w);
+      const head = !headTaken && f.startsWith(needle);
+      if (head) headTaken = true;
+      scores.set(cat, (scores.get(cat) ?? 0) + w + (head ? HEAD_BONUS : 0));
       const list = hits.get(cat) ?? [];
       list.push(stem.trim());
       hits.set(cat, list);

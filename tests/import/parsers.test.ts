@@ -214,3 +214,36 @@ test("line classifier", () => {
   assert.equal(classifyLine("Buongiorno, ecco il listino").cls, "noise");
   assert.equal(classifyLine("Perfetto grazie Mario!").cls, "noise");
 });
+
+test("hardening pass: regressions found on the blind corpus", () => {
+  // "8      EUR 7,20": the EUR introduces the next amount, 8 is the pack count
+  const mozz = parseProductText("MOZZ. FDL 125GR X 8                 EUR 7,20");
+  assert.equal(mozz.price, 7.2);
+  assert.equal(mozz.pack.pieces, 8);
+  assert.equal(mozz.pack.total?.value, 1);
+  // unit written before the size, dot separated
+  const olio = parseProductText("OLIO EVO LT.5   EUR 42,00");
+  assert.equal(olio.price, 42);
+  assert.deepEqual(olio.pack.total, { value: 5, base: "l" });
+  // 4-digit piece counts and "cartone 6 bt."
+  assert.equal(parsePack("cartone 1000 x 5 g").pack.pieces, 1000);
+  assert.equal(parsePack("Ripasso cartone 6 bt.").pack.pieces, 6);
+  assert.equal(unitFromWord("MZ"), "mazzo");
+  // OCR: S read instead of 5
+  assert.equal(fixOcrDigits("S,90"), "5,90");
+  // supplier conditions written in prose
+  assert.equal(findMinOrder("L'ordine minimo resta 200 euro."), 200);
+  assert.equal(findMinOrder("ordine minimo 6 bottiglie anche miste"), null);
+  assert.equal(findCutoff("ordinando entro mezzogiorno del giorno prima"), "12:00");
+  assert.equal(findLeadTime("Ordini entro le 18 del giorno prima"), 1);
+  // context-dependent abbreviations
+  assert.equal(expandAbbreviations("SALM. AFF. NORV.", {}, { allCaps: true }).text, "salmone affumicato norvegese");
+  assert.equal(expandAbbreviations("Prosc. cotto aff.").text, "prosciutto cotto affettato");
+  // categories: head noun, qualifiers, preserved vegetables
+  assert.equal(classifyCategory("Panini al latte").category, "panetteria");
+  assert.equal(classifyCategory("Filone toscano senza sale").category, "panetteria");
+  assert.equal(classifyCategory("Pomodori pelati").category, "secco");
+  assert.equal(classifyCategory("Detersivo piatti").category, "pulizia");
+  assert.equal(classifyCategory("Polpette pronte").category, "carne");
+  assert.equal(classifyCategory("Soave classico").category, "bevande");
+});

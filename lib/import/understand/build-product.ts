@@ -145,6 +145,10 @@ export function buildProduct(parsed: ParsedText, extra: BuildExtra, ctx: BuildCo
       priceUnit = pack.container ?? "confezione";
       unitConf = fc(0.6, `Colonna unità “${SALE_UNIT_LABELS[tu]}” ma confezione da ${parsed.format}: prezzo per confezione`);
       issues.push(`Verifica: prezzo al ${SALE_UNIT_LABELS[tu]} o per la confezione da ${parsed.format}?`);
+    } else if (tu === "confezione" && pack.container && pack.container !== "confezione") {
+      // "SC"/"CF" are generic ("scatola", "confezione"): the pack cell is more specific ("sacco 25 kg").
+      priceUnit = pack.container;
+      unitConf = fc(0.88, `Colonna unità “${SALE_UNIT_LABELS[tu]}”, confezione “${SALE_UNIT_LABELS[pack.container]}”`);
     } else {
       priceUnit = tu;
       unitConf = fc(0.9, `Colonna unità: ${SALE_UNIT_LABELS[priceUnit]}`);
@@ -155,6 +159,10 @@ export function buildProduct(parsed: ParsedText, extra: BuildExtra, ctx: BuildCo
   } else if (parsed.loneUnit) {
     priceUnit = parsed.loneUnit;
     unitConf = fc(0.85, `Unità “${SALE_UNIT_LABELS[priceUnit]}” sulla riga`);
+  } else if (pack.container && (pack.container === "latta" || pack.container === "bottiglia") && (pack.pieces ?? 1) > 1) {
+    // "lattina 33 cl x 24", "bottiglia 75 cl x 6": the price is for the pack, not one can
+    priceUnit = "confezione";
+    unitConf = fc(0.75, `Prezzo per confezione da ${pack.pieces} ${SALE_UNIT_LABELS[pack.container]}`);
   } else if (pack.container) {
     priceUnit = pack.container;
     unitConf = fc(0.8, `Prezzo riferito a ${SALE_UNIT_LABELS[priceUnit]}`);

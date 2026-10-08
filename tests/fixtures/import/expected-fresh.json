@@ -1,0 +1,52 @@
+{
+  "_doc": "Fresh corpus: written AFTER the hardening pass and never tuned on — the honest generalisation number.",
+  "fresh-whatsapp-pasticceria.txt": {
+    "kind": "text",
+    "supplier": { "name": "Dolciaria Sud", "deliveryDays": [4], "minOrder": 120 },
+    "products": [
+      { "name": "Farina di mandorle", "price": 14.9, "unit": ["pz", "confezione"], "category": "secco", "pack": { "total": [1, "kg"] } },
+      { "name": "Pasta di pistacchio Bronte 100%", "price": 48, "unit": ["latta", "pz", "confezione"], "category": "secco", "pack": { "total": [1, "kg"] } },
+      { "name": "Zucchero a velo", "price": 12.5, "unit": "sacco", "category": "secco", "pack": { "total": [10, "kg"] } },
+      { "name": ["Cioccolato fondente 70% gocce", "Cioccolato fondente gocce"], "price": 31, "unit": ["pz", "confezione"], "category": "secco", "pack": { "total": [2.5, "kg"] } },
+      { "name": "Panna vegetale", "price": 39.6, "unit": ["confezione", "cartone"], "category": ["latticini", "secco"], "pack": { "pieces": 12, "total": [12, "l"] } },
+      { "name": ["Uova pastorizzate brick", "Uova pastorizzate"], "price": 4.2, "unit": ["pz", "confezione"], "category": "latticini", "pack": { "total": [1, "kg"] } }
+    ]
+  },
+  "fresh-listino-ittico.tsv": {
+    "kind": "csv",
+    "supplier": {},
+    "products": [
+      { "name": "Branzino", "price": 11.9, "unit": "kg", "category": "pesce" },
+      { "name": "Rombo chiodato", "price": 29, "unit": "kg", "category": "pesce" },
+      { "name": "Gamberi rossi Mazara", "price": 62, "unit": "kg", "category": "pesce" },
+      { "name": "Cozze nere", "price": 2.8, "unit": "kg", "category": "pesce", "pack": { "total": [5, "kg"] } },
+      { "name": "Polpo decongelato", "price": 15.5, "unit": "kg", "category": ["pesce", "surgelati"] },
+      { "name": "Filetti di merluzzo", "price": 13.4, "unit": "kg", "category": "pesce", "pack": { "total": [5, "kg"] } }
+    ]
+  },
+  "fresh-email-bibite.txt": {
+    "kind": "text",
+    "supplier": { "name": "Bevande Rapide srl", "vatNumber": "06112233447", "phones": ["06 5544332"], "deliveryDays": [2, 6] },
+    "pricesIncludeVat": false,
+    "products": [
+      { "name": "Aranciata San Pellegrino lattina", "price": 17.28, "unit": ["confezione", "cartone"], "category": "bevande", "pack": { "pieces": 24, "total": [7.92, "l"] } },
+      { "name": "Acqua Levissima PET", "price": 6, "unit": "confezione", "category": "bevande", "pack": { "pieces": 24 } },
+      { "name": "Birra Menabrea", "price": 68, "unit": "fusto", "category": "bevande", "pack": { "total": [20, "l"] } },
+      { "name": "Aperol", "price": 14.5, "unit": ["pz", "bottiglia"], "category": "bevande", "pack": { "size": [1, "l"] } },
+      { "name": "Gin Bombay Sapphire", "price": 21.9, "unit": ["pz", "bottiglia"], "category": "bevande", "pack": { "size": [0.7, "l"] } },
+      { "name": "Sciroppo menta Fabbri", "price": 7.4, "unit": ["pz", "bottiglia"], "category": ["bevande", "secco"], "pack": { "size": [1, "l"] } }
+    ]
+  },
+  "fresh-ocr-macelleria.txt": {
+    "kind": "image",
+    "supplier": { "name": "MACELLERIA BRUNO" },
+    "products": [
+      { "name": "Lombata di vitello", "price": 24.9, "unit": "kg", "category": "carne" },
+      { "name": "Spezzatino di manzo", "price": 12.5, "unit": "kg", "category": "carne" },
+      { "name": ["Polpette pronte", "Polpette pronte vaschetta"], "price": 11, "unit": "vaschetta", "category": "carne", "pack": { "total": [1, "kg"] } },
+      { "name": "Cotolette impanate", "price": 13.9, "unit": "kg", "category": ["carne", "surgelati"] },
+      { "name": "Pollo intero ruspante", "price": 6.8, "unit": "kg", "category": "carne" },
+      { "name": "Ossobuco", "price": 15, "unit": "kg", "category": "carne" }
+    ]
+  }
+}

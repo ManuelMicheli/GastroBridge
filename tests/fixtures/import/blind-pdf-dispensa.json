@@ -1,0 +1,393 @@
+{
+ "description": "Blind PDF (dry goods, five columns, section rows, VAT column).",
+ "page": {
+  "width": 595,
+  "height": 842
+ },
+ "runs": [
+  {
+   "x": 40,
+   "y": 805,
+   "size": 15,
+   "text": "DISPENSA ITALIA S.P.A."
+  },
+  {
+   "x": 40,
+   "y": 789,
+   "size": 9,
+   "text": "Via dell'Industria 44 - 40138 Bologna (BO)"
+  },
+  {
+   "x": 40,
+   "y": 777,
+   "size": 9,
+   "text": "P.IVA 08112233443 - Tel. 051 6012345 - ordini@dispensaitalia.it"
+  },
+  {
+   "x": 40,
+   "y": 758,
+   "size": 11,
+   "text": "LISTINO PREZZI RISTORAZIONE N. 10/2026"
+  },
+  {
+   "x": 40,
+   "y": 730,
+   "size": 9,
+   "text": "Cod."
+  },
+  {
+   "x": 90,
+   "y": 730,
+   "size": 9,
+   "text": "Articolo"
+  },
+  {
+   "x": 300,
+   "y": 730,
+   "size": 9,
+   "text": "Confezione"
+  },
+  {
+   "x": 440,
+   "y": 730,
+   "size": 9,
+   "text": "Prezzo €"
+  },
+  {
+   "x": 510,
+   "y": 730,
+   "size": 9,
+   "text": "IVA"
+  },
+  {
+   "x": 40,
+   "y": 708,
+   "size": 10,
+   "text": "PASTA E RISO"
+  },
+  {
+   "x": 40,
+   "y": 690,
+   "size": 9,
+   "text": "PA10"
+  },
+  {
+   "x": 90,
+   "y": 690,
+   "size": 9,
+   "text": "Spaghetti Barilla n.5"
+  },
+  {
+   "x": 300,
+   "y": 690,
+   "size": 9,
+   "text": "cartone 24 x 500 g"
+  },
+  {
+   "x": 446,
+   "y": 690,
+   "size": 9,
+   "text": "28,80"
+  },
+  {
+   "x": 512,
+   "y": 690,
+   "size": 9,
+   "text": "4"
+  },
+  {
+   "x": 40,
+   "y": 675,
+   "size": 9,
+   "text": "PA11"
+  },
+  {
+   "x": 90,
+   "y": 675,
+   "size": 9,
+   "text": "Paccheri di Gragnano IGP"
+  },
+  {
+   "x": 300,
+   "y": 675,
+   "size": 9,
+   "text": "conf. 6 x 1 kg"
+  },
+  {
+   "x": 446,
+   "y": 675,
+   "size": 9,
+   "text": "19,20"
+  },
+  {
+   "x": 512,
+   "y": 675,
+   "size": 9,
+   "text": "4"
+  },
+  {
+   "x": 40,
+   "y": 660,
+   "size": 9,
+   "text": "PA12"
+  },
+  {
+   "x": 90,
+   "y": 660,
+   "size": 9,
+   "text": "Gnocchi di patate freschi"
+  },
+  {
+   "x": 300,
+   "y": 660,
+   "size": 9,
+   "text": "busta 1 kg"
+  },
+  {
+   "x": 446,
+   "y": 660,
+   "size": 9,
+   "text": "2,40"
+  },
+  {
+   "x": 512,
+   "y": 660,
+   "size": 9,
+   "text": "4"
+  },
+  {
+   "x": 40,
+   "y": 645,
+   "size": 10,
+   "text": "CONSERVE"
+  },
+  {
+   "x": 40,
+   "y": 627,
+   "size": 9,
+   "text": "CO20"
+  },
+  {
+   "x": 90,
+   "y": 627,
+   "size": 9,
+   "text": "Pomodori pelati San Marzano DOP"
+  },
+  {
+   "x": 300,
+   "y": 627,
+   "size": 9,
+   "text": "latta 2,5 kg"
+  },
+  {
+   "x": 446,
+   "y": 627,
+   "size": 9,
+   "text": "4,95"
+  },
+  {
+   "x": 512,
+   "y": 627,
+   "size": 9,
+   "text": "4"
+  },
+  {
+   "x": 40,
+   "y": 612,
+   "size": 9,
+   "text": "CO21"
+  },
+  {
+   "x": 90,
+   "y": 612,
+   "size": 9,
+   "text": "Passata di pomodoro"
+  },
+  {
+   "x": 300,
+   "y": 612,
+   "size": 9,
+   "text": "cartone 12 x 700 g"
+  },
+  {
+   "x": 446,
+   "y": 612,
+   "size": 9,
+   "text": "10,80"
+  },
+  {
+   "x": 512,
+   "y": 612,
+   "size": 9,
+   "text": "4"
+  },
+  {
+   "x": 40,
+   "y": 597,
+   "size": 9,
+   "text": "CO22"
+  },
+  {
+   "x": 90,
+   "y": 597,
+   "size": 9,
+   "text": "Tonno all'olio d'oliva"
+  },
+  {
+   "x": 300,
+   "y": 597,
+   "size": 9,
+   "text": "latta 1,7 kg"
+  },
+  {
+   "x": 446,
+   "y": 597,
+   "size": 9,
+   "text": "14,90"
+  },
+  {
+   "x": 512,
+   "y": 597,
+   "size": 9,
+   "text": "10"
+  },
+  {
+   "x": 40,
+   "y": 582,
+   "size": 9,
+   "text": "CO23"
+  },
+  {
+   "x": 90,
+   "y": 582,
+   "size": 9,
+   "text": "Capperi sotto sale"
+  },
+  {
+   "x": 300,
+   "y": 582,
+   "size": 9,
+   "text": "vaso 500 g"
+  },
+  {
+   "x": 446,
+   "y": 582,
+   "size": 9,
+   "text": "6,30"
+  },
+  {
+   "x": 512,
+   "y": 582,
+   "size": 9,
+   "text": "10"
+  },
+  {
+   "x": 40,
+   "y": 567,
+   "size": 10,
+   "text": "OLI E ACETI"
+  },
+  {
+   "x": 40,
+   "y": 549,
+   "size": 9,
+   "text": "OL30"
+  },
+  {
+   "x": 90,
+   "y": 549,
+   "size": 9,
+   "text": "Olio extravergine di oliva 100% italiano"
+  },
+  {
+   "x": 300,
+   "y": 549,
+   "size": 9,
+   "text": "latta 5 l"
+  },
+  {
+   "x": 446,
+   "y": 549,
+   "size": 9,
+   "text": "49,50"
+  },
+  {
+   "x": 512,
+   "y": 549,
+   "size": 9,
+   "text": "4"
+  },
+  {
+   "x": 40,
+   "y": 534,
+   "size": 9,
+   "text": "OL31"
+  },
+  {
+   "x": 90,
+   "y": 534,
+   "size": 9,
+   "text": "Olio di semi di girasole alto oleico"
+  },
+  {
+   "x": 300,
+   "y": 534,
+   "size": 9,
+   "text": "tanica 10 l"
+  },
+  {
+   "x": 446,
+   "y": 534,
+   "size": 9,
+   "text": "26,00"
+  },
+  {
+   "x": 512,
+   "y": 534,
+   "size": 9,
+   "text": "22"
+  },
+  {
+   "x": 40,
+   "y": 519,
+   "size": 9,
+   "text": "OL32"
+  },
+  {
+   "x": 90,
+   "y": 519,
+   "size": 9,
+   "text": "Aceto balsamico di Modena IGP"
+  },
+  {
+   "x": 300,
+   "y": 519,
+   "size": 9,
+   "text": "bottiglia 500 ml"
+  },
+  {
+   "x": 446,
+   "y": 519,
+   "size": 9,
+   "text": "3,60"
+  },
+  {
+   "x": 512,
+   "y": 519,
+   "size": 9,
+   "text": "22"
+  },
+  {
+   "x": 40,
+   "y": 484,
+   "size": 9,
+   "text": "Prezzi IVA esclusa - Consegna in 48 ore - Ordine minimo € 250"
+  },
+  {
+   "x": 40,
+   "y": 470,
+   "size": 9,
+   "text": "Pagina 1 di 1"
+  }
+ ]
+}

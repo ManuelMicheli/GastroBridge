@@ -101,10 +101,23 @@ export async function loadFixture(name: string, kind: string): Promise<SourceDoc
 // Scoring
 // ---------------------------------------------------------------------------
 
+export type GoldPack = {
+  /** Total content of one sale unit: [value, "kg" | "l" | "pz"]. */
+  total?: [number, string];
+  /** Pieces inside one sale unit. */
+  pieces?: number;
+  /** Size of one piece (or of the whole unit when it is a single piece). */
+  size?: [number, string];
+};
+
 export type GoldProduct = {
-  name: string;
+  /** Expected name; a list accepts any of the variants. */
+  name: string | string[];
   price: number;
   unit: string | string[];
+  /** Other acceptable [price, units] readings (e.g. per bottle instead of per carton). */
+  alt?: Array<[number, string[]]>;
+  pack?: GoldPack;
   category: string | string[];
   vat?: number | null;
   available?: boolean;
@@ -129,47 +142,72 @@ export type Score = {
   extraTotal: number;
   supplierOk: number;
   supplierTotal: number;
+  packOk: number;
+  packTotal: number;
   failures: string[];
 };
+
+const near = (a: number, b: number) => Math.abs(a - b) <= Math.max(0.005, Math.abs(b) * 0.01);
+
+function packMatches(p: ExtractionResult["products"][number], g: GoldPack): boolean {
+  const pk = p.pack;
+  if (g.total && !(pk.total && pk.total.base === g.total[1] && near(pk.total.value, g.total[0]))) return false;
+  if (g.pieces !== undefined && pk.pieces !== g.pieces) return false;
+  if (g.size) {
+    const size = pk.pieceSize ?? (!pk.pieces || pk.pieces === 1 ? pk.total : undefined);
+    if (!(size && size.base === g.size[1] && near(size.value, g.size[0]))) return false;
+  }
+  return true;
+}
 
 export function scoreResult(res: ExtractionResult, gold: Gold): Score {
   const s: Score = {
     expected: gold.products.length, extracted: res.products.length, found: 0, nameOk: 0, priceOk: 0, unitOk: 0,
-    categoryOk: 0, extraOk: 0, extraTotal: 0, supplierOk: 0, supplierTotal: 0, failures: [],
+    categoryOk: 0, extraOk: 0, extraTotal: 0, supplierOk: 0, supplierTotal: 0, packOk: 0, packTotal: 0, failures: [],
   };
   const used = new Set<string>();
   for (const g of gold.products) {
+    const names = Array.isArray(g.name) ? g.name : [g.name];
+    const label = names[0]!;
     let best: { id: string; score: number } | null = null;
     for (const p of res.products) {
       if (used.has(p.id)) continue;
-      const sc = similarity(g.name, p.name);
+      const sc = Math.max(...names.map((n) => similarity(n, p.name)));
       if (sc >= 0.6 && (!best || sc > best.score)) best = { id: p.id, score: sc };
     }
     if (!best) {
-      s.failures.push(`MISSING ${g.name}`);
+      s.failures.push(`MISSING ${label}`);
       continue;
     }
     used.add(best.id);
     const p = res.products.find((x) => x.id === best!.id)!;
     s.found++;
     if (best.score >= 0.8) s.nameOk++;
-    else s.failures.push(`NAME "${p.name}" ≠ "${g.name}" (${best.score.toFixed(2)})`);
-    if (p.price !== null && Math.abs(p.price - g.price) < 0.005) s.priceOk++;
-    else s.failures.push(`PRICE ${g.name}: ${p.price} ≠ ${g.price}`);
-    const units = Array.isArray(g.unit) ? g.unit : [g.unit];
+    else s.failures.push(`NAME "${p.name}" ≠ "${label}" (${best.score.toFixed(2)})`);
+    // price and unit are judged together against the main reading and the alternatives
+    const readings: Array<[number, string[]]> = [[g.price, Array.isArray(g.unit) ? g.unit : [g.unit]], ...(g.alt ?? [])];
+    const priceHit = readings.find(([v]) => p.price !== null && Math.abs(p.price - v) < 0.005);
+    if (priceHit) s.priceOk++;
+    else s.failures.push(`PRICE ${label}: ${p.price} ≠ ${g.price}`);
+    const units = (priceHit ?? readings[0]!)[1];
     if (units.includes(p.priceUnit)) s.unitOk++;
-    else s.failures.push(`UNIT ${g.name}: ${p.priceUnit} ∉ ${units.join("/")}`);
+    else s.failures.push(`UNIT ${label}: ${p.priceUnit} ∉ ${units.join("/")}`);
     if ((Array.isArray(g.category) ? g.category : [g.category]).includes(p.category)) s.categoryOk++;
-    else s.failures.push(`CATEGORY ${g.name}: ${p.category} ≠ ${g.category}`);
+    else s.failures.push(`CATEGORY ${label}: ${p.category} ≠ ${g.category}`);
+    if (g.pack) {
+      s.packTotal++;
+      if (packMatches(p, g.pack)) s.packOk++;
+      else s.failures.push(`PACK ${label}: ${JSON.stringify(p.pack)} ≠ ${JSON.stringify(g.pack)}`);
+    }
     if (g.vat !== undefined) {
       s.extraTotal++;
       if (p.vatRate === g.vat) s.extraOk++;
-      else s.failures.push(`VAT ${g.name}: ${p.vatRate} ≠ ${g.vat}`);
+      else s.failures.push(`VAT ${label}: ${p.vatRate} ≠ ${g.vat}`);
     }
     if (g.available !== undefined) {
       s.extraTotal++;
       if (p.available === g.available) s.extraOk++;
-      else s.failures.push(`AVAILABLE ${g.name}: ${p.available} ≠ ${g.available}`);
+      else s.failures.push(`AVAILABLE ${label}: ${p.available} ≠ ${g.available}`);
     }
   }
   for (const p of res.products) if (!used.has(p.id)) s.failures.push(`EXTRA "${p.name}" ${p.price}`);

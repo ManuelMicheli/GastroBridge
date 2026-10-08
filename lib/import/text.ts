@@ -126,9 +126,9 @@ const KEEP_UPPER = new Set([
  * "l,90" → "1,90", "O,70" → "0,70", "2,8O" → "2,80". Words are untouched.
  */
 export function fixOcrDigits(s: string): string {
-  return s.replace(/(?<![A-Za-zÀ-ú])([0-9OoIl|]{1,4}[,.][0-9OoIl|]{1,2})(?![A-Za-zÀ-ú0-9])/g, (tok) => {
+  return s.replace(/(?<![A-Za-zÀ-ú])([0-9OoIlS|]{1,4}[,.][0-9OoIl|]{1,2})(?![A-Za-zÀ-ú0-9])/g, (tok) => {
     if (!/\d/.test(tok)) return tok;
-    return tok.replace(/[Oo]/g, "0").replace(/[Il|]/g, "1");
+    return tok.replace(/[Oo]/g, "0").replace(/[Il|]/g, "1").replace(/S/g, "5");
   });
 }
 

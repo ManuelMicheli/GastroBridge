@@ -244,7 +244,7 @@ export function formatDays(days: number[]): string {
 }
 
 const MIN_ORDER_RE =
-  /(?:ordine\s+)?(?:min(?:imo|\.)?)\s*(?:d['’]\s*ordine|ordine|d['’]?\s*acquisto|fatturabile|consegna)?\s*(?:di|da|:|=|€|euro)?\s*(?:€|euro|eur)?\s*(\d+(?:[.,]\d{1,2})?)\s*(?:€|euro|eur)?/i;
+  /(?:ordine\s+)?(?:min(?:imo|\.)?)\s*(?:d['’]\s*ordine|ordine|d['’]?\s*acquisto|fatturabile|consegna)?\s*(?:(?:resta|rimane|è|e'|sempre|sono|pari\s+a|fissato\s+a|ancora|invariato\s+a)\s+){0,2}(?:di|da|:|=|€|euro)?\s*(?:€|euro|eur)?\s*(\d+(?:[.,]\d{1,2})?)\s*(?:€|euro|eur)?/i;
 const MIN_ORDER_CONTEXT = /\b(ordine|ord\.|acquisto|spesa|consegna|fattura)\b/i;
 const FREE_DELIVERY_RE = /(?:consegna|trasporto|spedizione)\s+(?:gratuita|gratis|omaggio)\s+(?:sopra|oltre|per\s+ordini\s+(?:sopra|oltre|superiori\s+a)|da)\s*(?:i\s*)?(?:€\s*)?(\d+(?:[.,]\d{1,2})?)/i;
 
@@ -254,8 +254,8 @@ export function findMinOrder(text: string): number | null {
   const m = MIN_ORDER_RE.exec(f);
   if (!m) return null;
   // "minimo 100€" alone is fine; "min 5 kg" is a product minimum quantity.
-  const after = f.slice(m.index + m[0].length, m.index + m[0].length + 6);
-  if (/^\s*(kg|g|gr|pz|l|lt|crt|ct|conf|cf|casse?|cartoni?)\b/i.test(after)) return null;
+  const after = f.slice(m.index + m[0].length, m.index + m[0].length + 14);
+  if (/^\s*(kg|g|gr|pz|pezzi|l|lt|crt|ct|conf|cf|confezioni|casse?|cartoni?|bottigli\w*|bt|colli|unit\w*|sacchi|buste)\b/i.test(after)) return null;
   const hasEuro = /€|euro|eur/i.test(m[0]);
   if (!hasEuro && !MIN_ORDER_CONTEXT.test(f)) return null;
   const v = parseNumber(m[1]!);
@@ -272,6 +272,7 @@ const CUTOFF_RE = /\b(?:entro|prima\s+delle|non\s+oltre)\s+(?:le\s+)?(?:ore\s+)?
 
 export function findCutoff(text: string): string | null {
   if (!/\b(ordin\w*|entro|richiest\w*)\b/i.test(text)) return null;
+  if (/\b(?:entro|prima\s+di|non\s+oltre)\s+(?:le\s+ore\s+|le\s+|ore\s+)?(?:il\s+)?mezzogiorno\b/i.test(text)) return "12:00";
   const m = CUTOFF_RE.exec(text);
   if (!m) return null;
   const h = Number(m[1]);
@@ -281,8 +282,10 @@ export function findCutoff(text: string): string | null {
 
 export function findLeadTime(text: string): number | null {
   const f = fold(text);
-  if (!/(consegn|evas|spedi|arriv|tempi)/.test(f)) return null;
+  if (!/(consegn|evas|spedi|arriv|tempi|ordin)/.test(f)) return null;
   if (/in\s+giornata|stesso\s+giorno/.test(f)) return 0;
+  // "ordini entro le 18 del giorno prima" → next-day delivery
+  if (/ordin\w*\s.*\b(?:del|il)\s+giorno\s+(?:prima|precedente)/.test(f)) return 1;
   if (/giorno\s+(dopo|successivo|seguente)|entro\s+24\s*h|in\s+24\s*(h|ore)|\b24\s*h\b/.test(f)) return 1;
   const m = /(?:in|entro)\s+(\d{1,2})\s*(h|ore|gg|giorni|gg\.)/.exec(f);
   if (!m) return null;
@@ -369,7 +372,9 @@ export function supplierSignals(line: string): SupplierSignals {
   const phone = /\b(tel|telefono|cell|fax|whatsapp)\b/i.test(line) || (findPhones(line).length > 0 && !/\d+[.,]\d{2}\b/.test(line));
   const address = STREET_RE.test(line) && (CAP_CITY_RE.test(line) || /\d/.test(line));
   const legalForm = LEGAL_FORM_RE.test(line);
-  const delivery = DELIVERY_CONTEXT.test(fold(line)) && /\b(lun|mar|mer|gio|ven|sab|dom|giorn|24\s*h|48\s*h|settiman)/i.test(fold(line));
+  const delivery =
+    (DELIVERY_CONTEXT.test(fold(line)) && /\b(lun|mar|mer|gio|ven|sab|dom|giorn|\d{2}\s*(?:h|ore)\b|settiman)/i.test(fold(line))) ||
+    (findLeadTime(line) !== null && !/\d+[.,]\d{2}\b|€/.test(line));
   const minOrder = findMinOrder(line) !== null;
   const freeDelivery = findFreeDelivery(line) !== null;
   const cutoff = findCutoff(line) !== null;

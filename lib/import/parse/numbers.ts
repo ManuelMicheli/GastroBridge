@@ -116,7 +116,8 @@ export function findMoney(line: string): MoneyCandidate[] {
     let euro = Boolean(m[1] || m[3]);
     let end = m.index + m[0].length;
     // "24 € 5,80": the € introduces the next amount, it is not a suffix of 24.
-    if (m[3] && !m[1] && /^\s*\d+(?:[.,]\d{1,2})/.test(line.slice(end)) && m[3].trim() === "€") {
+    // Same for "8      EUR 7,20" (pack count, then a column with the price).
+    if (m[3] && !m[1] && /^\s*\d+(?:[.,]\d{1,2})/.test(line.slice(end)) && /^(?:€|eur|euro)$/i.test(m[3].trim())) {
       euro = false;
       end = startNum + numStr.length;
       MONEY_RE.lastIndex = end;

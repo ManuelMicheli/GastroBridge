@@ -1,0 +1,121 @@
+{
+ "description": "Blind Excel: list price + discount + net price columns, conditions on a second sheet.",
+ "sheets": [
+  {
+   "name": "Listino",
+   "rows": [
+    [
+     "GRUPPO HORECA SUD S.R.L. – Listino Secco Ottobre 2026"
+    ],
+    [],
+    [
+     "ARTICOLO",
+     "MARCA",
+     "CONF.",
+     "UM",
+     "LISTINO",
+     "SCONTO %",
+     "NETTO"
+    ],
+    [
+     "Farina tipo 00 per pizza",
+     "Caputo",
+     "sacco 25 kg",
+     "SC",
+     26.0,
+     10,
+     23.4
+    ],
+    [
+     "Zucchero semolato",
+     "Eridania",
+     "10 x 1 kg",
+     "CT",
+     12.5,
+     5,
+     11.88
+    ],
+    [
+     "Sale marino grosso",
+     "Italkali",
+     "1 kg",
+     "PZ",
+     0.6,
+     0,
+     0.6
+    ],
+    [
+     "Riso Carnaroli",
+     "Acquerello",
+     "conf. 1 kg",
+     "CF",
+     9.8,
+     10,
+     8.82
+    ],
+    [
+     "Caffè espresso in grani",
+     "Lavazza",
+     "1 kg",
+     "PZ",
+     19.9,
+     15,
+     16.92
+    ],
+    [
+     "Zucchero in bustine",
+     "Cristallo",
+     "cartone 1000 x 5 g",
+     "CT",
+     14.0,
+     0,
+     14.0
+    ],
+    [
+     "Mais dolce",
+     "Bonduelle",
+     "12 x 340 g",
+     "CT",
+     15.6,
+     10,
+     14.04
+    ],
+    [
+     "Ceci lessati",
+     "Valfrutta",
+     "latta 2,5 kg",
+     "PZ",
+     4.1,
+     0,
+     4.1
+    ]
+   ]
+  },
+  {
+   "name": "Condizioni",
+   "rows": [
+    [
+     "Condizioni di vendita"
+    ],
+    [
+     "Consegne: lunedì e giovedì"
+    ],
+    [
+     "Ordine minimo: 300,00 €"
+    ],
+    [
+     "Pagamento: 30 gg DF"
+    ],
+    [
+     "Email: ordini@horecasud.it"
+    ],
+    [
+     "P.IVA 05667788995"
+    ],
+    [
+     "Sede: Via Appia 120, 81100 Caserta (CE)"
+    ]
+   ]
+  }
+ ]
+}

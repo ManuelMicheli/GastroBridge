@@ -59,6 +59,11 @@ export const ABBREVIATIONS: Record<string, string> = {
   det: "detergente", deterg: "detergente", sgrass: "sgrassatore", igien: "igienizzante", disinf: "disinfettante",
   tov: "tovaglioli", tovagl: "tovaglioli", vasch: "vaschette", allum: "alluminio", pellic: "pellicola",
   guant: "guanti", nitr: "nitrile", monous: "monouso", sacch: "sacchetti",
+  deters: "detersivo", detersiv: "detersivo", lavast: "lavastoviglie", pav: "pavimenti",
+  // --- aggettivi frequenti
+  trif: "trifolati", norv: "norvegese", scoz: "scozzese", sgusc: "sgusciati", decort: "decorticato",
+  sott: "sottovuoto", grigl: "grigliati", marin: "marinato", impan: "impanato", precot: "precotto",
+  aromat: "aromatizzato", class: "classico", sup: "superiore",
 };
 
 /** Tokens that look like abbreviations but must never be expanded. */
@@ -76,9 +81,24 @@ const DOT_REQUIRED = new Set([
   "poll", "tacch", "hamb", "sv", "ps", "mzo", "aran", "broc", "champ", "prezz", "rosm", "mirt", "lamp", "datt", "cil",
   "buf", "burr", "parm", "regg", "gratt", "masc", "scam", "affum", "lievit", "bals", "acet", "cioc", "ciocc", "marm",
   "allum", "pellic", "guant", "nitr", "sacch", "igien", "disinf", "deterg", "sgrass", "tovagl", "vasch",
+  "deters", "lavast", "pav", "trif", "norv", "scoz", "sgusc", "decort", "sott", "grigl", "marin", "impan", "precot",
+  "aromat", "class", "sup",
 ]);
 
 const ALWAYS = new Set(["fdl", "evo", "gp"]);
+
+const fold1 = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+/**
+ * Abbreviations whose meaning depends on the words before them. Checked
+ * (first match wins) against the already-expanded preceding words; when no
+ * rule matches, the plain lexicon applies. The expansion is masculine and
+ * agrees with a preceding feminine noun ("scamorza affumicata").
+ */
+const CONTEXTUAL: Record<string, Array<[RegExp, string]>> = {
+  aff: [[/\b(salmon|scamorz|provol|pancett|speck|aring|trot|pesce spada|spada|tonn|baccal|ricott|caciocaval|sgombr|merluzz)\w*/, "affumicato"]],
+  sd: [[/\b(prosciutt|crudo|spalla|coppa)\w*/, "disossato"]],
+};
 
 export type ExpandResult = { text: string; expanded: string[]; unknown: string[] };
 
@@ -108,18 +128,34 @@ export function expandAbbreviations(
     });
   }
 
+  let prevWord = "";
   const out = text.split(/(\s+)/).map((tok) => {
     if (/^\s+$/.test(tok) || !tok) return tok;
     const m = /^([("']*)([A-Za-zÀ-ú]+)(\.?)([)"',;:]*)$/.exec(tok);
     if (!m) return tok;
     const [, pre, word, dot, post] = m;
-    const key = word!.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const key = fold1(word!);
+    const before = prevWord;
     if (NEVER_EXPAND.has(key)) return tok;
     const learned = extra[key];
     if (learned) {
       expanded.push(key);
+      prevWord = `${before} ${fold1(learned)}`.trim();
       return `${pre}${learned}${post}`;
     }
+    // Context-dependent abbreviations ("salm. aff." is smoked, "prosc. aff." is sliced).
+    const ctx = CONTEXTUAL[key];
+    if (ctx && (dot || allCaps)) {
+      const hit = ctx.find(([re]) => re.test(before));
+      if (hit) {
+        const last = before.split(" ").pop() ?? "";
+        const agreed = /a$/.test(last) ? hit[1].replace(/o$/, "a") : hit[1];
+        expanded.push(key);
+        prevWord = `${before} ${agreed}`.trim();
+        return `${pre}${agreed}${post}`;
+      }
+    }
+    prevWord = `${before} ${ABBREVIATIONS[key] ? fold1(ABBREVIATIONS[key]!) : key}`.trim();
     const exp = ABBREVIATIONS[key];
     if (exp) {
       const needsDot = DOT_REQUIRED.has(key) && !ALWAYS.has(key);
