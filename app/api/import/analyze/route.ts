@@ -27,10 +27,11 @@ import {
   type ImportActor,
 } from "@/lib/import/server/context";
 import { SUPPLIER_PLATFORM_ENABLED } from "@/lib/utils/constants";
+import { getCachedUser } from "@/lib/supabase/cached-user";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-// Parsing is CPU-bound and fast (≈1 s for 5 000 rows); 60 s covers the
+// Parsing is CPU-bound (≈2 s for 5 000 rows, ≈8 s at the 20 000-row cap); 60 s covers the
 // slowest documents and stays within the Vercel Hobby/Pro defaults.
 export const maxDuration = 60;
 
@@ -99,18 +100,43 @@ function json(status: number, error: string) {
   return Response.json({ error }, { status });
 }
 
+/** Read the body without ever buffering more than `max` bytes (chunked uploads included). */
+async function readCapped(req: Request, max: number): Promise<string | null> {
+  if (!req.body) return "";
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) {
+      await reader.cancel().catch(() => {});
+      return null;
+    }
+    chunks.push(value);
+  }
+  const all = new Uint8Array(size);
+  let off = 0;
+  for (const c of chunks) {
+    all.set(c, off);
+    off += c.byteLength;
+  }
+  return new TextDecoder().decode(all);
+}
+
+const TOO_BIG = "Documento troppo grande da analizzare in una volta: dividi il file (max ~4 MB di testo).";
+
 export async function POST(req: Request) {
   const declared = Number(req.headers.get("content-length") ?? "0");
-  if (declared > IMPORT_LIMITS.maxBodyBytes) {
-    return json(413, "Documento troppo grande da analizzare in una volta: dividi il file (max ~4 MB di testo).");
-  }
+  if (declared > IMPORT_LIMITS.maxBodyBytes) return json(413, TOO_BIG);
+  // Cheap session check before reading a multi-MB body.
+  if (!(await getCachedUser())) return json(401, "Sessione scaduta: accedi di nuovo.");
 
   let body: AnalyzeRequest;
   try {
-    const raw = await req.text();
-    if (raw.length > IMPORT_LIMITS.maxBodyBytes) {
-      return json(413, "Documento troppo grande da analizzare in una volta: dividi il file (max ~4 MB di testo).");
-    }
+    const raw = await readCapped(req, IMPORT_LIMITS.maxBodyBytes);
+    if (raw === null) return json(413, TOO_BIG);
     const parsed = BodySchema.safeParse(JSON.parse(raw));
     if (!parsed.success) return json(400, "Documento non valido o troppo grande (max 20.000 righe).");
     body = parsed.data as AnalyzeRequest;

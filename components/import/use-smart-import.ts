@@ -60,7 +60,7 @@ export function useSmartImport(persona: ImportPersona, opts: { targetCatalogId?:
       setProgress(id, 0.02, "Analisi del contenuto", "analyzing");
       const body: AnalyzeRequest = { persona, doc, targetCatalogId: opts.targetCatalogId ?? null, columnOverrides };
       const json = JSON.stringify(body);
-      if (json.length > IMPORT_LIMITS.maxBodyBytes) {
+      if (new TextEncoder().encode(json).byteLength > IMPORT_LIMITS.maxBodyBytes) {
         throw new HttpError(413, "Il documento è troppo grande per un solo import: dividilo in più file (es. un foglio alla volta).");
       }
       let res: Response;

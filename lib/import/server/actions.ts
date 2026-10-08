@@ -195,7 +195,15 @@ export async function commitRestaurantImport(input: RestaurantCommitInput): Prom
   }
 
   if (data.linkSupplierId && SUPPLIER_PLATFORM_ENABLED) {
-    await (supabase as any).from("restaurant_catalogs").update({ supplier_id: data.linkSupplierId }).eq("id", catalogId);
+    // only an active supplier registered on the platform can be linked
+    const { data: sup } = await supabase
+      .from("suppliers")
+      .select("id")
+      .eq("id", data.linkSupplierId)
+      .eq("is_active", true)
+      .maybeSingle<{ id: string }>();
+    if (sup) await (supabase as any).from("restaurant_catalogs").update({ supplier_id: sup.id }).eq("id", catalogId);
+    else warnings.push("Fornitore della piattaforma non trovato: listino non collegato.");
   }
 
   // ---- items: diff against what is there -----------------------------------
