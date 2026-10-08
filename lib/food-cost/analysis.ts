@@ -2,7 +2,7 @@
 // Food-cost alerts, menu engineering and theoretical consumption (pure).
 
 import { toBase, type BaseUnit } from "../invoices/units.ts";
-import { normalizeText } from "../invoices/text.ts";
+import { normalizeText, productSimilarity } from "../invoices/text.ts";
 import type { RecipeCost, RecipeInput } from "./cost.ts";
 
 /* ------------------------------------------------------------------ */
@@ -191,4 +191,18 @@ export function theoreticalConsumption(
 /** Normalised POS item name used to link sales to recipes. */
 export function posNameKey(name: string): string {
   return normalizeText(name);
+}
+
+/** Suggest recipe ↔ POS item links by name similarity (pure, no write). */
+export function suggestPosLinks(names: string[], recipes: Array<{ id: string; name: string }>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const n of names.slice(0, 500)) {
+    let best: { id: string; s: number } | null = null;
+    for (const r of recipes) {
+      const s = normalizeText(n) === normalizeText(r.name) ? 1 : productSimilarity(n, r.name);
+      if (!best || s > best.s) best = { id: r.id, s };
+    }
+    if (best && best.s >= 0.75) out[n] = best.id;
+  }
+  return out;
 }
