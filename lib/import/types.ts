@@ -185,8 +185,11 @@ export type ExtractionStats = {
   /** Products needing attention (overall confidence < REVIEW_THRESHOLD). */
   needsReview: number;
   /** Which strategy produced the products per sheet. */
-  strategies: Array<{ sheet: string; strategy: "table" | "lines"; columns?: Partial<Record<string, ColumnRole>> }>;
+  strategies: Array<{ sheet: string; strategy: "table" | "lines"; columns?: ColumnSummary[] }>;
 };
+
+/** One column of a table sheet as understood by the engine (review "Colonne"). */
+export type ColumnSummary = { index: number; header: string; role: ColumnRole | null; sample: string };
 
 export type ExtractionResult = {
   extractor: string;

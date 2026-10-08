@@ -2,15 +2,19 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowLeft, Check, Download, UploadCloud } from "lucide-react";
+import { ArrowLeft, Check, Download, Settings2, Sparkles, UploadCloud } from "lucide-react";
 import { parseCsv, parseXlsx, suggestMapping, type ParsedSheet } from "@/lib/catalogs/parse-file";
 import { normalizeName, normalizeUnit } from "@/lib/catalogs/normalize";
+import { NameIndex } from "@/lib/import/match/similarity";
+import type { OrderLine as ParsedOrderLine } from "@/lib/import/understand/order-lines";
+import { SmartDropzone } from "@/components/import/smart-dropzone";
 import type { Group, OrderLine } from "../_lib/types";
 
 const MAX_BYTES = 2 * 1024 * 1024;
 const MAX_ROWS = 5000;
 
 type WizardStep = "upload" | "map" | "preview";
+type WizardMode = "smart" | "advanced";
 type Mapping = { name: string; unit: string; qty: string };
 type ValidatedRow =
   | { ok: true; matchType: "exact" | "name" | "none"; matchedKey: string | null; productName: string; unit: string; qty: number; rawName: string; rawUnit: string }
@@ -33,12 +37,45 @@ export function ImportWizard({
   const [mapping, setMapping] = useState<Mapping>({ name: "", unit: "", qty: "" });
   const [mode, setMode] = useState<"append" | "replace">("append");
   const [error, setError] = useState<string | null>(null);
+  // Smart mode: drop / paste anything ("10 kg farina", WhatsApp list, photo…)
+  const [wizardMode, setWizardMode] = useState<WizardMode>("smart");
+  const [smartLines, setSmartLines] = useState<ParsedOrderLine[] | null>(null);
+  const [smartSkipped, setSmartSkipped] = useState(0);
+  const [busy, setBusy] = useState<string | null>(null);
 
   const reset = () => {
     setStep("upload");
     setSheet(null);
     setMapping({ name: "", unit: "", qty: "" });
     setError(null);
+    setSmartLines(null);
+    setSmartSkipped(0);
+    setBusy(null);
+  };
+
+  const runSmart = async (load: () => Promise<import("@/lib/import/types").SourceDoc>) => {
+    setError(null);
+    setBusy("Lettura in corso…");
+    try {
+      const doc = await load();
+      const { parseOrderLines } = await import("@/lib/import/understand/order-lines");
+      const { lines, skipped } = parseOrderLines(doc);
+      if (lines.length === 0) {
+        setError("Non abbiamo trovato righe con una quantità. Scrivi ad es. «10 kg farina 00» o «olio evo x 6».");
+        return;
+      }
+      if (lines.length > MAX_ROWS) {
+        setError(`Troppe righe (max ${MAX_ROWS})`);
+        return;
+      }
+      setSmartLines(lines);
+      setSmartSkipped(skipped);
+      setStep("preview");
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Errore lettura");
+    } finally {
+      setBusy(null);
+    }
   };
   const closeAll = () => { reset(); onClose(); };
 
@@ -57,12 +94,20 @@ export function ImportWizard({
     return m;
   }, [groups]);
 
+  const fuzzyIndex = useMemo(() => new NameIndex(groups, (g) => g.productName), [groups]);
+
   const validated: ValidatedRow[] = useMemo(() => {
-    if (!sheet) return [];
-    return sheet.rows.map((r) => {
-      const name = (r[mapping.name] ?? "").trim();
-      const unit = (r[mapping.unit] ?? "").trim();
-      const qtyRaw = (r[mapping.qty] ?? "").trim();
+    const source: Array<{ name: string; unit: string; qtyRaw: string }> | null = smartLines
+      ? smartLines.map((l) => ({ name: l.name, unit: l.unit ?? "", qtyRaw: String(l.qty) }))
+      : sheet
+        ? sheet.rows.map((r) => ({
+            name: (r[mapping.name] ?? "").trim(),
+            unit: (r[mapping.unit] ?? "").trim(),
+            qtyRaw: (r[mapping.qty] ?? "").trim(),
+          }))
+        : null;
+    if (!source) return [];
+    return source.map(({ name, unit, qtyRaw }) => {
 
       if (!name) return { ok: false, reason: "Nome vuoto", raw: { name, unit, qty: qtyRaw } };
       const qtyNum = Number(qtyRaw.replace(",", "."));
@@ -83,6 +128,13 @@ export function ImportWizard({
         matched = groupsByName.get(nameNorm);
         if (matched) matchType = "name";
       }
+      if (!matched) {
+        const fz = fuzzyIndex.best(name, 0.72);
+        if (fz) {
+          matched = fz.item;
+          matchType = "name";
+        }
+      }
 
       return {
         ok: true,
@@ -95,7 +147,7 @@ export function ImportWizard({
         rawUnit:     unit,
       };
     });
-  }, [sheet, mapping, groupByNormKey, groupsByName]);
+  }, [sheet, smartLines, mapping, groupByNormKey, groupsByName, fuzzyIndex]);
 
   if (!open) return null;
 
@@ -144,8 +196,9 @@ export function ImportWizard({
     closeAll();
   };
 
-  const stepLabel =
-    step === "upload" ? "1 / 3 UPLOAD" : step === "map" ? "2 / 3 MAP" : "3 / 3 PREVIEW";
+  const stepLabel = smartLines
+    ? step === "upload" ? "1 / 2 CARICA" : "2 / 2 VERIFICA"
+    : step === "upload" ? "1 / 3 UPLOAD" : step === "map" ? "2 / 3 MAP" : "3 / 3 PREVIEW";
 
   return (
     <div
@@ -174,8 +227,38 @@ export function ImportWizard({
           </div>
         )}
 
-        {step === "upload" && (
+        {step === "upload" && wizardMode === "smart" && (
+          <div className="space-y-3">
+            {busy ? (
+              <div className="rounded-xl border border-border-subtle p-8 text-center text-sm text-text-secondary" role="status">
+                <Sparkles className="mx-auto mb-2 h-6 w-6 animate-pulse text-accent-green" /> {busy}
+              </div>
+            ) : (
+              <SmartDropzone
+                title="Trascina la lista, una foto o un file"
+                hint="Anche una nota o un messaggio: «10 kg farina 00, olio evo x 6, 3 casse di pomodori». Riconosciamo prodotti e quantità."
+                placeholder={"10 kg farina 00\nolio evo x 6\npomodori pelati: 3 casse"}
+                onFile={(file) =>
+                  runSmart(async () => (await import("@/lib/import/formats/browser")).readFileAsSourceDoc(file, (_p, m) => setBusy(m)))
+                }
+                onText={(text) => runSmart(async () => (await import("@/lib/import/formats/browser")).pastedTextAsSourceDoc(text))}
+              />
+            )}
+            <button
+              type="button"
+              onClick={() => setWizardMode("advanced")}
+              className="inline-flex items-center gap-1 text-sm text-text-tertiary hover:text-text-primary"
+            >
+              <Settings2 className="h-4 w-4" /> Avanzato: scegli tu le colonne di un Excel/CSV
+            </button>
+          </div>
+        )}
+
+        {step === "upload" && wizardMode === "advanced" && (
           <div className="space-y-4">
+            <button type="button" onClick={() => setWizardMode("smart")} className="inline-flex items-center gap-1 text-sm text-accent-green hover:underline">
+              <Sparkles className="h-4 w-4" /> Torna all&apos;import automatico
+            </button>
             <label className="flex items-center gap-2 text-sm text-text-secondary">
               <input type="checkbox" checked={hasHeader} onChange={(e) => setHasHeader(e.target.checked)} />
               Il file ha un&apos;intestazione sulla prima riga
@@ -261,6 +344,7 @@ export function ImportWizard({
                 <span className="text-yellow-400">{unmatchedCount} non in catalogo</span>
               )}
               {invalidCount > 0 && <span className="text-red-400">{invalidCount} scartate</span>}
+              {smartSkipped > 0 && <span className="text-text-tertiary">{smartSkipped} righe ignorate (senza quantità)</span>}
             </div>
 
             <div className="max-h-64 overflow-y-auto rounded-lg border border-border-subtle">
@@ -320,7 +404,15 @@ export function ImportWizard({
             </fieldset>
 
             <div className="flex justify-between">
-              <button onClick={() => setStep("map")} className="inline-flex items-center gap-1 text-text-secondary hover:text-text-primary">
+              <button
+                onClick={() => {
+                  if (smartLines) {
+                    setSmartLines(null);
+                    setStep("upload");
+                  } else setStep("map");
+                }}
+                className="inline-flex items-center gap-1 text-text-secondary hover:text-text-primary"
+              >
                 <ArrowLeft className="h-4 w-4" /> Indietro
               </button>
               <button

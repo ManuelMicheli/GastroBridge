@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowLeft, Pencil, Trash2, Plus, Search, Upload } from "lucide-react";
+import { ArrowLeft, Pencil, Trash2, Plus, Search, Settings2, Sparkles } from "lucide-react";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { Avatar } from "@/components/fernly/primitives";
 import { CatalogFormDialog } from "@/components/dashboard/restaurant/catalog-form-dialog";
@@ -95,8 +95,11 @@ export function CatalogDetailClient({
           <button onClick={() => setItemDialog({ open: true, item: null })} className="f-btn f-btn-primary">
             <Plus className="h-4 w-4" /> Aggiungi prodotto
           </button>
-          <button onClick={() => setImportOpen(true)} className="f-btn f-btn-outline">
-            <Upload className="h-4 w-4" /> Importa da file
+          <Link href={`/cataloghi/importa?catalog=${catalog.id}`} className="f-btn f-btn-outline" title="Carica il nuovo listino (PDF, Excel, foto, testo): vedrai cosa cambia prima di salvare">
+            <Sparkles className="h-4 w-4" /> Aggiorna listino
+          </Link>
+          <button onClick={() => setImportOpen(true)} className="f-icon-btn" aria-label="Import avanzato con mappatura colonne" title="Avanzato: import Excel/CSV con mappatura colonne">
+            <Settings2 className="h-4 w-4" />
           </button>
           <button onClick={() => setEditCatalog(true)} className="f-icon-btn" aria-label="Modifica catalogo" title="Modifica">
             <Pencil className="h-4 w-4" />

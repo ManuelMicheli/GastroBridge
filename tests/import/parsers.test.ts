@@ -19,6 +19,8 @@ import { expandAbbreviations } from "../../lib/import/lexicon/abbreviations.ts";
 import { categoryFromHeading, classifyCategory } from "../../lib/import/lexicon/categories.ts";
 import { parseProductText } from "../../lib/import/understand/product-line.ts";
 import { classifyLine } from "../../lib/import/understand/classify.ts";
+import { parseOrderLine, parseOrderLines } from "../../lib/import/understand/order-lines.ts";
+import { textToSourceDoc } from "../../lib/import/formats/spreadsheet.ts";
 
 test("parseNumber: Italian and English formats", () => {
   assert.equal(parseNumber("1.234,56"), 1234.56);
@@ -187,6 +189,20 @@ test("product line parsing end to end", () => {
   const av = parseProductText("Limoni €2,50 kg (disponibili fino a dicembre)");
   assert.equal(av.availability, "disponibili fino a dicembre");
   assert.equal(parseProductText("Bresaola 27,50 esaurita").available, false);
+});
+
+test("order lines for the typical-order import", () => {
+  assert.deepEqual(parseOrderLine("10 kg farina 00"), { name: "farina 00", qty: 10, unit: "kg", raw: "10 kg farina 00" });
+  assert.equal(parseOrderLine("Olio evo x 6")?.qty, 6);
+  assert.equal(parseOrderLine("pomodori pelati: 3 casse")?.unit, "cassa");
+  assert.equal(parseOrderLine("Farina 00"), null);
+  assert.equal(parseOrderLine("farina 00 10 kg")?.name, "farina 00");
+  assert.equal(parseOrderLine("Buongiorno, per domani:"), null);
+  const { lines, skipped } = parseOrderLines(textToSourceDoc("Ciao Mario, per domani:\n- 2 crt acqua naturale\n- mozzarella 5 kg\n- basilico 3 mazzi"));
+  assert.equal(lines.length, 3);
+  assert.equal(skipped, 1);
+  const table = parseOrderLines(textToSourceDoc("Prodotto\tQuantità\nFarina 00\t10\nOlio\t5\nSale\t2\n"));
+  assert.deepEqual(table.lines.map((l) => [l.name, l.qty]), [["Farina 00", 10], ["Olio", 5], ["Sale", 2]]);
 });
 
 test("line classifier", () => {

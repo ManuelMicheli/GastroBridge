@@ -11,7 +11,7 @@ import {
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence } from "motion/react";
-import { GitCompareArrows, Plus, Search, X } from "lucide-react";
+import { GitCompareArrows, Plus, Search, Sparkles, X } from "lucide-react";
 import { CheatsheetOverlay, useSearchKeyboard } from "@/components/shared/awwwards";
 import { CatalogFormDialog } from "@/components/dashboard/restaurant/catalog-form-dialog";
 import { PageHeader } from "@/components/ui/page-header";
@@ -181,12 +181,12 @@ export function CatalogsClient({
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key.toLowerCase() === "n" && canManage) {
         e.preventDefault();
-        setDialogOpen(true);
+        router.push("/cataloghi/importa");
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [canManage]);
+  }, [canManage, router]);
 
   const profile = profileId ? initialCatalogs.find((c) => `${c.source}-${c.id}` === profileId) ?? null : null;
 
@@ -201,9 +201,14 @@ export function CatalogsClient({
       actions={
         <>
           {canManage ? (
-            <button type="button" onClick={() => setDialogOpen(true)} className="f-btn f-btn-primary">
-              <Plus className="h-4 w-4" strokeWidth={2.2} /> Nuovo catalogo
-            </button>
+            <>
+              <Link href="/cataloghi/importa" className="f-btn f-btn-primary">
+                <Sparkles className="h-4 w-4" strokeWidth={2.2} /> Aggiungi fornitore
+              </Link>
+              <button type="button" onClick={() => setDialogOpen(true)} className="f-btn f-btn-outline" title="Crea un listino vuoto e inserisci i prodotti a mano">
+                <Plus className="h-4 w-4" strokeWidth={2.2} /> Crea a mano
+              </button>
+            </>
           ) : null}
           {canCompare ? (
             <Link href="/cataloghi/confronta" className="f-btn f-btn-outline">
@@ -233,12 +238,17 @@ export function CatalogsClient({
         <div className="f-card f-rise flex flex-col items-center px-6 py-14 text-center">
           <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-[var(--f-ink)]">Nessun catalogo ancora</h2>
           <p className="mt-1.5 max-w-sm text-[14px] text-[var(--f-muted)]">
-            Crea il primo listino per iniziare a confrontare i prezzi dei tuoi fornitori.
+            Carica il listino di un fornitore (PDF, Excel, una foto o il suo messaggio WhatsApp): prodotti e prezzi li riconosciamo noi.
           </p>
           {canManage ? (
-            <button type="button" onClick={() => setDialogOpen(true)} className="f-btn f-btn-primary mt-5">
-              <Plus className="h-4 w-4" /> Nuovo catalogo
-            </button>
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+              <Link href="/cataloghi/importa" className="f-btn f-btn-primary">
+                <Sparkles className="h-4 w-4" /> Aggiungi il primo fornitore
+              </Link>
+              <button type="button" onClick={() => setDialogOpen(true)} className="f-btn f-btn-outline">
+                <Plus className="h-4 w-4" /> Crea a mano
+              </button>
+            </div>
           ) : null}
         </div>
         {dialog}
@@ -345,7 +355,7 @@ export function CatalogsClient({
 
       <footer className="pt-6 text-right text-[11.5px] text-[var(--f-faint)]">
         Suggerimento: premi <kbd className="rounded-md bg-[var(--f-fill-2)] px-1.5 py-0.5 text-[var(--f-ink-2)]">/</kbd> per cercare,{" "}
-        <kbd className="rounded-md bg-[var(--f-fill-2)] px-1.5 py-0.5 text-[var(--f-ink-2)]">N</kbd> per un nuovo catalogo,{" "}
+        <kbd className="rounded-md bg-[var(--f-fill-2)] px-1.5 py-0.5 text-[var(--f-ink-2)]">N</kbd> per aggiungere un fornitore,{" "}
         <kbd className="rounded-md bg-[var(--f-fill-2)] px-1.5 py-0.5 text-[var(--f-ink-2)]">?</kbd> per le scorciatoie.
       </footer>
 

@@ -59,13 +59,22 @@ const nextConfig: NextConfig = {
     // Vercel Live + Toolbar inject script/iframe/websocket on previews and
     // (optionally) production. Allowlist or they pollute the console with
     // CSP violations and inject orphan DOM nodes that break React unmount.
+    // Smart import OCR (photos of paper price lists) runs tesseract.js in the
+    // browser: its worker + WASM core are loaded from jsDelivr pinned to the
+    // installed versions (lib/import/formats/ocr.ts) and the Italian/English
+    // language data is fetched once and cached in IndexedDB. Allowed by exact
+    // path prefix only; 'wasm-unsafe-eval' permits WebAssembly compilation
+    // (not JS eval).
+    const ocrScripts =
+      "https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/ https://cdn.jsdelivr.net/npm/tesseract.js-core@7.0.0/";
+    const ocrData = "https://cdn.jsdelivr.net/npm/@tesseract.js-data/";
     const csp = [
       "default-src 'self'",
-      `script-src 'self' 'unsafe-inline' https://js.stripe.com ${posthogHost} https://vercel.live https://*.vercel.live`,
+      `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://js.stripe.com ${posthogHost} https://vercel.live https://*.vercel.live ${ocrScripts}`,
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://vercel.live https://*.vercel.live",
       "font-src 'self' data: https://fonts.gstatic.com https://vercel.live https://*.vercel.live https://assets.vercel.com",
       `img-src 'self' data: blob: ${supabaseOrigin} https://*.stripe.com https://images.unsplash.com https://vercel.live https://*.vercel.live https://vercel.com`.trim(),
-      `connect-src 'self' ${supabaseOrigin} ${supabaseWs} https://api.stripe.com ${posthogHost} https://*.ingest.sentry.io https://vercel.live https://*.vercel.live wss://*.pusher.com`.replace(/\s+/g, " ").trim(),
+      `connect-src 'self' ${supabaseOrigin} ${supabaseWs} https://api.stripe.com ${posthogHost} https://*.ingest.sentry.io https://vercel.live https://*.vercel.live wss://*.pusher.com ${ocrScripts} ${ocrData}`.replace(/\s+/g, " ").trim(),
       "frame-src https://js.stripe.com https://hooks.stripe.com https://vercel.live https://*.vercel.live",
       "worker-src 'self' blob:",
       "manifest-src 'self'",

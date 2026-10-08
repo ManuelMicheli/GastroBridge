@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ImportClient } from "./import-client";
 import type { CategoryOption } from "@/components/supplier/catalog/product-import-wizard";
 
-export const metadata: Metadata = { title: "Import CSV" };
+export const metadata: Metadata = { title: "Importa listino" };
 
 export default async function ImportCSVPage() {
   const supabase = await createClient();

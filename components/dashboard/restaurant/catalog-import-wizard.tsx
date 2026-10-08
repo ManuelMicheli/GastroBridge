@@ -115,7 +115,7 @@ export function CatalogImportWizard({ open, onClose, catalogId, onImported }: Pr
         onClick={(e) => e.stopPropagation()}
       >
         <header className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-text-primary">Importa catalogo da file</h2>
+          <h2 className="text-lg font-semibold text-text-primary">Import avanzato · mappatura colonne</h2>
           <div className="text-xs text-text-tertiary">{step === "upload" ? "1/2 Carica" : "2/2 Anteprima"}</div>
         </header>
 

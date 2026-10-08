@@ -9,6 +9,7 @@
 
 import type {
   ColumnRole,
+  ColumnSummary,
   ExtractedProduct,
   ExtractionContext,
   ExtractionResult,
@@ -355,7 +356,7 @@ async function extract(doc: SourceDoc, ctx: ExtractionContext): Promise<Extracti
       });
       res.products.forEach(push);
       if (plan.signature) layouts.push({ signature: plan.signature, roles: res.roles });
-      stats.strategies.push({ sheet: plan.sheet.name, strategy: res.strategy, columns: res.columnNames });
+      stats.strategies.push({ sheet: plan.sheet.name, strategy: res.strategy, columns: res.columns });
     }
   }
 
@@ -403,7 +404,7 @@ async function extractTable(
   warnings: string[],
   ocr: boolean,
   onRows: (n: number) => void,
-): Promise<{ products: Array<ExtractedProduct | null>; roles: Record<number, ColumnRole>; strategy: "table" | "lines"; columnNames: Partial<Record<string, ColumnRole>> }> {
+): Promise<{ products: Array<ExtractedProduct | null>; roles: Record<number, ColumnRole>; strategy: "table" | "lines"; columns: ColumnSummary[] }> {
   const rows = sheet.rows;
   const headerCells = headerIndex >= 0 ? rows[headerIndex]! : [];
   const headerSig = headerIndex >= 0 ? headerSignature(headerCells) : "";
@@ -414,8 +415,13 @@ async function extractTable(
   const colsOf = (role: ColumnRole) => Object.entries(roles).filter(([, r]) => r === role).map(([i]) => Number(i));
   const nameCols = colsOf("name");
   const priceCols = colsOf("price");
-  const columnNames: Partial<Record<string, ColumnRole>> = {};
-  for (const [i, r] of Object.entries(roles)) columnNames[headerCells[Number(i)] || `Colonna ${Number(i) + 1}`] = r;
+  const width = Math.min(40, Math.max(headerCells.length, ...sample.slice(0, 50).map((r) => r.length)));
+  const columns: ColumnSummary[] = Array.from({ length: width }, (_, i) => ({
+    index: i,
+    header: headerCells[i] || `Colonna ${i + 1}`,
+    role: roles[i] ?? null,
+    sample: sample.map((r) => r[i] ?? "").find((v) => v.trim()) ?? "",
+  })).filter((c) => c.role || c.sample);
 
   const out: Array<ExtractedProduct | null> = [];
 
@@ -433,7 +439,7 @@ async function extractTable(
       stats.productLines++;
       out.push(buildProduct(parsed, { id: `${sheet.name}:${r + headerIndex + 1}`, original: text, section, sectionCategory }, bctx));
     }
-    return { products: out, roles, strategy: "lines", columnNames };
+    return { products: out, roles, strategy: "lines", columns };
   }
 
   const nameCol = nameCols[0]!;
@@ -574,7 +580,7 @@ async function extractTable(
     }, bctx));
   }
   onRows(data.length % 400);
-  return { products: out, roles, strategy: "table", columnNames };
+  return { products: out, roles, strategy: "table", columns };
 }
 
 export const localExtractor: Extractor = {
