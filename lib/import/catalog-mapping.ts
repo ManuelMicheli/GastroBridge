@@ -101,3 +101,25 @@ export function supplierNotes(s: Pick<SupplierInfo, "vatNumber" | "phones" | "em
   for (const n of s.notes.slice(0, 2)) parts.push(n);
   return parts.join(" · ").slice(0, 500);
 }
+
+/** ISO weekdays (1 = lunedì … 7 = domenica) → JS getDay() (0 = domenica … 6), sorted, unique. */
+export function isoToJsWeekdays(days: number[]): number[] {
+  return [...new Set(days.filter((d) => d >= 1 && d <= 7).map((d) => d % 7))].sort((a, b) => a - b);
+}
+
+/**
+ * How to send orders to a supplier found in a document: WhatsApp when there
+ * is an Italian mobile number, otherwise e-mail (PEC excluded), otherwise a
+ * phone call. Null when there is no usable contact.
+ */
+export function orderContactFrom(
+  phones: string[],
+  emails: string[],
+): { preferredChannel: "whatsapp" | "email" | "phone"; phone: string | null; email: string | null } | null {
+  const clean = phones.map((p) => p.trim()).filter(Boolean);
+  const mobile = clean.find((p) => /^(?:\+?39|0039)?3\d{8,9}$/.test(p.replace(/[\s./()-]/g, "")));
+  const email = emails.map((e) => e.trim()).find((e) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e) && !/@pec\.|\.pec\./i.test(e)) ?? null;
+  const phone = mobile ?? clean[0] ?? null;
+  if (!phone && !email) return null;
+  return { preferredChannel: mobile ? "whatsapp" : email ? "email" : "phone", phone, email };
+}

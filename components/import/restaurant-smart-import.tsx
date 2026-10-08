@@ -4,12 +4,12 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowLeft, Brain, CheckCircle2, GitMerge, PlusCircle, RefreshCw, Settings2, Store } from "lucide-react";
+import { ArrowLeft, Brain, CalendarClock, CheckCircle2, GitMerge, PlusCircle, RefreshCw, Settings2, Store } from "lucide-react";
 import { cn } from "@/lib/utils/formatters";
-import { commitRestaurantImport } from "@/lib/import/server/actions";
+import { commitRestaurantImport, type RestaurantCommitOutput } from "@/lib/import/server/actions";
 import type { CatalogSnapshot, RestaurantContextPayload } from "@/lib/import/api-types";
 import type { ExtractionResult } from "@/lib/import/types";
-import { toCatalogItem, supplierNotes } from "@/lib/import/catalog-mapping";
+import { orderContactFrom, toCatalogItem, supplierNotes } from "@/lib/import/catalog-mapping";
 import { diffPriceLists } from "@/lib/import/match/diff";
 import { CatalogImportWizard } from "@/components/dashboard/restaurant/catalog-import-wizard";
 import { CatalogFormDialog } from "@/components/dashboard/restaurant/catalog-form-dialog";
@@ -32,10 +32,17 @@ function supplierFormFrom(r: ExtractionResult): SupplierForm {
     emails: [...s.emails, ...(s.pec ? [s.pec] : [])].join(", "),
     address: [s.address, [s.zip, s.city].filter(Boolean).join(" "), s.province ? `(${s.province})` : null].filter(Boolean).join(", "),
     deliveryDays: s.deliveryDays,
+    orderCutoff: s.orderCutoff ?? "",
     minOrder: s.minOrder != null ? String(s.minOrder).replace(".", ",") : "",
     leadTimeDays: s.leadTimeDays != null ? String(s.leadTimeDays) : "",
     notes: supplierNotes(s),
+    saveSchedule: s.deliveryDays.length > 0 || Boolean(s.orderCutoff),
+    saveContact: s.phones.length > 0 || s.emails.length > 0 || Boolean(s.pec),
   };
+}
+
+function contactFrom(form: SupplierForm) {
+  return orderContactFrom(form.phones.split(/[,;]+/), form.emails.split(/[,;\s]+/));
 }
 
 function num(s: string): number | null {
@@ -65,7 +72,7 @@ export function RestaurantSmartImport({
   const [linkPlatform, setLinkPlatform] = useState(false);
   const [usedOverrides, setUsedOverrides] = useState(false);
   const [saving, startSaving] = useTransition();
-  const [done, setDone] = useState<{ catalogId: string; inserted: number; updated: number; removed: number; unchanged: number; learned: number } | null>(null);
+  const [done, setDone] = useState<RestaurantCommitOutput | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
 
   const result = state.result;
@@ -153,11 +160,21 @@ export function RestaurantSmartImport({
           minOrder: num(supplier.minOrder),
           notes: supplier.notes.trim() || null,
           deliveryDays: supplier.deliveryDays,
+          orderCutoff: /^\d{2}:\d{2}$/.test(supplier.orderCutoff) ? supplier.orderCutoff : null,
           emails: supplier.emails.split(/[,;\s]+/).filter((e) => e.includes("@")).slice(0, 5),
           phones: supplier.phones.split(/[,;]+/).map((p) => p.trim()).filter(Boolean).slice(0, 5),
           address: supplier.address.trim() || null,
         },
         items: rows.map(({ product_name, unit, price, notes }) => ({ product_name, unit, price, notes })),
+        schedule:
+          supplier.saveSchedule && (supplier.deliveryDays.length > 0 || /^\d{2}:\d{2}$/.test(supplier.orderCutoff))
+            ? {
+                weekdays: supplier.deliveryDays,
+                cutoffTime: /^\d{2}:\d{2}$/.test(supplier.orderCutoff) ? supplier.orderCutoff : null,
+                leadDays: supplier.leadTimeDays ? Math.min(14, Math.max(0, Math.round(num(supplier.leadTimeDays) ?? 1))) : null,
+              }
+            : null,
+        contact: supplier.saveContact ? contactFrom(supplier) : null,
         linkSupplierId: linkPlatform && ctx?.platformSupplier ? ctx.platformSupplier.id : null,
         learning: { corrections: toCorrections(items), layouts: usedOverrides ? result.layouts.map((l) => ({ signature: l.signature, roles: Object.fromEntries(Object.entries(l.roles)) })) : [] },
       });
@@ -166,6 +183,7 @@ export function RestaurantSmartImport({
         return;
       }
       setDone(res.data);
+      for (const w of res.data.warnings) toast.warning(w);
       toast.success(target.kind === "existing" ? "Listino aggiornato" : `“${supplier.name.trim()}” aggiunto ai fornitori`);
       router.refresh();
     });
@@ -183,6 +201,17 @@ export function RestaurantSmartImport({
           {done.unchanged ? ` · ${done.unchanged} invariati` : ""}
           {done.removed ? ` · ${done.removed} rimossi` : ""}
         </p>
+        {done.scheduleSaved || done.contactSaved ? (
+          <p className="flex items-center gap-1.5 text-[13px] text-[var(--f-ink-2)]">
+            <CalendarClock className="h-4 w-4 text-[var(--acc-700)]" />
+            {done.scheduleSaved && done.contactSaved
+              ? "Giorni di consegna, orario limite e contatto per gli ordini salvati."
+              : done.scheduleSaved
+                ? "Giorni di consegna e orario limite salvati."
+                : "Contatto per gli ordini salvato."}{" "}
+            <Link href="/consegne" className="text-[var(--acc-700)] hover:underline">Vedi in Consegne</Link>
+          </p>
+        ) : null}
         {done.learned > 0 ? (
           <p className="flex items-center gap-1.5 text-[13px] text-[var(--acc-700)]">
             <Brain className="h-4 w-4" /> Abbiamo imparato {done.learned} correzioni: il prossimo listino di questo fornitore sarà più veloce.
@@ -243,6 +272,8 @@ export function RestaurantSmartImport({
           target={target}
           setTarget={setTarget}
           counts={diff?.counts ?? null}
+          removedItems={diff?.entries.filter((e) => e.kind === "removed" && e.existing).map((e) => e.existing!) ?? []}
+          existingName={existing?.supplier_name ?? null}
           linkPlatform={linkPlatform}
           setLinkPlatform={setLinkPlatform}
         />
@@ -279,6 +310,8 @@ function TargetCard({
   target,
   setTarget,
   counts,
+  removedItems,
+  existingName,
   linkPlatform,
   setLinkPlatform,
 }: {
@@ -286,6 +319,8 @@ function TargetCard({
   target: Target;
   setTarget: (t: Target) => void;
   counts: Record<"new" | "increased" | "decreased" | "unchanged" | "removed", number> | null;
+  removedItems: Array<{ name: string; unit: string; price: number }>;
+  existingName: string | null;
   linkPlatform: boolean;
   setLinkPlatform: (v: boolean) => void;
 }) {
@@ -356,6 +391,22 @@ function TargetCard({
               <span className="f-tag bg-[var(--f-card)] text-[var(--f-muted)]">= {counts.unchanged} invariati</span>
               <span className="f-tag bg-[var(--f-card)] text-[var(--f-muted)]">− {counts.removed} non più presenti</span>
             </div>
+            {removedItems.length > 0 ? (
+              <details className="mt-2 text-[12.5px] text-[var(--f-muted)]">
+                <summary className="cursor-pointer hover:text-[var(--f-ink)]">Quali non sono più nel nuovo listino?</summary>
+                <ul className="mt-1.5 max-h-40 list-disc overflow-auto pl-5">
+                  {removedItems.slice(0, 60).map((r, i) => (
+                    <li key={`${r.name}-${i}`}>
+                      {r.name} <span className="tabular-nums">· € {r.price.toFixed(2).replace(".", ",")}/{r.unit}</span>
+                    </li>
+                  ))}
+                  {removedItems.length > 60 ? <li>…e altri {removedItems.length - 60}</li> : null}
+                </ul>
+              </details>
+            ) : null}
+            {existingName ? (
+              <p className="mt-2 text-[12px] text-[var(--f-muted)]">Il nome «{existingName}» e le tue note restano; aggiungiamo solo i dati nuovi.</p>
+            ) : null}
             {counts.removed > 0 ? (
               <label className="mt-3 flex items-center gap-2 text-[13px] text-[var(--f-ink-2)]">
                 <input

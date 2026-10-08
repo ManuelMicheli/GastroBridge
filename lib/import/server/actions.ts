@@ -10,7 +10,10 @@ import { createCatalog } from "@/lib/catalogs/actions";
 import { normalizeName, normalizeUnit } from "@/lib/catalogs/normalize";
 import { requirePermission } from "@/lib/supplier/context";
 import { SUPPLIER_PLATFORM_ENABLED } from "@/lib/utils/constants";
+import { applyLimit, importCommitLimiter } from "@/lib/utils/rate-limit";
+import { normalizeWhatsAppPhone } from "@/lib/restaurants/channels/text";
 import { diffPriceLists } from "../match/diff.ts";
+import { isoToJsWeekdays } from "../catalog-mapping.ts";
 import { learnFromCorrections, supplierMemoryKeys, type Correction } from "../memory.ts";
 import { IMPORT_LIMITS } from "../api-types.ts";
 import { loadHints, resolveImportActor, saveHints } from "./context.ts";
@@ -52,10 +55,27 @@ const RestaurantCommitZ = z.object({
     minOrder: z.number().min(0).max(1_000_000).nullish(),
     notes: z.string().max(500).nullish(),
     deliveryDays: z.array(z.number().int().min(1).max(7)).max(7).default([]),
+    orderCutoff: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Orario limite non valido (HH:MM)").nullish(),
     emails: z.array(z.string().max(200)).max(5).default([]),
     phones: z.array(z.string().max(40)).max(5).default([]),
     address: z.string().max(200).nullish(),
   }),
+  /** Save delivery days / cut-off into restaurant_supplier_schedules (ISO weekdays 1–7). */
+  schedule: z
+    .object({
+      weekdays: z.array(z.number().int().min(1).max(7)).max(7),
+      cutoffTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullable(),
+      leadDays: z.number().int().min(0).max(14).nullable(),
+    })
+    .nullish(),
+  /** Save the ordering contact into restaurant_catalog_contacts. */
+  contact: z
+    .object({
+      preferredChannel: z.enum(["whatsapp", "email", "pdf", "phone"]),
+      phone: z.string().trim().max(40).nullable(),
+      email: z.string().trim().max(200).nullable(),
+    })
+    .nullish(),
   items: z
     .array(
       z.object({
@@ -79,7 +99,31 @@ export type RestaurantCommitOutput = {
   unchanged: number;
   removed: number;
   learned: number;
+  scheduleSaved: boolean;
+  contactSaved: boolean;
+  warnings: string[];
 };
+
+const MISSING_TABLE = /does not exist|schema cache|42P01/i;
+
+function friendlyDbError(err: { message?: string; code?: string } | null | undefined): string {
+  if (!err) return "errore sconosciuto";
+  if (err.code === "42P01" || MISSING_TABLE.test(err.message ?? "")) return "funzione non ancora attiva (migrazioni da applicare)";
+  if (err.code === "42501" || /row-level security/i.test(err.message ?? "")) return "il tuo ruolo non lo consente";
+  return err.message ?? "errore";
+}
+
+/** Keep what is in the catalog notes and add the new parts ("P.IVA …", "Tel …") once. */
+function mergeNotes(existing: string | null, incoming: string | null): string | null {
+  const have = (existing ?? "").trim();
+  const add = (incoming ?? "")
+    .split(/\s+·\s+/)
+    .map((x) => x.trim())
+    .filter((x) => x && !have.toLowerCase().includes(x.toLowerCase()));
+  const out = [have, ...add].filter(Boolean).join(" · ").slice(0, 500);
+  return out || null;
+}
+
 
 export async function commitRestaurantImport(input: RestaurantCommitInput): Promise<Result<RestaurantCommitOutput>> {
   const parsed = RestaurantCommitZ.safeParse(input);
@@ -91,12 +135,21 @@ export async function commitRestaurantImport(input: RestaurantCommitInput): Prom
   const actor = auth.actor;
   if (actor.kind !== "restaurant") return { ok: false, error: "Ristorante non trovato" };
 
+  const limit = await applyLimit(importCommitLimiter, `import-commit:${actor.userId}`);
+  if (!limit.allowed) return { ok: false, error: "Hai salvato molti listini di fila: riprova tra qualche minuto." };
+
   const supabase = await createClient();
+  const warnings: string[] = [];
+  // The P.IVA always lands in the notes: it is how the next import recognises this supplier.
+  let notes = data.supplier.notes?.trim() || null;
+  if (data.supplier.vatNumber && !(notes ?? "").includes(data.supplier.vatNumber)) {
+    notes = `P.IVA ${data.supplier.vatNumber}${notes ? ` · ${notes}` : ""}`.slice(0, 500);
+  }
   const catalogFields = {
     supplier_name: data.supplier.name,
     delivery_days: data.supplier.leadTimeDays ?? null,
     min_order_amount: data.supplier.minOrder ?? null,
-    notes: data.supplier.notes ?? null,
+    notes,
   };
 
   let catalogId: string;
@@ -106,14 +159,19 @@ export async function commitRestaurantImport(input: RestaurantCommitInput): Prom
   if (data.target.kind === "existing") {
     const { data: cat } = await (supabase as any)
       .from("restaurant_catalogs")
-      .select("id, restaurant_id")
+      .select("id, restaurant_id, notes")
       .eq("id", data.target.catalogId)
       .in("restaurant_id", actor.scopeIds.length ? actor.scopeIds : ["00000000-0000-0000-0000-000000000000"])
       .maybeSingle();
     if (!cat) return { ok: false, error: "Catalogo non trovato" };
     catalogId = cat.id;
     restaurantId = cat.restaurant_id;
-    const { error: upErr } = await (supabase as any).from("restaurant_catalogs").update(catalogFields).eq("id", catalogId);
+    // Updating a list keeps the name and the notes the restaurant already has;
+    // only conditions actually found in the new document overwrite old ones.
+    const patch: Record<string, unknown> = { notes: mergeNotes(cat.notes ?? null, notes) };
+    if (catalogFields.delivery_days != null) patch.delivery_days = catalogFields.delivery_days;
+    if (catalogFields.min_order_amount != null) patch.min_order_amount = catalogFields.min_order_amount;
+    const { error: upErr } = await (supabase as any).from("restaurant_catalogs").update(patch).eq("id", catalogId);
     if (upErr) return { ok: false, error: upErr.message };
     const { data: items } = await (supabase as any)
       .from("restaurant_catalog_items")
@@ -213,15 +271,127 @@ export async function commitRestaurantImport(input: RestaurantCommitInput): Prom
   });
   await saveHints({ ...actor, restaurantId }, keys, hints, restaurantId);
 
+  // ---- delivery schedule + ordering contact (best effort, never blocks) -------
+  let scheduleSaved = false;
+  let contactSaved = false;
+  if (restaurantId && data.schedule && (data.schedule.weekdays.length > 0 || data.schedule.cutoffTime)) {
+    const r = await saveImportedSchedule(supabase, { restaurantId, catalogId, userId: actor.userId, ...data.schedule });
+    if (r === true) scheduleSaved = true;
+    else warnings.push(`Giorni di consegna non salvati: ${r}. Puoi impostarli da Consegne.`);
+  }
+  if (restaurantId && data.contact) {
+    const r = await saveImportedContact(supabase, { restaurantId, catalogId, userId: actor.userId, ...data.contact });
+    if (r === true) contactSaved = true;
+    else if (r) warnings.push(`Contatto per gli ordini non salvato: ${r}.`);
+  }
+
   revalidatePath("/cataloghi");
   revalidatePath(`/cataloghi/${catalogId}`);
   revalidatePath("/cataloghi/confronta");
   revalidatePath("/fornitori");
+  if (scheduleSaved || contactSaved) {
+    revalidatePath("/consegne");
+    revalidatePath("/dashboard");
+  }
 
   return {
     ok: true,
-    data: { catalogId, inserted: inserts.length, updated: updates.length, unchanged, removed: removals.length, learned: learnedCount },
+    data: {
+      catalogId,
+      inserted: inserts.length,
+      updated: updates.length,
+      unchanged,
+      removed: removals.length,
+      learned: learnedCount,
+      scheduleSaved,
+      contactSaved,
+      warnings,
+    },
   };
+}
+
+type Db = Awaited<ReturnType<typeof createClient>>;
+
+/**
+ * Delivery days / cut-off found in the document → restaurant_supplier_schedules
+ * (one row per catalog). An existing schedule keeps its reminder settings and
+ * notes; only the values found in the new document replace the old ones.
+ * RLS (rss team write: order.submit) is the authoritative gate.
+ */
+async function saveImportedSchedule(
+  db: Db,
+  s: { restaurantId: string; catalogId: string; userId: string; weekdays: number[]; cutoffTime: string | null; leadDays: number | null },
+): Promise<true | string> {
+  const supabase = db as any;
+  const weekdays = isoToJsWeekdays(s.weekdays);
+  const { data: existing, error: selErr } = await supabase
+    .from("restaurant_supplier_schedules")
+    .select("id")
+    .eq("restaurant_id", s.restaurantId)
+    .eq("catalog_id", s.catalogId)
+    .maybeSingle();
+  if (selErr) return friendlyDbError(selErr);
+  const patch: Record<string, unknown> = { updated_by: s.userId };
+  if (weekdays.length) patch.delivery_weekdays = weekdays;
+  if (s.cutoffTime) patch.cutoff_time = s.cutoffTime;
+  if (s.leadDays != null) patch.lead_days = s.leadDays;
+  const res = existing
+    ? await supabase.from("restaurant_supplier_schedules").update(patch).eq("id", existing.id)
+    : await supabase.from("restaurant_supplier_schedules").insert({
+        restaurant_id: s.restaurantId,
+        catalog_id: s.catalogId,
+        supplier_id: null,
+        delivery_weekdays: weekdays,
+        cutoff_time: s.cutoffTime,
+        lead_days: s.leadDays ?? 1,
+        reminder_enabled: true,
+        updated_by: s.userId,
+      });
+  return res.error ? friendlyDbError(res.error) : true;
+}
+
+/**
+ * Supplier phone / e-mail → restaurant_catalog_contacts (how orders are sent
+ * to an off-platform supplier). An existing contact is only completed (empty
+ * fields), never overwritten: the restaurant may have chosen another channel.
+ * Returns true, an error message, or null when there was nothing to save.
+ */
+async function saveImportedContact(
+  db: Db,
+  c: { restaurantId: string; catalogId: string; userId: string; preferredChannel: "whatsapp" | "email" | "pdf" | "phone"; phone: string | null; email: string | null },
+): Promise<true | string | null> {
+  const supabase = db as any;
+  const phone = normalizeWhatsAppPhone(c.phone);
+  const email = c.email && z.string().email().max(200).safeParse(c.email.toLowerCase()).success ? c.email.toLowerCase() : null;
+  if (!phone && !email) return null;
+  let channel = c.preferredChannel;
+  if ((channel === "whatsapp" || channel === "phone") && !phone) channel = email ? "email" : "pdf";
+  if (channel === "email" && !email) channel = phone ? "phone" : "pdf";
+
+  const { data: existing, error: selErr } = await supabase
+    .from("restaurant_catalog_contacts")
+    .select("catalog_id, whatsapp_phone, email")
+    .eq("catalog_id", c.catalogId)
+    .maybeSingle();
+  if (selErr) return friendlyDbError(selErr);
+  if (existing) {
+    const patch: Record<string, unknown> = {};
+    if (!existing.whatsapp_phone && phone) patch.whatsapp_phone = phone;
+    if (!existing.email && email) patch.email = email;
+    if (Object.keys(patch).length === 0) return true;
+    patch.updated_by = c.userId;
+    const { error } = await supabase.from("restaurant_catalog_contacts").update(patch).eq("catalog_id", c.catalogId);
+    return error ? friendlyDbError(error) : true;
+  }
+  const { error } = await supabase.from("restaurant_catalog_contacts").insert({
+    catalog_id: c.catalogId,
+    restaurant_id: c.restaurantId,
+    preferred_channel: channel,
+    whatsapp_phone: phone,
+    email,
+    updated_by: c.userId,
+  });
+  return error ? friendlyDbError(error) : true;
 }
 
 // ---------------------------------------------------------------------------
@@ -264,6 +434,11 @@ const SupplierCommitZ = z.object({
     .max(IMPORT_LIMITS.maxItemsPerCommit),
   /** Products missing from the new list → marked unavailable (never deleted). */
   deactivateIds: z.array(z.string().uuid()).max(IMPORT_LIMITS.maxItemsPerCommit).default([]),
+  /** Unchanged products: their price goes into the named price list only. */
+  listPrices: z
+    .array(z.object({ productId: z.string().uuid(), price: z.number().positive().max(1_000_000) }))
+    .max(IMPORT_LIMITS.maxItemsPerCommit)
+    .default([]),
   priceList: z.discriminatedUnion("kind", [
     z.object({ kind: z.literal("none") }),
     z.object({ kind: z.literal("new"), name: z.string().trim().min(1).max(120) }),
@@ -287,7 +462,8 @@ export async function commitSupplierImport(input: SupplierCommitInput): Promise<
   const parsed = SupplierCommitZ.safeParse(input);
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Dati non validi" };
   const data = parsed.data;
-  if (data.creates.length + data.updates.length + data.deactivateIds.length === 0) {
+  const namedList = data.priceList.kind !== "none";
+  if (data.creates.length + data.updates.length + data.deactivateIds.length + (namedList ? data.listPrices.length : 0) === 0) {
     return { ok: false, error: "Nessuna modifica da applicare" };
   }
 
@@ -296,6 +472,9 @@ export async function commitSupplierImport(input: SupplierCommitInput): Promise<
   const actor = auth.actor;
   if (actor.kind !== "supplier") return { ok: false, error: "Profilo fornitore non trovato" };
   const supplierId = actor.supplierId;
+
+  const limit = await applyLimit(importCommitLimiter, `import-commit:${actor.userId}`);
+  if (!limit.allowed) return { ok: false, error: "Hai applicato molti import di fila: riprova tra qualche minuto." };
 
   try {
     await requirePermission(supplierId, "catalog.edit");
@@ -306,7 +485,7 @@ export async function commitSupplierImport(input: SupplierCommitInput): Promise<
   const supabase = await createClient();
 
   // ---- ownership of updated products ------------------------------------------
-  const touchIds = [...new Set([...data.updates.map((u) => u.productId), ...data.deactivateIds])];
+  const touchIds = [...new Set([...data.updates.map((u) => u.productId), ...data.deactivateIds, ...data.listPrices.map((l) => l.productId)])];
   if (touchIds.length) {
     const owned = new Set<string>();
     for (let i = 0; i < touchIds.length; i += 500) {
@@ -397,7 +576,7 @@ export async function commitSupplierImport(input: SupplierCommitInput): Promise<
   ];
   let priceListId: string | null = null;
   let priceListItems = 0;
-  if (priced.length) {
+  if (priced.length || (namedList && data.listPrices.length)) {
     let canPrice = true;
     try {
       await requirePermission(supplierId, "pricing.edit");
@@ -423,7 +602,8 @@ export async function commitSupplierImport(input: SupplierCommitInput): Promise<
       const targets = [...new Set([defaultId, priceListId].filter((x): x is string => !!x))];
       if (targets.length) {
         const baseUnits = new Map<string, string>();
-        const ids = priced.map((p) => p.id);
+        const listOnly = priceListId ? data.listPrices.map((l) => ({ id: l.productId, price: l.price })) : [];
+        const ids = [...priced, ...listOnly].map((p) => p.id);
         for (let i = 0; i < ids.length; i += 500) {
           const { data: su } = await (supabase as any)
             .from("product_sales_units")
@@ -433,7 +613,7 @@ export async function commitSupplierImport(input: SupplierCommitInput): Promise<
           for (const r of (su ?? []) as Array<{ id: string; product_id: string }>) baseUnits.set(r.product_id, r.id);
         }
         const rows = targets.flatMap((listId) =>
-          priced
+          [...priced, ...(listId === priceListId ? listOnly : [])]
             .filter((p) => baseUnits.has(p.id))
             .map((p) => ({ price_list_id: listId, product_id: p.id, sales_unit_id: baseUnits.get(p.id)!, price: p.price })),
         );
@@ -447,7 +627,7 @@ export async function commitSupplierImport(input: SupplierCommitInput): Promise<
           }
           priceListItems += Math.min(500, rows.length - i);
         }
-        const missing = priced.length - priced.filter((p) => baseUnits.has(p.id)).length;
+        const missing = [...priced, ...listOnly].filter((p) => !baseUnits.has(p.id)).length;
         if (missing > 0) warnings.push(`${missing} prodotti senza unità di vendita base: prezzo aggiornato solo sul catalogo.`);
       }
     }

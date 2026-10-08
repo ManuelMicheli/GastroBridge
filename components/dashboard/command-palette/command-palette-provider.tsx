@@ -56,10 +56,11 @@ export function CommandPaletteProvider({ children, navItems, role }: Props) {
             { id: "action-receive", label: "Ricevi merce / tracciabilità", section: "Azioni", href: "/tracciabilita", keywords: ["haccp", "lotto", "richiamo", "ddt", "temperatura"] },
             { id: "action-cutoff", label: "Consegne e orari limite", section: "Azioni", href: "/consegne", keywords: ["cutoff", "scadenza", "consegna", "giorni"] },
             { id: "action-prices", label: "Osservatorio prezzi", section: "Azioni", href: "/prezzi", keywords: ["prezzi", "aumenti", "risparmio", "alternative"] },
+            { id: "action-add-supplier", label: "Aggiungi fornitore da listino", section: "Azioni", href: "/cataloghi/importa", keywords: ["importa", "listino", "pdf", "excel", "foto", "whatsapp", "fornitore"] },
           ]
         : [
             { id: "action-new-product", label: "Aggiungi prodotto", section: "Azioni", href: "/supplier/catalogo/nuovo", keywords: ["add", "product", "nuovo", "prodotto"] },
-            { id: "action-import", label: "Importa CSV", section: "Azioni", href: "/supplier/catalogo/import", keywords: ["import", "csv", "bulk"] },
+            { id: "action-import", label: "Importa listino (PDF, Excel, foto, testo)", section: "Azioni", href: "/supplier/catalogo/import", keywords: ["import", "csv", "excel", "pdf", "listino", "bulk"] },
             { id: "action-zones", label: "Gestisci zone consegna", section: "Azioni", href: "/supplier/impostazioni/zone", keywords: ["delivery", "zone", "consegna"] },
           ];
 

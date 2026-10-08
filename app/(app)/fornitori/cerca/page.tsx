@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, MapPin, Shield, Star } from "lucide-react";
+import { ArrowLeft, MapPin, Shield, Sparkles, Star } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { contextCan, getRestaurantContext } from "@/lib/restaurants/context";
 import { Card } from "@/components/ui/card";
@@ -78,9 +78,20 @@ export default async function CercaFornitoriPage({
       </Link>
 
       <h1 className="text-2xl font-bold text-charcoal mb-2">Trova nuovi fornitori</h1>
-      <p className="text-sage mb-6">
+      <p className="text-sage mb-4">
         Cerca fornitori registrati su GastroBridge e invia una richiesta di collegamento.
       </p>
+
+      <Link
+        href="/cataloghi/importa"
+        className="f-card mb-6 flex items-center gap-3 px-4 py-3 text-[14px] text-[var(--f-ink-2)] transition-colors hover:bg-[var(--f-fill)]"
+      >
+        <Sparkles className="h-5 w-5 shrink-0 text-[var(--acc-700)]" />
+        <span>
+          <strong className="text-[var(--f-ink)]">Il tuo fornitore non è su GastroBridge?</strong> Carica il suo listino (PDF,
+          Excel, foto o messaggio WhatsApp): prodotti, prezzi e giorni di consegna li riconosciamo noi.
+        </span>
+      </Link>
 
       <form className="flex flex-col sm:flex-row gap-3 mb-6" method="GET">
         <Input

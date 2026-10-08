@@ -80,11 +80,21 @@ export async function loadHints(actor: ImportActor, keys: string[]): Promise<Imp
   if (keys.length === 0 || (!owner.restaurant_id && !owner.supplier_id)) return null;
   try {
     const supabase = await createClient();
-    let q = (supabase as any).from("import_memory").select("source_key, hints").in("source_key", keys);
-    q = owner.restaurant_id ? q.eq("restaurant_id", owner.restaurant_id) : q.eq("supplier_id", owner.supplier_id);
-    const { data, error } = await q;
+    let q = (supabase as any).from("import_memory").select("restaurant_id, source_key, hints, updated_at").in("source_key", keys);
+    if (owner.restaurant_id) {
+      // A catalog may belong to another sede of the same group: read the
+      // memory of every restaurant in scope, the active one wins on ties.
+      const scope = actor.kind === "restaurant" && actor.scopeIds.length ? [...new Set([...actor.scopeIds, owner.restaurant_id])] : [owner.restaurant_id];
+      q = q.in("restaurant_id", scope);
+    } else {
+      q = q.eq("supplier_id", owner.supplier_id);
+    }
+    const { data, error } = await q.order("updated_at", { ascending: true });
     if (error || !data?.length) return null;
-    const byKey = new Map<string, unknown>((data as Array<{ source_key: string; hints: unknown }>).map((r) => [r.source_key, r.hints]));
+    const rows = (data as Array<{ restaurant_id: string | null; source_key: string; hints: unknown }>).sort(
+      (a, b) => Number(a.restaurant_id === owner.restaurant_id) - Number(b.restaurant_id === owner.restaurant_id),
+    );
+    const byKey = new Map<string, unknown>(rows.map((r) => [r.source_key, r.hints]));
     return mergeHints(...keys.map((k) => (byKey.has(k) ? normalizeHints(byKey.get(k)) : null)));
   } catch {
     // table not migrated yet / transient error: import works without memory

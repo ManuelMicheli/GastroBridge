@@ -164,6 +164,13 @@ export function SupplierSmartImport({ advanced }: { advanced?: ReactNode }) {
         creates: createRows,
         updates: [...updateRows.values()],
         deactivateIds: deactivateMissing ? missing.map((p) => p.id) : [],
+        // a named list gets every price of the document, unchanged ones included
+        listPrices:
+          priceList.kind === "none"
+            ? []
+            : included
+                .filter((m) => m.product && annotations[m.item.id]?.kind === "unchanged")
+                .map((m) => ({ productId: m.product!.id, price: toProductUnit(m.item.priceUnit, m.item.price!).price })),
         priceList,
         learning: {
           corrections: toCorrections(items),
@@ -311,7 +318,7 @@ export function SupplierSmartImport({ advanced }: { advanced?: ReactNode }) {
           <button
             type="button"
             className="f-btn f-btn-primary"
-            disabled={saving || !ctx || updates.length + reactivate.length + creates.length + (deactivateMissing ? missing.length : 0) === 0}
+            disabled={saving || !ctx || updates.length + reactivate.length + creates.length + (deactivateMissing ? missing.length : 0) + (saveList && ctx.canEditPricing ? unchanged : 0) === 0}
             onClick={save}
           >
             {saving ? "Salvataggio…" : "Applica al catalogo"}

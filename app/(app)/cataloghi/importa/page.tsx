@@ -7,6 +7,8 @@ import { PageHeader } from "@/components/ui/page-header";
 import { RestaurantSmartImport } from "@/components/import/restaurant-smart-import";
 
 export const metadata: Metadata = { title: "Aggiungi fornitore" };
+// Server actions of this page (commitRestaurantImport) write up to 5.000 rows.
+export const maxDuration = 60;
 
 /**
  * Smart "Aggiungi fornitore": drop / paste anything, review, save.

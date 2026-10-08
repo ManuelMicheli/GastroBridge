@@ -68,6 +68,8 @@ export const authLimiter = makeLimiter(10, "1 m", "rl:auth");
 export const cronLimiter = makeLimiter(60, "1 m", "rl:cron");
 // Smart import analysis (CPU-bound parsing of whole price lists), per user.
 export const importLimiter = makeLimiter(30, "10 m", "rl:import");
+/** Smart import commits (catalog writes) — fewer than analyses. */
+export const importCommitLimiter = makeLimiter(20, "10 m", "rl:import-commit");
 
 // Fallback when Redis is missing or down: a fixed-window counter in this
 // instance's memory. Weaker than the shared Redis limiter (each instance

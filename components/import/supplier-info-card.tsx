@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, Building2, ShieldAlert } from "lucide-react";
+import { BadgeCheck, Building2, CalendarClock, MessageCircle, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils/formatters";
 import { DAY_LABELS, isValidPartitaIva } from "@/lib/import/parse/supplier-info";
 import type { FieldConfidence } from "@/lib/import/types";
@@ -12,9 +12,15 @@ export type SupplierForm = {
   emails: string;
   address: string;
   deliveryDays: number[];
+  /** "HH:MM" or "" */
+  orderCutoff: string;
   minOrder: string;
   leadTimeDays: string;
   notes: string;
+  /** Also save days / cut-off as the supplier's delivery schedule (Consegne). */
+  saveSchedule: boolean;
+  /** Also save phone / e-mail as the contact used to send orders. */
+  saveContact: boolean;
 };
 
 function Hint({ c }: { c?: FieldConfidence }) {
@@ -104,6 +110,19 @@ export function SupplierInfoCard({
           <Hint c={confidence.deliveryDays} />
         </fieldset>
         <label className="block">
+          <span className="f-label">Ordini entro le (orario limite)</span>
+          <input
+            type="time"
+            className="f-input mt-1 tabular-nums"
+            value={value.orderCutoff}
+            onChange={(e) => set({ orderCutoff: e.target.value })}
+            aria-describedby="cutoff-hint"
+          />
+          <span id="cutoff-hint" className="mt-1 block text-[11.5px] text-[var(--f-faint)]">
+            {value.orderCutoff ? "Ti ricordiamo di ordinare prima di quest’ora" : "Non indicato nel documento"}
+          </span>
+        </label>
+        <label className="block">
           <span className="f-label">Ordine minimo (€)</span>
           <input className="f-input mt-1 tabular-nums" inputMode="decimal" value={value.minOrder} onChange={(e) => set({ minOrder: e.target.value })} />
           <Hint c={confidence.minOrder} />
@@ -117,6 +136,38 @@ export function SupplierInfoCard({
           <span className="f-label">Note (contatti, orari, condizioni)</span>
           <textarea className="f-input mt-1 min-h-[72px] py-2.5" maxLength={500} value={value.notes} onChange={(e) => set({ notes: e.target.value })} style={{ height: "auto" }} />
         </label>
+        <div className="flex flex-col gap-2 rounded-xl bg-[var(--f-fill)] p-3 sm:col-span-2">
+          <label className="flex items-start gap-2 text-[13px] text-[var(--f-ink-2)]">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 accent-[var(--acc-700)]"
+              checked={value.saveSchedule}
+              disabled={value.deliveryDays.length === 0 && !value.orderCutoff}
+              onChange={(e) => set({ saveSchedule: e.target.checked })}
+            />
+            <span>
+              <span className="inline-flex items-center gap-1.5 font-medium text-[var(--f-ink)]">
+                <CalendarClock className="h-3.5 w-3.5 text-[var(--acc-700)]" /> Salva giorni di consegna e orario limite
+              </span>
+              <span className="block text-[12px] text-[var(--f-muted)]">Li trovi in Consegne: ti avvisiamo prima dell’orario limite.</span>
+            </span>
+          </label>
+          <label className="flex items-start gap-2 text-[13px] text-[var(--f-ink-2)]">
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 accent-[var(--acc-700)]"
+              checked={value.saveContact}
+              disabled={!value.phones.trim() && !value.emails.includes("@")}
+              onChange={(e) => set({ saveContact: e.target.checked })}
+            />
+            <span>
+              <span className="inline-flex items-center gap-1.5 font-medium text-[var(--f-ink)]">
+                <MessageCircle className="h-3.5 w-3.5 text-[var(--acc-700)]" /> Usa questi contatti per inviare gli ordini
+              </span>
+              <span className="block text-[12px] text-[var(--f-muted)]">WhatsApp se c’è un cellulare, altrimenti e-mail o telefono.</span>
+            </span>
+          </label>
+        </div>
       </div>
     </section>
   );

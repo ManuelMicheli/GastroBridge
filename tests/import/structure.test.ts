@@ -11,7 +11,7 @@ import { learnAbbreviations, learnFromReview, supplierMemoryKeys } from "../../l
 import { localExtractor } from "../../lib/import/engine.ts";
 import { emptyHints, type ExtractedProduct } from "../../lib/import/types.ts";
 import { matchSupplierToCatalogs } from "../../lib/import/match/supplier-match.ts";
-import { supplierNotes, toCatalogItem, toProductUnit } from "../../lib/import/catalog-mapping.ts";
+import { isoToJsWeekdays, orderContactFrom, supplierNotes, toCatalogItem, toProductUnit } from "../../lib/import/catalog-mapping.ts";
 import { buildPdf, loadPdfJs } from "./helpers.ts";
 
 test("reconstructRows: columns aligned across lines, right-aligned prices", () => {
@@ -217,6 +217,49 @@ test("supplier ↔ existing catalogs and table mapping", () => {
     zip: "84047", city: "Capaccio", province: "SA", deliveryDays: [1, 3, 5], orderCutoff: "18:00", freeDeliveryOver: null, notes: [],
   });
   assert.equal(notes, "P.IVA 01234567897 · Tel 0828 123456 · a@b.it · Via Roma 1 84047 Capaccio (SA) · Consegna: Lun, Mer, Ven · Ordini entro 18:00");
+});
+
+test("re-import of the same supplier (found by P.IVA) applies what was learned", async () => {
+  const doc1 = textToSourceDoc("Ortofrutta Sud srl - P.IVA 01234567897\nPomd. ross. 3,20 €/kg\nBasil. 0,80\nZucchine 1,60 kg");
+  const first = await localExtractor.extract(doc1, { persona: "restaurant" });
+  assert.equal(first.supplier.vatNumber, "01234567897");
+  const pomd = first.products.find((p) => /pomd/i.test(p.name))!;
+  const basil = first.products.find((p) => /basil/i.test(p.name))!;
+  const { hints } = learnFromReview(emptyHints(), first.products, [
+    { id: pomd.id, name: "Pomodori rossi", priceUnit: "kg", category: "verdura" },
+    { id: basil.id, name: "Basilico", priceUnit: "mazzo", category: "verdura" },
+  ]);
+  const store = new Map(supplierMemoryKeys({ vatNumber: "01234567897", name: "Ortofrutta Sud srl" }, "cat-1").map((k) => [k, hints]));
+  const asked: string[][] = [];
+  // next week's list: other prices, same abbreviations, supplier name written differently
+  const doc2 = textToSourceDoc("ORTOFRUTTA SUD - partita iva 01234567897\nPomd. ross. 3,50 €/kg\nBasil. 0,90");
+  const second = await localExtractor.extract(doc2, {
+    persona: "restaurant",
+    loadHints: (s) => {
+      const keys = supplierMemoryKeys(s);
+      asked.push(keys);
+      return keys.map((k) => store.get(k)).find(Boolean) ?? null;
+    },
+  });
+  assert.ok(asked[0]!.includes("piva:01234567897"));
+  const p = second.products.find((x) => x.name === "Pomodori rossi");
+  assert.ok(p?.fromMemory);
+  assert.equal(p?.price, 3.5);
+  const b = second.products.find((x) => x.name === "Basilico");
+  assert.equal(b?.priceUnit, "mazzo");
+});
+
+test("schedule and contact mapping for the restaurant tables", () => {
+  assert.deepEqual(isoToJsWeekdays([1, 3, 5]), [1, 3, 5]);
+  assert.deepEqual(isoToJsWeekdays([6, 7, 7, 2]), [0, 2, 6]);
+  assert.deepEqual(orderContactFrom(["0828 123456", "347 987 6543"], ["ordini@x.it"]), {
+    preferredChannel: "whatsapp", phone: "347 987 6543", email: "ordini@x.it",
+  });
+  assert.deepEqual(orderContactFrom(["0828 123456"], ["x@pec.it", "ordini@x.it"]), {
+    preferredChannel: "email", phone: "0828 123456", email: "ordini@x.it",
+  });
+  assert.equal(orderContactFrom(["0828 123456"], [])?.preferredChannel, "phone");
+  assert.equal(orderContactFrom([" "], ["non-una-mail"]), null);
 });
 
 test("engine never drops rows silently over the limit", async () => {
