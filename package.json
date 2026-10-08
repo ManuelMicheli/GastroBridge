@@ -12,6 +12,7 @@
     "lint": "eslint",
     "test:fiscal": "node --test --experimental-strip-types --experimental-transform-types",
     "test:import": "node --test --experimental-strip-types --experimental-transform-types --no-warnings \"tests/import/*.test.ts\"",
+    "test:invoices": "node --test --experimental-strip-types --experimental-transform-types lib/invoices/*.test.ts lib/food-cost/*.test.ts",
     "test:supplier": "node --test --experimental-strip-types lib/supplier/intel/cadence.test.ts lib/supplier/route/plan.test.ts lib/supplier/phone-order/parse.test.ts",
     "test:ordering": "node --test --experimental-strip-types --experimental-transform-types lib/restaurants/ordering/ordering.test.ts"
   },
@@ -29,6 +30,7 @@
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "exceljs": "^4.4.0",
+    "fflate": "^0.8.3",
     "isomorphic-dompurify": "^3.12.0",
     "lucide-react": "^1.6.0",
     "meilisearch": "^0.56.0",

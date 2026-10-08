@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import {
   getReceiptById,
   getRestaurantsForCurrentUser,
+  pickFinanceRestaurant,
   listIntegrations,
 } from "@/lib/fiscal/queries";
 import {
@@ -26,10 +27,7 @@ export default async function ReceiptDetailPage({
   const restaurants = await getRestaurantsForCurrentUser();
   const { id } = await params;
   const qs = await searchParams;
-  const selectedId =
-    qs.r && restaurants.find((r) => r.id === qs.r)
-      ? qs.r
-      : restaurants[0]?.id;
+  const selectedId = (await pickFinanceRestaurant(restaurants, qs.r));
   if (!selectedId) notFound();
 
   const receipt = await getReceiptById(selectedId, id);

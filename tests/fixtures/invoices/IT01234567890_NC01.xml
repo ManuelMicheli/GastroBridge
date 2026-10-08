@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ns3:FatturaElettronica xmlns:ns3="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2" versione="FPR12">
+  <FatturaElettronicaHeader>
+    <DatiTrasmissione>
+      <IdTrasmittente><IdPaese>IT</IdPaese><IdCodice>01234567890</IdCodice></IdTrasmittente>
+      <ProgressivoInvio>00051</ProgressivoInvio>
+      <FormatoTrasmissione>FPR12</FormatoTrasmissione>
+      <CodiceDestinatario>JKKZDGR</CodiceDestinatario>
+    </DatiTrasmissione>
+    <CedentePrestatore>
+      <DatiAnagrafici>
+        <IdFiscaleIVA><IdPaese>IT</IdPaese><IdCodice>01234567890</IdCodice></IdFiscaleIVA>
+        <Anagrafica><Denominazione>ROSSI CARNI SRL</Denominazione></Anagrafica>
+        <RegimeFiscale>RF01</RegimeFiscale>
+      </DatiAnagrafici>
+      <Sede><Indirizzo>Via dei Macelli 12</Indirizzo><CAP>20121</CAP><Comune>Milano</Comune><Nazione>IT</Nazione></Sede>
+    </CedentePrestatore>
+    <CessionarioCommittente>
+      <DatiAnagrafici>
+        <IdFiscaleIVA><IdPaese>IT</IdPaese><IdCodice>09876543210</IdCodice></IdFiscaleIVA>
+        <Anagrafica><Denominazione>Trattoria da Mario S.r.l.</Denominazione></Anagrafica>
+      </DatiAnagrafici>
+      <Sede><Indirizzo>Corso Garibaldi 5</Indirizzo><CAP>20121</CAP><Comune>Milano</Comune><Nazione>IT</Nazione></Sede>
+    </CessionarioCommittente>
+  </FatturaElettronicaHeader>
+  <FatturaElettronicaBody>
+    <DatiGenerali>
+      <DatiGeneraliDocumento>
+        <TipoDocumento>TD04</TipoDocumento>
+        <Divisa>EUR</Divisa>
+        <Data>2026-09-29</Data>
+        <Numero>NC 2026/0031</Numero>
+        <ImportoTotaleDocumento>46.64</ImportoTotaleDocumento>
+        <Causale>Storno differenze come da vostra segnalazione</Causale>
+      </DatiGeneraliDocumento>
+      <DatiFattureCollegate>
+        <IdDocumento>FT 2026/0815</IdDocumento>
+        <Data>2026-09-15</Data>
+      </DatiFattureCollegate>
+    </DatiGenerali>
+    <DatiBeniServizi>
+      <DettaglioLinee>
+        <NumeroLinea>1</NumeroLinea>
+        <Descrizione>Rettifica prezzo guanciale</Descrizione>
+        <Quantita>5.00</Quantita>
+        <UnitaMisura>KG</UnitaMisura>
+        <PrezzoUnitario>2.16</PrezzoUnitario>
+        <PrezzoTotale>10.80</PrezzoTotale>
+        <AliquotaIVA>10.00</AliquotaIVA>
+      </DettaglioLinee>
+      <DettaglioLinee>
+        <NumeroLinea>2</NumeroLinea>
+        <Descrizione>Reso filetto di manzo non consegnato</Descrizione>
+        <Quantita>0.500</Quantita>
+        <UnitaMisura>KG</UnitaMisura>
+        <PrezzoUnitario>25.20</PrezzoUnitario>
+        <PrezzoTotale>12.60</PrezzoTotale>
+        <AliquotaIVA>10.00</AliquotaIVA>
+      </DettaglioLinee>
+      <DettaglioLinee>
+        <NumeroLinea>3</NumeroLinea>
+        <Descrizione>Storno salsiccia non ordinata</Descrizione>
+        <Quantita>2</Quantita>
+        <UnitaMisura>KG</UnitaMisura>
+        <PrezzoUnitario>9.50</PrezzoUnitario>
+        <PrezzoTotale>19.00</PrezzoTotale>
+        <AliquotaIVA>10.00</AliquotaIVA>
+      </DettaglioLinee>
+      <DatiRiepilogo>
+        <AliquotaIVA>10.00</AliquotaIVA>
+        <ImponibileImporto>42.40</ImponibileImporto>
+        <Imposta>4.24</Imposta>
+        <EsigibilitaIVA>I</EsigibilitaIVA>
+      </DatiRiepilogo>
+    </DatiBeniServizi>
+  </FatturaElettronicaBody>
+</ns3:FatturaElettronica>

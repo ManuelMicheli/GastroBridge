@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<FatturaElettronica xmlns="http://ivaservizi.agenziaentrate.gov.it/docs/xsd/fatture/v1.2" versione="FPR12">
+<FatturaElettronicaHeader>
+<DatiTrasmissione><IdTrasmittente><IdPaese>IT</IdPaese><IdCodice>02345678901</IdCodice></IdTrasmittente><ProgressivoInvio>A9</ProgressivoInvio><FormatoTrasmissione>FPR12</FormatoTrasmissione><CodiceDestinatario>JKKZDGR</CodiceDestinatario></DatiTrasmissione>
+<CedentePrestatore><DatiAnagrafici><IdFiscaleIVA><IdPaese>IT</IdPaese><IdCodice>02345678901</IdCodice></IdFiscaleIVA><Anagrafica><Denominazione>Ortofrutta Bianchi &amp; Figli S.n.c.</Denominazione></Anagrafica><RegimeFiscale>RF01</RegimeFiscale></DatiAnagrafici><Sede><Indirizzo>Viale del Mercato</Indirizzo><CAP>20137</CAP><Comune>Milano</Comune><Provincia>MI</Provincia><Nazione>IT</Nazione></Sede></CedentePrestatore>
+<CessionarioCommittente><DatiAnagrafici><IdFiscaleIVA><IdPaese>IT</IdPaese><IdCodice>09876543210</IdCodice></IdFiscaleIVA><Anagrafica><Denominazione>Trattoria da Mario S.r.l.</Denominazione></Anagrafica></DatiAnagrafici><Sede><Indirizzo>Corso Garibaldi 5</Indirizzo><CAP>20121</CAP><Comune>Milano</Comune><Nazione>IT</Nazione></Sede></CessionarioCommittente>
+</FatturaElettronicaHeader>
+<FatturaElettronicaBody>
+<DatiGenerali>
+<DatiGeneraliDocumento><TipoDocumento>TD24</TipoDocumento><Divisa>EUR</Divisa><Data>2026-09-30</Data><Numero>318/B</Numero><DatiBollo><BolloVirtuale>SI</BolloVirtuale><ImportoBollo>2.00</ImportoBollo></DatiBollo><ImportoTotaleDocumento>116.66</ImportoTotaleDocumento><Causale>Fattura riepilogativa DDT di settembre - qualità extra, caffè incluso</Causale></DatiGeneraliDocumento>
+<DatiDDT><NumeroDDT>1201</NumeroDDT><DataDDT>2026-09-10</DataDDT><RiferimentoNumeroLinea>1</RiferimentoNumeroLinea><RiferimentoNumeroLinea>2</RiferimentoNumeroLinea></DatiDDT>
+<DatiDDT><NumeroDDT>1244</NumeroDDT><DataDDT>2026-09-24</DataDDT><RiferimentoNumeroLinea>3</RiferimentoNumeroLinea><RiferimentoNumeroLinea>4</RiferimentoNumeroLinea></DatiDDT>
+</DatiGenerali>
+<DatiBeniServizi>
+<DettaglioLinee><NumeroLinea>1</NumeroLinea><Descrizione>Passata di pomodoro 6x700g</Descrizione><Quantita>2,00</Quantita><UnitaMisura>CT</UnitaMisura><PrezzoUnitario>9.60</PrezzoUnitario><PrezzoTotale>19.20</PrezzoTotale><AliquotaIVA>4.00</AliquotaIVA></DettaglioLinee>
+<DettaglioLinee><NumeroLinea>2</NumeroLinea><Descrizione>Lattuga gentile</Descrizione><Quantita>3.5</Quantita><UnitaMisura>KG</UnitaMisura><PrezzoUnitario>2.40</PrezzoUnitario><PrezzoTotale>8.40</PrezzoTotale><AliquotaIVA>4.00</AliquotaIVA></DettaglioLinee>
+<DettaglioLinee><NumeroLinea>3</NumeroLinea><Descrizione>Mozzarella fior di latte 125g x 8</Descrizione><Quantita>10</Quantita><UnitaMisura>PZ</UnitaMisura><PrezzoUnitario>6.20</PrezzoUnitario><PrezzoTotale>62.00</PrezzoTotale><AliquotaIVA>10.00</AliquotaIVA></DettaglioLinee>
+<DettaglioLinee><NumeroLinea>4</NumeroLinea><Descrizione>Caffè in grani miscela bar 1 kg</Descrizione><Quantita>1</Quantita><UnitaMisura>PZ</UnitaMisura><PrezzoUnitario>18.00</PrezzoUnitario><PrezzoTotale>18.00</PrezzoTotale><AliquotaIVA>22.00</AliquotaIVA></DettaglioLinee>
+<DettaglioLinee><NumeroLinea>5</NumeroLinea><TipoCessionePrestazione>SC</TipoCessionePrestazione><Descrizione>Sconto fedeltà</Descrizione><PrezzoUnitario>-2.00</PrezzoUnitario><PrezzoTotale>-2.00</PrezzoTotale><AliquotaIVA>10.00</AliquotaIVA></DettaglioLinee>
+<DatiRiepilogo><AliquotaIVA>4.00</AliquotaIVA><ImponibileImporto>27.60</ImponibileImporto><Imposta>1.10</Imposta><EsigibilitaIVA>I</EsigibilitaIVA></DatiRiepilogo>
+<DatiRiepilogo><AliquotaIVA>10.00</AliquotaIVA><ImponibileImporto>60.00</ImponibileImporto><Imposta>6.00</Imposta><EsigibilitaIVA>I</EsigibilitaIVA></DatiRiepilogo>
+<DatiRiepilogo><AliquotaIVA>22.00</AliquotaIVA><ImponibileImporto>18.00</ImponibileImporto><Imposta>3.96</Imposta><EsigibilitaIVA>I</EsigibilitaIVA></DatiRiepilogo>
+</DatiBeniServizi>
+<DatiPagamento><CondizioniPagamento>TP02</CondizioniPagamento><DettaglioPagamento><ModalitaPagamento>MP12</ModalitaPagamento><DataScadenzaPagamento>2026-10-31</DataScadenzaPagamento><ImportoPagamento>116.66</ImportoPagamento></DettaglioPagamento></DatiPagamento>
+</FatturaElettronicaBody>
+</FatturaElettronica>

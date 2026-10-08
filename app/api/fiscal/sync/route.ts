@@ -30,16 +30,26 @@ function unauthorized() {
   return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 }
 
+// Vercel Cron calls GET with `Authorization: Bearer <CRON_SECRET>` (see
+// vercel.json): same pull as POST, for every active integration.
+export async function GET(request: Request) {
+  return POST(request);
+}
+
 export async function POST(request: Request) {
   const secret = process.env.FISCAL_CRON_SECRET;
-  if (!secret) {
+  const cronSecret = process.env.CRON_SECRET;
+  if (!secret && !cronSecret) {
     return NextResponse.json(
       { error: "FISCAL_CRON_SECRET not configured" },
       { status: 500 },
     );
   }
   const auth = request.headers.get("authorization") ?? "";
-  if (!safeEqual(auth, `Bearer ${secret}`)) return unauthorized();
+  const ok =
+    (!!secret && safeEqual(auth, `Bearer ${secret}`)) ||
+    (!!cronSecret && safeEqual(auth, `Bearer ${cronSecret}`));
+  if (!ok) return unauthorized();
 
   let body: { integration_id?: string } = {};
   try {
@@ -54,7 +64,9 @@ export async function POST(request: Request) {
   let query = supabase
     .from("fiscal_integrations")
     .select("id, restaurant_id, provider, config, last_synced_at")
-    .eq("status", "active");
+    .eq("status", "active")
+    // Push-only providers have nothing to pull.
+    .not("provider", "in", "(generic_webhook,csv_upload)");
 
   if (body.integration_id) {
     query = query.eq("id", body.integration_id);

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import {
   getFiscalEnabled,
   getRestaurantsForCurrentUser,
+  pickFinanceRestaurant,
 } from "@/lib/fiscal/queries";
 import { FinanzeEmpty } from "../../_components/finanze-empty";
 import { CsvClient } from "./csv-client";
@@ -27,10 +28,7 @@ export default async function CsvImportPage({
     );
   }
   const qs = await searchParams;
-  const selectedId =
-    qs.r && restaurants.find((r) => r.id === qs.r)
-      ? qs.r
-      : restaurants[0]!.id;
+  const selectedId = (await pickFinanceRestaurant(restaurants, qs.r))!;
 
   const enabled = await getFiscalEnabled(selectedId);
   if (!enabled) {

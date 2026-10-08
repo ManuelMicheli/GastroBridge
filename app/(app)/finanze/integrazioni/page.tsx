@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, BookOpen } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import {
   getFiscalEnabled,
   getRestaurantsForCurrentUser,
+  pickFinanceRestaurant,
   listIntegrations,
 } from "@/lib/fiscal/queries";
 import { FinanzeEmpty } from "../_components/finanze-empty";
@@ -31,10 +32,7 @@ export default async function IntegrazioniPage({
   }
 
   const qs = await searchParams;
-  const selectedId =
-    qs.r && restaurants.find((r) => r.id === qs.r)
-      ? qs.r
-      : restaurants[0]!.id;
+  const selectedId = (await pickFinanceRestaurant(restaurants, qs.r))!;
 
   const [enabled, integrations] = await Promise.all([
     getFiscalEnabled(selectedId),
@@ -48,28 +46,21 @@ export default async function IntegrazioniPage({
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
           <Link
-            href={`/finanze?r=${selectedId}`}
+            href="/finanze/collegamenti"
             className="text-text-tertiary hover:text-text-secondary"
-            aria-label="Torna al dashboard"
+            aria-label="Torna allo stato collegamenti"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
             <p className="text-[10px] uppercase tracking-widest text-text-tertiary font-bold">
-              Cassetto Fiscale · Integrazioni
+              Finanze · Collegamenti
             </p>
             <h1 className="text-2xl font-semibold text-text-primary">
-              POS collegati
+              Casse (POS)
             </h1>
           </div>
         </div>
-        <Link
-          href={`/finanze/guida?r=${selectedId}`}
-          className="inline-flex items-center gap-2 rounded-lg border border-border-subtle px-3 py-1.5 text-xs font-medium text-text-secondary hover:text-text-primary hover:border-border-accent"
-        >
-          <BookOpen className="h-3.5 w-3.5" />
-          Guida collegamento
-        </Link>
       </div>
 
       <IntegrazioniClient

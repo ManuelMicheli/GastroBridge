@@ -23,7 +23,13 @@ export type RestaurantNotificationEvent =
   | "price_change"
   | "kitchen_request"
   | "delivery_issue"
-  | "restaurant_digest";
+  | "restaurant_digest"
+  // Finanze → Fatture fornitori / Food cost (20261010010000).
+  | "invoice_received"
+  | "invoice_anomaly"
+  | "food_cost_alert"
+  | "payment_due"
+  | "finance_digest";
 
 export type RestaurantNotification = {
   event: RestaurantNotificationEvent;
