@@ -22,6 +22,8 @@ function isApiPath(pathname: string): boolean {
   if (pathname === "/api/fiscal/health") return false;
   if (pathname.startsWith("/api/invoices/webhook/")) return false;
   if (pathname === "/api/invoices/cron") return false;
+  if (pathname === "/api/cron/price-changes") return false;
+  if (pathname === "/api/restaurant/reminders") return false;
   if (pathname === "/api/vitals") return false;
   return pathname.startsWith("/api/");
 }

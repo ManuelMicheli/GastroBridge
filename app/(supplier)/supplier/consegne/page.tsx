@@ -208,6 +208,12 @@ export default async function SupplierConsegnePage({
           >
             Calendario
           </Link>
+          <Link
+            href={`/supplier/giro?date=${date}`}
+            className="flex-1 rounded-md py-2 text-center text-[12px] font-semibold text-[color:var(--color-brand-primary)] active:bg-white/60"
+          >
+            Giro
+          </Link>
         </div>
         {deliveries.length > 0 && (
           <div className="mx-3 mt-3 grid gap-3 sm:grid-cols-2">
@@ -277,6 +283,12 @@ export default async function SupplierConsegnePage({
                   className="inline-flex items-center gap-1 rounded-md border border-border-subtle bg-surface-card px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-text-secondary transition-colors hover:border-accent-green hover:text-accent-green"
                 >
                   <Calendar className="h-3 w-3" aria-hidden /> calendario
+                </Link>
+                <Link
+                  href={`/supplier/giro?date=${date}`}
+                  className="inline-flex items-center gap-1 rounded-md border border-accent-green/40 bg-accent-green/10 px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-[0.08em] text-accent-green transition-colors hover:bg-accent-green/20"
+                >
+                  <Truck className="h-3 w-3" aria-hidden /> giro consegne
                 </Link>
               </div>
             </div>

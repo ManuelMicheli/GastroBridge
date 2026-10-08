@@ -12,6 +12,12 @@ const PROTECTED_PREFIXES = [
   "/fornitori",
   "/messaggi",
   "/finanze",
+  "/riordina",
+  "/consegne",
+  "/tracciabilita",
+  "/prezzi",
+  "/ordine-veloce",
+  "/lista-cucina",
   "/supplier",
 ];
 

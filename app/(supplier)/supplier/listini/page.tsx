@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { ListiniClient } from "./listini-client";
 import type { Database } from "@/types/database";
 import { getCurrentSupplierMember, memberCan } from "@/lib/supplier/current-member";
+import { applyDueScheduledChanges } from "@/lib/supplier/pricing/scheduled-core";
 
 type PriceListRow = Database["public"]["Tables"]["price_lists"]["Row"];
 
@@ -35,6 +36,11 @@ export default async function ListiniPage() {
         </Card>
       </div>
     );
+  }
+
+  // Apply scheduled price changes that are due (see /api/cron/price-changes).
+  if (memberCan(member, "pricing.edit")) {
+    await applyDueScheduledChanges(supabase, supplier.id).catch(() => null);
   }
 
   const { data: lists } = await supabase

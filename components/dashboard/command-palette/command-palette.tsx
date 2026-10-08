@@ -21,7 +21,21 @@ export function CommandPalette() {
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const results = useFuzzySearch(searchItems, query);
-  const displayItems = query ? results : searchItems.slice(0, 6);
+  // Restaurant area: "2 kg datterini, 1 cassa limoni" → Ordine veloce.
+  const quickOrder =
+    query.trim().length > 2 &&
+    /^\s*(\d|un\b|una\b|uno\b|mezz|due\b|tre\b)/i.test(query) &&
+    searchItems.some((i) => i.href === "/ordine-veloce")
+      ? [
+          {
+            id: "action-quick-order-query",
+            label: `Ordine veloce: “${query.trim()}”`,
+            section: "Azioni",
+            href: `/ordine-veloce?q=${encodeURIComponent(query.trim())}`,
+          },
+        ]
+      : [];
+  const displayItems = query ? [...quickOrder, ...results] : searchItems.slice(0, 6);
 
   // Group items by section
   const grouped: Record<string, typeof displayItems> = {};

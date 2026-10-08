@@ -50,6 +50,12 @@ export function CommandPaletteProvider({ children, navItems, role }: Props) {
             { id: "action-search", label: "Cerca prodotti", section: "Azioni", href: "/cerca", keywords: ["search", "find", "prodotto"] },
             { id: "action-cart", label: "Vai al carrello", section: "Azioni", href: "/carrello", keywords: ["cart", "basket"] },
             { id: "action-order", label: "Nuovo ordine", section: "Azioni", href: "/cerca", keywords: ["order", "ordine", "nuovo"] },
+            { id: "action-reorder", label: "Riordina come al solito", section: "Azioni", href: "/riordina", keywords: ["riordino", "solito", "settimana scorsa", "reorder"] },
+            { id: "action-quick", label: "Ordine veloce da lista", section: "Azioni", href: "/ordine-veloce", keywords: ["lista", "spesa", "dettare", "veloce"] },
+            { id: "action-kitchen", label: "Lista cucina", section: "Azioni", href: "/lista-cucina", keywords: ["chef", "manca", "brigata"] },
+            { id: "action-receive", label: "Ricevi merce / tracciabilità", section: "Azioni", href: "/tracciabilita", keywords: ["haccp", "lotto", "richiamo", "ddt", "temperatura"] },
+            { id: "action-cutoff", label: "Consegne e orari limite", section: "Azioni", href: "/consegne", keywords: ["cutoff", "scadenza", "consegna", "giorni"] },
+            { id: "action-prices", label: "Osservatorio prezzi", section: "Azioni", href: "/prezzi", keywords: ["prezzi", "aumenti", "risparmio", "alternative"] },
           ]
         : [
             { id: "action-new-product", label: "Aggiungi prodotto", section: "Azioni", href: "/supplier/catalogo/nuovo", keywords: ["add", "product", "nuovo", "prodotto"] },
