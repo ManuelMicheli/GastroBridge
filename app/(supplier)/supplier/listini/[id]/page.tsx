@@ -11,6 +11,9 @@ import {
 import type { Database } from "@/types/database";
 import type { EditorRow } from "@/components/supplier/pricing/types";
 import { getCurrentSupplierMember, memberCan } from "@/lib/supplier/current-member";
+import { applyDueScheduledChanges, type ScheduledChange } from "@/lib/supplier/pricing/scheduled-core";
+import { getListMargins } from "@/lib/supplier/pricing/margins";
+import { MarginsCard, ScheduledChangesCard, type MarginRow, type ScheduledChangeView } from "./price-intel";
 
 type PriceListRow = Database["public"]["Tables"]["price_lists"]["Row"];
 type PriceListItemRow =
@@ -55,6 +58,13 @@ export default async function PriceListEditorPage({
 
   if (!supplier?.id || supplier.id !== list.supplier_id) {
     notFound();
+  }
+
+  // Due scheduled price changes are applied lazily by anyone allowed to edit
+  // prices (the cron route covers unattended days).
+  const canEditPrices = memberCan(member, "pricing.edit");
+  if (canEditPrices) {
+    await applyDueScheduledChanges(supabase, supplier.id).catch(() => null);
   }
 
   const { data: items } = await supabase
@@ -163,6 +173,54 @@ export default async function PriceListEditorPage({
     }))
     .sort((a, b) => a.name.localeCompare(b.name, "it"));
 
+  // Scheduled changes of this list (table absent until the migration is applied).
+  const { data: changeRows, error: changesErr } = (await (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- table added by 20261009000000, not in generated types
+    supabase as any
+  )
+    .from("scheduled_price_changes")
+    .select("id, supplier_id, price_list_id, category_id, mode, value, effective_date, status, note, notify_clients, notified_at, applied_at, applied_count, created_at")
+    .eq("price_list_id", id)
+    .order("effective_date", { ascending: false })
+    .limit(30)) as { data: ScheduledChange[] | null; error: unknown };
+  const categoryIds = Array.from(new Set(products.map((p) => p.category_id).filter(Boolean)));
+  const { data: catRows } = categoryIds.length
+    ? await supabase.from("categories").select("id, name").in("id", categoryIds).returns<{ id: string; name: string }[]>()
+    : { data: [] as { id: string; name: string }[] };
+  const catName = new Map((catRows ?? []).map((c) => [c.id, c.name]));
+  const changes: ScheduledChangeView[] = (changeRows ?? []).map((c) => ({
+    id: c.id,
+    categoryName: c.category_id ? catName.get(c.category_id) ?? "Categoria" : null,
+    mode: c.mode,
+    value: Number(c.value),
+    effectiveDate: c.effective_date,
+    status: c.status,
+    note: c.note,
+    notifiedAt: c.notified_at,
+    appliedCount: c.applied_count,
+  }));
+
+  // Margins vs. purchase cost (financial roles only).
+  let marginRows: MarginRow[] | null = null;
+  if (memberCan(member, "analytics.financial")) {
+    const margins = await getListMargins(
+      supabase,
+      itemsArr.map((it) => ({ id: it.id, product_id: it.product_id, sales_unit_id: it.sales_unit_id, price: Number(it.price) })),
+    );
+    marginRows = margins.map((m) => {
+      const row = rows.find((r) => r.id === m.itemId);
+      return {
+        itemId: m.itemId,
+        productName: row?.product_name ?? "Prodotto",
+        unitLabel: row?.sales_unit_label ?? "—",
+        price: m.price,
+        unitCost: m.unitCost,
+        marginPct: m.marginPct,
+        costBasis: m.costBasis,
+      };
+    });
+  }
+
   return (
     <div>
       <div className="mb-4">
@@ -185,6 +243,14 @@ export default async function PriceListEditorPage({
         assigned={assigned}
         assignable={assignable}
       />
+      <ScheduledChangesCard
+        priceListId={list.id}
+        categories={(catRows ?? []).sort((a, b) => a.name.localeCompare(b.name, "it"))}
+        changes={changes}
+        canEdit={canEditPrices}
+        available={!changesErr}
+      />
+      {marginRows && <MarginsCard rows={marginRows} />}
     </div>
   );
 }

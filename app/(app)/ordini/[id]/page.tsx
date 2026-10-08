@@ -16,6 +16,10 @@ import { getWorkflowState } from "@/lib/orders/workflow-state";
 import { resolveRelationshipIdForPair } from "@/lib/messages/context";
 import { SupplierChangesBanner } from "./_components/supplier-changes-banner";
 import { OrderActions, type ReorderLine } from "./_components/order-actions";
+import { loadOrderChecks } from "@/lib/restaurants/receiving/server";
+import { loadOrderDispatch } from "@/lib/restaurants/channels/server";
+import { LineCheckBadge, ReceivingSummary } from "@/components/restaurant/ordering/receiving-summary";
+import { DispatchPanel } from "@/components/restaurant/ordering/dispatch-panel";
 
 const TIMELINE_STEPS = [
   { key: "submitted", label: "Inviato", icon: Check },
@@ -238,6 +242,27 @@ export default async function OrderDetailPage({
   const isCancelled = effectiveStatus === "cancelled";
   const isDraft = effectiveStatus === "draft";
 
+  // Receiving check-ins (HACCP) and, for off-platform suppliers, the
+  // WhatsApp / email / PDF dispatch log.
+  const canReceive = accessCan(access, "order.receive");
+  const [receiving, dispatchBlocks] = await Promise.all([
+    loadOrderChecks(id),
+    hasMarketplaceSplits ? Promise.resolve(null) : loadOrderDispatch(order),
+  ]);
+  const orderTools = (
+    <>
+      {dispatchBlocks && dispatchBlocks.length > 0 && !isCancelled && (
+        <DispatchPanel orderId={id} blocks={dispatchBlocks} canSend={canOrder} />
+      )}
+      <ReceivingSummary
+        orderId={id}
+        checks={receiving.checks}
+        canReceive={canReceive}
+        open={!isCancelled && !isDraft}
+      />
+    </>
+  );
+
   return (
     <>
       <RealtimeRefresh
@@ -285,6 +310,7 @@ export default async function OrderDetailPage({
         <div className="px-4 pt-1">
           <OrderActions orderId={id} reorderLines={reorderLines} canCancel={canCancel} />
         </div>
+        <div className="px-[10px] pt-3">{orderTools}</div>
 
         {!isDraft && !isCancelled && (
           <GroupedList className="mt-2" label="Stato ordine">
@@ -392,7 +418,12 @@ export default async function OrderDetailPage({
                   return (
                     <GroupedListRow
                       key={`m-it-${item.id}`}
-                      title={product?.name ?? "—"}
+                      title={
+                        <span>
+                          {product?.name ?? "—"}
+                          <LineCheckBadge mark={receiving.marks[item.id]} />
+                        </span>
+                      }
                       subtitle={
                         <span className="font-mono">
                           × {item.quantity}
@@ -453,7 +484,12 @@ export default async function OrderDetailPage({
               {s.items.map((it, i) => (
                 <GroupedListRow
                   key={`m-ci-${i}`}
-                  title={it.name}
+                  title={
+                    <span>
+                      {it.name}
+                      <LineCheckBadge mark={receiving.marks[`catalog:${idx}:${i}`]} />
+                    </span>
+                  }
                   subtitle={
                     <span className="font-mono">× {it.qty}</span>
                   }
@@ -520,6 +556,8 @@ export default async function OrderDetailPage({
           />
         }
       />
+
+      {orderTools}
 
       {/* Timeline scrubber — only for non-draft, non-cancelled */}
       {!isDraft && !isCancelled && (
@@ -644,7 +682,10 @@ export default async function OrderDetailPage({
                 const product = item.products as unknown as { name: string; unit: string } | null;
                 return (
                   <div key={item.id} className="flex justify-between text-sm py-1 border-t border-sage-muted/20 first:border-0">
-                    <span className="text-charcoal">{product?.name} x{item.quantity}</span>
+                    <span className="text-charcoal">
+                      {product?.name} x{item.quantity}
+                      <LineCheckBadge mark={receiving.marks[item.id]} />
+                    </span>
                     <span className="font-mono">{formatCurrency(item.subtotal)}</span>
                   </div>
                 );
@@ -690,6 +731,7 @@ export default async function OrderDetailPage({
                   <span className="text-charcoal">
                     <span className="font-mono text-sage mr-2">{item.qty}×</span>
                     {item.name}
+                    <LineCheckBadge mark={receiving.marks[`catalog:${idx}:${i}`]} />
                   </span>
                   <span className="font-mono text-sage">{item.price}</span>
                 </div>

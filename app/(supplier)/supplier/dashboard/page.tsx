@@ -16,7 +16,8 @@ import {
   getTopProducts,
   getRecentDeliveries,
 } from "@/lib/supplier/dashboard/queries";
-import { getCurrentSupplierMember } from "@/lib/supplier/current-member";
+import { redirect } from "next/navigation";
+import { getCurrentSupplierMember, memberCan } from "@/lib/supplier/current-member";
 
 export const metadata: Metadata = { title: "Dashboard Fornitore — GastroBridge" };
 
@@ -35,6 +36,10 @@ export default async function SupplierDashboardPage() {
     userId ? getCachedProfile(userId) : Promise.resolve(null),
     getCurrentSupplierMember(),
   ]);
+
+  // Warehouse and driver staff have no financial permission: their home is
+  // the operational "Oggi" board, not revenue charts.
+  if (member && !memberCan(member, "analytics.financial")) redirect("/supplier/oggi");
 
   const supplierId = member?.supplier_id;
 

@@ -10,7 +10,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Keyboard, LayoutGrid, List, Search, X } from "lucide-react";
+import { Keyboard, LayoutGrid, List, Phone, Search, X } from "lucide-react";
 import { formatCurrency } from "@/lib/utils/formatters";
 import { SupplierOrdersClientMobile } from "./orders-client-mobile";
 import { SupplierStatusChips } from "./_components/status-chips";
@@ -35,6 +35,8 @@ type Props = {
   orders: SupplierOrderRow[];
   filters: Filters;
   total: number;
+  /** Shows the "Ordine telefonico" entry (order.accept_line). */
+  canCreate?: boolean;
 };
 
 function normalize(s: string): string {
@@ -60,7 +62,7 @@ function computeStats(rows: SupplierOrderRow[]): SupplierOrderStats {
   return { totalCount: rows.length, monthTotal, statusCounts };
 }
 
-export function SupplierOrdersClient({ orders, filters, total }: Props) {
+export function SupplierOrdersClient({ orders, filters, total, canCreate = false }: Props) {
   const router = useRouter();
   const sp = useSearchParams();
 
@@ -164,6 +166,13 @@ export function SupplierOrdersClient({ orders, filters, total }: Props) {
     <>
       {/* Mobile Apple-app view — untouched */}
       <div className="lg:hidden">
+        {canCreate && (
+          <div className="flex justify-end px-4 pt-2">
+            <Link href="/supplier/ordini/nuovo" className="f-btn f-btn-primary f-btn-sm">
+              <Phone className="h-4 w-4" aria-hidden /> Ordine telefonico
+            </Link>
+          </div>
+        )}
         <SupplierOrdersClientMobile orders={orders} total={total} />
       </div>
 
@@ -187,6 +196,11 @@ export function SupplierOrdersClient({ orders, filters, total }: Props) {
             </span>
           </div>
           <div className="flex items-center gap-2">
+            {canCreate && (
+              <Link href="/supplier/ordini/nuovo" className="f-btn f-btn-primary f-btn-xs">
+                <Phone className="h-3.5 w-3.5" aria-hidden /> Ordine telefonico
+              </Link>
+            )}
             <div className="inline-flex rounded-md border border-border-subtle bg-surface-card p-0.5">
               <button
                 type="button"
